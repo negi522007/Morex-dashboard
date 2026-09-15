@@ -1,0 +1,17 @@
+dashboard-project.pdf
+dashboard-bootstrap.pdf
+.claude/
+
+# env & secrets
+.env
+.env.local
+
+# dependencies & build output
+node_modules/
+dist/
+build/
+coverage/
+
+# misc
+*.log
+.DS_Store
