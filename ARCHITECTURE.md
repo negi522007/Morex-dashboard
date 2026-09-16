@@ -46,6 +46,8 @@ File: `backend/prisma/schema.prisma`.
 
 - **User** — platform account. `passwordHash` is nullable (an account can be created via OAuth only),
   `emailVerified` blocks login until confirmation has happened.
+- **Session** — a server-side session record; its `id` is the unguessable value stored in the login
+  cookie. Deleting a row logs that session out immediately (see Authentication below).
 - **EmailVerificationToken** — time-limited token for signup email confirmation.
 - **OAuthAccount** — a third-party account linked to a `User`. Linking is resolved by matching the
   provider's verified email against an existing `User`, never by auto-creating a duplicate. Tokens are
@@ -69,12 +71,32 @@ the scheduler can be swapped without touching the services themselves.
 ## Authentication & authorization
 
 Two distinct mechanisms, as required by the brief:
-- **Authentication**: JWT on local credentials (email + hashed password), with mandatory signup email
-  confirmation before any login.
+- **Authentication**: server-side sessions on local credentials (email + hashed password), with
+  mandatory signup email confirmation before any login — **not JWT**. On login, the server creates a
+  `Session` row and sends its `id` back as an `httpOnly` + `Secure` + `SameSite=Lax` cookie. Every
+  request looks the session up server-side; nothing is trusted purely on the client's say-so.
 - **Authorization**: OAuth 2.0 (GitHub for now) to let a widget access a third-party API on the user's
   behalf. A user already registered locally must be able to *link* their GitHub account afterwards (not
   only log in via GitHub); on an OAuth login whose email matches an existing account, link to that
   existing account rather than creating a new one.
+
+### Why sessions instead of JWT
+
+JWT was the default in the original proposal, carried over by convention rather than evaluated against
+this project's actual constraints. On reconsideration, sessions fit better here:
+
+- **No scaling need**: the app runs as a single `server` container — JWT's main advantage (no shared
+  session store across instances) doesn't apply.
+- **Instant revocation**: the brief calls for an admin section to manage users. Banning someone must take
+  effect immediately — trivial with sessions (delete the `Session` row), not natively possible with a
+  bare JWT (would need a `tokenVersion`/refresh-token workaround that reintroduces server-side state
+  anyway, cancelling JWT's main benefit).
+- **Equivalent security, less complexity**: a JWT stored safely (httpOnly cookie) ends up with the same
+  security properties as a session cookie, without the extra machinery of signing/expiry/refresh — so
+  sessions win on simplicity for no security cost. A `Session` row in Postgres (rather than in-memory)
+  also survives server restarts.
+- No requirement in the brief needs a non-browser client (mobile app, third-party API consumer) for
+  which JWT's statelessness would matter — designing for that hypothetical would be over-engineering.
 
 ## Security
 

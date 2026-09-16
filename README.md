@@ -40,7 +40,7 @@ curl http://localhost:8080/about.json
 
 - **Backend**: Node.js / NestJS + Prisma + PostgreSQL
 - **Frontend**: React + Tailwind + react-grid-layout
-- **Auth**: JWT (local credentials + email confirmation on signup) + OAuth 2.0 (GitHub)
+- **Auth**: server-side sessions, DB-backed (local credentials + email confirmation on signup) + OAuth 2.0 (GitHub)
 - **Refresh**: in-process scheduler (`@nestjs/schedule`), no external job queue
 
 For the technical architecture, the `ServiceProvider` contract, the data model, and the
