@@ -5,6 +5,8 @@ import { RssModule } from './rss/rss.module';
 import { RssProvider } from './rss/rss.provider';
 import { MarketDataModule } from './market-data/market-data.module';
 import { MarketDataProvider } from './market-data/market-data.provider';
+import { GithubModule } from './github/github.module';
+import { GithubProvider } from './github/github.provider';
 
 // @Global so AboutModule (about.json) and TimerModule (the scheduler) can
 // both inject the same registry without re-declaring it. Adding a new
@@ -12,12 +14,16 @@ import { MarketDataProvider } from './market-data/market-data.provider';
 // below, and add it to the returned array — nothing else changes.
 @Global()
 @Module({
-  imports: [RssModule, MarketDataModule],
+  imports: [RssModule, MarketDataModule, GithubModule],
   providers: [
     {
       provide: SERVICE_PROVIDERS,
-      useFactory: (rss: RssProvider, marketData: MarketDataProvider): ServiceProvider[] => [rss, marketData],
-      inject: [RssProvider, MarketDataProvider],
+      useFactory: (rss: RssProvider, marketData: MarketDataProvider, github: GithubProvider): ServiceProvider[] => [
+        rss,
+        marketData,
+        github,
+      ],
+      inject: [RssProvider, MarketDataProvider, GithubProvider],
     },
   ],
   exports: [SERVICE_PROVIDERS],
