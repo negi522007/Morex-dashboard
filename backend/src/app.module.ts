@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { ServicesModule } from './services/services.module';
 import { TimerModule } from './timer/timer.module';
+import { WidgetsModule } from './widgets/widgets.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { TimerModule } from './timer/timer.module';
     AboutModule,
     AuthModule,
     TimerModule,
+    WidgetsModule,
   ],
 })
 export class AppModule {}
