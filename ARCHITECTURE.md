@@ -73,8 +73,10 @@ the scheduler can be swapped without touching the services themselves.
 Two distinct mechanisms, as required by the brief:
 - **Authentication**: server-side sessions on local credentials (email + hashed password), with
   mandatory signup email confirmation before any login — **not JWT**. On login, the server creates a
-  `Session` row and sends its `id` back as an `httpOnly` + `Secure` + `SameSite=Lax` cookie. Every
-  request looks the session up server-side; nothing is trusted purely on the client's say-so.
+  `Session` row and sends its `id` back as an `httpOnly` + `SameSite=Lax` cookie (`Secure` too, once the
+  app is served over HTTPS — gated by `COOKIE_SECURE`, not `NODE_ENV`, since a browser silently drops
+  `Secure` cookies over plain HTTP and docker-compose has no TLS termination today). Every request looks
+  the session up server-side; nothing is trusted purely on the client's say-so.
 - **Authorization**: OAuth 2.0 (GitHub for now) to let a widget access a third-party API on the user's
   behalf. A user already registered locally must be able to *link* their GitHub account afterwards (not
   only log in via GitHub); on an OAuth login whose email matches an existing account, link to that
@@ -123,5 +125,5 @@ language, TypeScript, end to end). Accepted trade-off: Node.js is single-threade
 to parallel CPU-intensive work — accepted because the actual workload is I/O-bound API aggregation, a
 case where the event loop excels; to be revisited only if heavy processing appears later.
 
-*Current fill = Person A's independent scoring only. Pending Person B's independent fill and a comparison
-of the gaps before treating this choice as fully validated by the team.*
+*Validated by the team: Morayo reviewed and agreed with this stack and architecture after filling their
+own matrix independently.*

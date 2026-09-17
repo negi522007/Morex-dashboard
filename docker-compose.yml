@@ -8,8 +8,11 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://dashboard:dashboard@db:5432/dashboard
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
     depends_on:
       - db
+      - mailhog
 
   db:
     image: postgres:16-alpine
@@ -17,8 +20,18 @@ services:
       POSTGRES_USER: dashboard
       POSTGRES_PASSWORD: dashboard
       POSTGRES_DB: dashboard
+    ports:
+      - "55432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+
+  # Local SMTP catcher so `docker-compose up` works out of the box with no
+  # real email account. Swap SMTP_HOST/PORT/USER/PASSWORD in .env to point at
+  # a real provider (e.g. Brevo, Resend) for actual delivery. Web UI: :8025.
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "8025:8025"
 
   # frontend service to be added once the frontend build/Dockerfile exists (Phase 1)
 
