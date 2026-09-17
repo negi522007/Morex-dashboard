@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -10,6 +11,18 @@ import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { hashPassword, verifyPassword } from './password.util';
+import { encryptToken } from '../common/token-encryption.util';
+
+interface GithubTokenResponse {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+}
+
+interface GithubProfile {
+  id: number;
+  login: string;
+}
 
 const EMAIL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -83,6 +96,69 @@ export class AuthService {
 
   async logout(sessionId: string): Promise<void> {
     await this.prisma.session.deleteMany({ where: { id: sessionId } });
+  }
+
+  // Links a GitHub account to an ALREADY authenticated user (userId comes
+  // from the session, never from anything GitHub returns) — this is
+  // authorization for the widget, not an alternate login path. The unique
+  // constraint on (provider, providerAccountId) is what stops one GitHub
+  // account from being linked to two different platform users; we check it
+  // explicitly rather than upserting, so a re-link attempt by a different
+  // user fails loudly instead of silently reassigning ownership.
+  async linkGithubAccount(userId: string, code: string): Promise<void> {
+    const clientId = this.config.get<string>('GITHUB_CLIENT_ID');
+    const clientSecret = this.config.get<string>('GITHUB_CLIENT_SECRET');
+    const redirectUri = this.config.get<string>('GITHUB_OAUTH_CALLBACK_URL');
+    const encryptionKey = this.config.get<string>('TOKEN_ENCRYPTION_KEY');
+    if (!clientId || !clientSecret || !redirectUri || !encryptionKey) {
+      throw new ServiceUnavailableException('GitHub OAuth is not configured on the server');
+    }
+
+    const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        redirect_uri: redirectUri,
+      }),
+    });
+    const tokenData = (await tokenRes.json()) as GithubTokenResponse;
+    if (!tokenData.access_token) {
+      throw new BadRequestException(
+        `GitHub did not return an access token (${tokenData.error_description ?? tokenData.error ?? 'unknown error'})`,
+      );
+    }
+
+    const profileRes = await fetch('https://api.github.com/user', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}`, 'User-Agent': 'dashboard-app' },
+    });
+    if (!profileRes.ok) {
+      throw new BadRequestException('Could not fetch the GitHub profile for this token');
+    }
+    const profile = (await profileRes.json()) as GithubProfile;
+    const providerAccountId = String(profile.id);
+    const accessTokenEncrypted = encryptToken(tokenData.access_token, encryptionKey);
+
+    const existing = await this.prisma.oAuthAccount.findUnique({
+      where: { provider_providerAccountId: { provider: 'github', providerAccountId } },
+    });
+
+    if (existing && existing.userId !== userId) {
+      throw new ConflictException('This GitHub account is already linked to another user');
+    }
+
+    if (existing) {
+      await this.prisma.oAuthAccount.update({
+        where: { id: existing.id },
+        data: { accessTokenEncrypted },
+      });
+    } else {
+      await this.prisma.oAuthAccount.create({
+        data: { provider: 'github', providerAccountId, userId, accessTokenEncrypted },
+      });
+    }
   }
 
   async getUserBySession(sessionId: string) {
