@@ -3,7 +3,9 @@
 Endpoint reference for whoever is building the frontend against this backend. For *why* things are
 built this way, see [ARCHITECTURE.md](./ARCHITECTURE.md); this file is just the contract.
 
-Base URL in development: `http://localhost:8080`.
+Base URL in development: `http://localhost:8080`. There's also a live, interactive version of this same
+reference — generated straight from the code, so it can't drift from it — at
+**`http://localhost:8080/docs`** once the server is running (raw OpenAPI JSON at `/docs-json`).
 
 ## Authentication model
 
