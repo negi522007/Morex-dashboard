@@ -31,6 +31,7 @@ services:
   mailhog:
     image: mailhog/mailhog:v1.0.1
     ports:
+      - "1025:1025"
       - "8025:8025"
 
   # frontend service to be added once the frontend build/Dockerfile exists (Phase 1)
