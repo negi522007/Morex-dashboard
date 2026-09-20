@@ -1,7 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import GridLayout, { WidthProvider, type Layout } from 'react-grid-layout'
+import 'react-grid-layout/css/styles.css'
+import 'react-resizable/css/styles.css'
 import { apiFetch } from '../lib/api'
+import type { AboutResponse, WidgetInstance } from '../lib/types'
 import { Logo } from '../components/Logo'
+import { WidgetCard } from '../components/WidgetCard'
+import { WidgetFormModal } from '../components/WidgetFormModal'
+
+const ReactGridLayout = WidthProvider(GridLayout)
+const POLL_INTERVAL_MS = 15_000
 
 interface User {
   id: string
@@ -12,6 +21,10 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
   const [checking, setChecking] = useState(true)
+  const [about, setAbout] = useState<AboutResponse | null>(null)
+  const [widgets, setWidgets] = useState<WidgetInstance[]>([])
+  const [modal, setModal] = useState<'add' | WidgetInstance | null>(null)
+  const isInteractingRef = useRef(false)
 
   useEffect(() => {
     apiFetch<User>('/auth/me')
@@ -19,6 +32,29 @@ export function DashboardPage() {
       .catch(() => navigate('/login', { replace: true }))
       .finally(() => setChecking(false))
   }, [navigate])
+
+  const loadWidgets = useCallback(() => {
+    apiFetch<WidgetInstance[]>('/widgets').then((fresh) => {
+      if (isInteractingRef.current) return
+      setWidgets((current) => {
+        const byId = new Map(current.map((w) => [w.id, w]))
+        return fresh.map((w) => {
+          const existing = byId.get(w.id)
+          // Keep the locally-known position so an in-flight drag/resize
+          // (not yet reflected server-side) never gets overwritten by a poll.
+          return existing ? { ...w, position: existing.position } : w
+        })
+      })
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+    apiFetch<AboutResponse>('/about.json').then(setAbout)
+    loadWidgets()
+    const interval = setInterval(loadWidgets, POLL_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [user, loadWidgets])
 
   async function handleLogout() {
     await apiFetch('/auth/logout', { method: 'POST' }).catch(() => {})
@@ -29,7 +65,35 @@ export function DashboardPage() {
     window.open('/auth/github', '_blank')
   }
 
-  if (checking) {
+  async function handleDelete(widget: WidgetInstance) {
+    if (!confirm(`Delete this ${widget.widgetName} widget?`)) return
+    await apiFetch(`/widgets/${widget.id}`, { method: 'DELETE' })
+    setWidgets((current) => current.filter((w) => w.id !== widget.id))
+  }
+
+  function handleSaved() {
+    setModal(null)
+    loadWidgets()
+  }
+
+  const layout: Layout[] = useMemo(
+    () =>
+      widgets.map((w, index) => ({
+        i: w.id,
+        x: w.position.x ?? (index % 3) * 4,
+        y: w.position.y ?? Math.floor(index / 3) * 3,
+        w: w.position.w ?? 4,
+        h: w.position.h ?? 3,
+      })),
+    [widgets],
+  )
+
+  function persistPosition(itemId: string, next: { x: number; y: number; w: number; h: number }) {
+    setWidgets((current) => current.map((w) => (w.id === itemId ? { ...w, position: next } : w)))
+    apiFetch(`/widgets/${itemId}`, { method: 'PATCH', body: JSON.stringify({ position: next }) }).catch(() => {})
+  }
+
+  if (checking || (user && !about)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <p className="text-sm text-gray-500">Loading…</p>
@@ -37,7 +101,7 @@ export function DashboardPage() {
     )
   }
 
-  if (!user) return null
+  if (!user || !about) return null
 
   const initial = user.email.charAt(0).toUpperCase()
 
@@ -67,13 +131,56 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-6 py-12">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900">Welcome back 👋</h1>
-          <p className="mt-1 text-sm text-gray-500">Your widget dashboard is coming together in a later step.</p>
+      <main className="mx-auto max-w-6xl px-6 py-10">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Your widgets</h1>
+            <p className="mt-1 text-sm text-gray-500">Drag to move, drag the corner to resize.</p>
+          </div>
+          <button
+            onClick={() => setModal('add')}
+            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+          >
+            + Add widget
+          </button>
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow-xl ring-1 ring-black/5">
+        {widgets.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-gray-300 bg-white/60 p-12 text-center">
+            <p className="text-sm text-gray-500">No widgets yet — add your first one to get started.</p>
+          </div>
+        ) : (
+          <ReactGridLayout
+            className="layout"
+            layout={layout}
+            cols={12}
+            rowHeight={90}
+            margin={[16, 16]}
+            draggableHandle=".widget-drag-handle"
+            onDragStart={() => {
+              isInteractingRef.current = true
+            }}
+            onResizeStart={() => {
+              isInteractingRef.current = true
+            }}
+            onDragStop={(_layout, _oldItem, newItem) => {
+              isInteractingRef.current = false
+              persistPosition(newItem.i, { x: newItem.x, y: newItem.y, w: newItem.w, h: newItem.h })
+            }}
+            onResizeStop={(_layout, _oldItem, newItem) => {
+              isInteractingRef.current = false
+              persistPosition(newItem.i, { x: newItem.x, y: newItem.y, w: newItem.w, h: newItem.h })
+            }}
+          >
+            {widgets.map((widget) => (
+              <div key={widget.id}>
+                <WidgetCard widget={widget} onEdit={() => setModal(widget)} onDelete={() => handleDelete(widget)} />
+              </div>
+            ))}
+          </ReactGridLayout>
+        )}
+
+        <div className="mt-10 rounded-2xl bg-white p-6 shadow-xl ring-1 ring-black/5">
           <div className="flex items-start gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-900">
               <GithubIcon />
@@ -90,14 +197,19 @@ export function DashboardPage() {
                 <GithubIcon size={16} />
                 Link GitHub account
               </button>
-              <p className="mt-3 text-xs text-gray-400">
-                Opens in a new tab — GitHub will show "linked" there when it's done, you can close it and come
-                back here.
-              </p>
             </div>
           </div>
         </div>
       </main>
+
+      {modal && (
+        <WidgetFormModal
+          about={about}
+          editing={modal === 'add' ? null : modal}
+          onClose={() => setModal(null)}
+          onSaved={handleSaved}
+        />
+      )}
     </div>
   )
 }
