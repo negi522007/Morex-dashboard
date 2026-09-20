@@ -157,6 +157,7 @@ export function DashboardPage() {
             rowHeight={90}
             margin={[16, 16]}
             draggableHandle=".widget-drag-handle"
+            draggableCancel=".widget-actions"
             onDragStart={() => {
               isInteractingRef.current = true
             }}

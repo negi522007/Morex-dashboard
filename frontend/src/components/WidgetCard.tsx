@@ -14,18 +14,18 @@ export function WidgetCard({ widget, onEdit, onDelete }: Props) {
           <p className="text-[11px] font-medium tracking-wide text-gray-400 uppercase">{widget.serviceName}</p>
           <h3 className="truncate font-semibold text-gray-900">{widget.widgetName}</h3>
         </div>
-        <div className="flex shrink-0 gap-1">
+        <div className="widget-actions flex shrink-0 cursor-default gap-1.5">
           <button
             onClick={onEdit}
             aria-label="Reconfigure widget"
-            className="rounded p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-lg border border-gray-200 bg-white p-1.5 text-gray-500 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700"
           >
             <GearIcon />
           </button>
           <button
             onClick={onDelete}
             aria-label="Delete widget"
-            className="rounded p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
+            className="rounded-lg border border-gray-200 bg-white p-1.5 text-gray-500 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
           >
             <TrashIcon />
           </button>
