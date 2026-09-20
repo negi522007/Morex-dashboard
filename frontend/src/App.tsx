@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
+import { RegisterPage } from './pages/RegisterPage'
 
 function Home() {
   return (
@@ -12,6 +13,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/register" element={<RegisterPage />} />
     </Routes>
   )
 }
