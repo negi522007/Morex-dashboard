@@ -49,10 +49,22 @@ The server listens on `http://localhost:8080`. Quick check:
 curl http://localhost:8080/about.json
 ```
 
+Then, in a separate terminal, run the frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Opens on `http://localhost:5173` — see [FRONTEND.md](./FRONTEND.md) for what's built there
+(routes, the widget dashboard, how its dev proxy talks to the backend) and what isn't yet.
+
 ## How to use it
 
-There's no frontend yet (see TODO), so this is a walkthrough with `curl` — the exact same requests a
-future UI would make. Full endpoint reference: [API.md](./API.md).
+The walkthrough below uses `curl` directly against the API — useful to understand the contract or debug
+independently of the UI. For the actual app, use the frontend at `http://localhost:5173` instead; it
+makes these exact same requests. Full endpoint reference: [API.md](./API.md).
 
 **1. Create an account and confirm it.**
 ```bash
@@ -150,5 +162,7 @@ important, what isn't and why.
 - [x] Architecture diagrams (module graph, ER diagram, sequence diagrams)
 - [x] Non-technical user-facing section
 - [x] Usage walkthrough, contributor guide, and troubleshooting doc
+- [x] Bootstrap the React app (`frontend/`): auth pages (login/register), protected dashboard route
+- [x] Widget dashboard UI: add/reconfigure/move/resize/delete, backed by the real API (see [FRONTEND.md](./FRONTEND.md))
 - [ ] Services: Weather, Steam, Maps/Cinema
-- [ ] Bootstrap the React app (`frontend/`) and the dashboard UI
+- [ ] Per-widget custom rendering (currently a generic key/value dump — see frontend README's "Known gaps")
