@@ -7,9 +7,12 @@ services:
     env_file:
       - .env
     environment:
+      # Always the in-network hostname, regardless of .env (.env's own
+      # DATABASE_URL is for running the server outside Docker instead — see
+      # CONTRIBUTING.md). SMTP_* is intentionally NOT overridden here: it
+      # comes from .env, so a real provider's credentials actually take
+      # effect instead of always being forced back to Mailhog.
       DATABASE_URL: postgresql://dashboard:dashboard@db:5432/dashboard
-      SMTP_HOST: mailhog
-      SMTP_PORT: 1025
     depends_on:
       - db
       - mailhog
