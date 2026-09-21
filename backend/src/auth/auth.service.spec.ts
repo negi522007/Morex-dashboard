@@ -58,7 +58,26 @@ describe('AuthService', () => {
         'new@example.com',
         expect.stringContaining('http://localhost:8080/auth/confirm?token='),
       );
-      expect(result).toEqual({ id: 'user-1', email: 'new@example.com' });
+      expect(result).toEqual({ id: 'user-1', email: 'new@example.com', firstName: undefined, lastName: undefined });
+    });
+
+    it('stores optional firstName/lastName when provided, and null when omitted', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({
+        id: 'user-1',
+        email: 'new@example.com',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+      });
+
+      const result = await service.register('new@example.com', 'password123', 'Ada', 'Lovelace');
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ firstName: 'Ada', lastName: 'Lovelace' }),
+        }),
+      );
+      expect(result).toEqual({ id: 'user-1', email: 'new@example.com', firstName: 'Ada', lastName: 'Lovelace' });
     });
 
     it('deletes the user and surfaces a 503 if the confirmation email fails to send', async () => {

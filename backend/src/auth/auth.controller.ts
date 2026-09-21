@@ -29,14 +29,29 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'Create an account. Sends a confirmation email; login is blocked until confirmed.' })
-  @ApiBody({ schema: { example: { email: 'user@example.com', password: 'at least 8 characters' } } })
+  @ApiBody({
+    schema: {
+      example: {
+        email: 'user@example.com',
+        password: 'at least 8 characters',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+      },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Account created, confirmation email sent' })
   @ApiResponse({ status: 400, description: 'Invalid email, or password under 8 characters' })
   @ApiResponse({ status: 409, description: 'An account with this email already exists' })
   @ApiResponse({ status: 503, description: 'Confirmation email failed to send — account was NOT created' })
-  async register(@Body() body: { email?: string; password?: string }) {
+  async register(
+    @Body() body: { email?: string; password?: string; firstName?: string; lastName?: string },
+  ) {
     const { email, password } = this.validateCredentials(body);
-    return this.authService.register(email, password);
+    // Optional and editable later (no profile-edit endpoint yet) — never
+    // required, so trimmed-empty just becomes "not provided".
+    const firstName = body.firstName?.trim() || undefined;
+    const lastName = body.lastName?.trim() || undefined;
+    return this.authService.register(email, password, firstName, lastName);
   }
 
   @Get('confirm')
@@ -89,7 +104,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get the currently logged-in user — useful to check auth state on app load' })
   @ApiResponse({ status: 200, description: 'The current user' })
   @ApiResponse({ status: 401, description: 'No valid session' })
-  me(@CurrentUser() user: { id: string; email: string }) {
+  me(@CurrentUser() user: { id: string; email: string; firstName: string | null; lastName: string | null }) {
     return user;
   }
 

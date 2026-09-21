@@ -27,6 +27,17 @@ interface GithubProfile {
 const EMAIL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+export interface PublicUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+}
+
+function toPublicUser(user: { id: string; email: string; firstName: string | null; lastName: string | null }): PublicUser {
+  return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName };
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -35,14 +46,18 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async register(email: string, password: string) {
+  // firstName/lastName are optional and editable later — there is no
+  // profile-edit endpoint yet, so for now this is the only way to set them.
+  async register(email: string, password: string, firstName?: string, lastName?: string) {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
       throw new ConflictException('An account with this email already exists');
     }
 
     const passwordHash = await hashPassword(password);
-    const user = await this.prisma.user.create({ data: { email, passwordHash } });
+    const user = await this.prisma.user.create({
+      data: { email, passwordHash, firstName: firstName || null, lastName: lastName || null },
+    });
 
     const token = randomBytes(32).toString('hex');
     await this.prisma.emailVerificationToken.create({
@@ -63,7 +78,7 @@ export class AuthService {
       throw new ServiceUnavailableException('Could not send the confirmation email, please try again');
     }
 
-    return { id: user.id, email: user.email };
+    return toPublicUser(user);
   }
 
   async confirmEmail(token: string): Promise<void> {
@@ -91,7 +106,7 @@ export class AuthService {
       data: { userId: user.id, expiresAt: new Date(Date.now() + SESSION_TTL_MS) },
     });
 
-    return { session, user: { id: user.id, email: user.email } };
+    return { session, user: toPublicUser(user) };
   }
 
   async logout(sessionId: string): Promise<void> {
@@ -169,6 +184,6 @@ export class AuthService {
     if (!session || session.expiresAt < new Date()) {
       return null;
     }
-    return { id: session.user.id, email: session.user.email };
+    return toPublicUser(session.user);
   }
 }
