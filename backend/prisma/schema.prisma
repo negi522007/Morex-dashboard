@@ -1,0 +1,86 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String?
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions                 Session[]
+  oauthAccounts            OAuthAccount[]
+  serviceSubscriptions     ServiceSubscription[]
+  widgetInstances          WidgetInstance[]
+  emailVerificationTokens  EmailVerificationToken[]
+}
+
+// Server-side session (not a JWT): the id is the unguessable value stored in
+// the httpOnly session cookie. Deleting a row logs that session out instantly —
+// this is what makes admin-initiated bans/logouts immediate.
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// A third-party account linked to a platform user (OAuth authorization).
+// Linking is resolved by matching the provider's verified email against
+// an existing User — never create a duplicate User on OAuth login.
+model OAuthAccount {
+  id                     String  @id @default(uuid())
+  provider               String
+  providerAccountId      String
+  accessTokenEncrypted   String
+  refreshTokenEncrypted  String?
+  userId                 String
+  user                   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// Non-OAuth service subscription (e.g. username/password based service).
+model ServiceSubscription {
+  id                    String   @id @default(uuid())
+  serviceName           String
+  credentialsEncrypted  String?
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt             DateTime @default(now())
+
+  @@unique([userId, serviceName])
+}
+
+model WidgetInstance {
+  id                 String    @id @default(uuid())
+  serviceName        String
+  widgetName         String
+  config             Json
+  refreshRateSeconds Int
+  position           Json
+  lastRefreshedAt    DateTime?
+  cachedData         Json?
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}

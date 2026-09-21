@@ -1,0 +1,238 @@
+import { ConflictException, ForbiddenException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { hashPassword } from './password.util';
+
+function makePrismaMock() {
+  return {
+    user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+    emailVerificationToken: { create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
+    session: { create: jest.fn(), deleteMany: jest.fn(), findUnique: jest.fn() },
+    oAuthAccount: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+    $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
+  };
+}
+
+function makeConfigMock(values: Record<string, string> = {}) {
+  return { get: jest.fn((key: string): string | undefined => values[key]) };
+}
+
+describe('AuthService', () => {
+  let prisma: ReturnType<typeof makePrismaMock>;
+  let mail: { sendConfirmationEmail: jest.Mock };
+  let config: ReturnType<typeof makeConfigMock>;
+  let service: AuthService;
+  let fetchMock: jest.Mock;
+
+  beforeEach(() => {
+    prisma = makePrismaMock();
+    mail = { sendConfirmationEmail: jest.fn().mockResolvedValue(undefined) };
+    config = makeConfigMock({
+      APP_URL: 'http://localhost:8080',
+      GITHUB_CLIENT_ID: 'client-id',
+      GITHUB_CLIENT_SECRET: 'client-secret',
+      GITHUB_OAUTH_CALLBACK_URL: 'http://localhost:8080/auth/github/callback',
+      TOKEN_ENCRYPTION_KEY: 'a'.repeat(64),
+    });
+    service = new AuthService(prisma as any, mail as any, config as any);
+    fetchMock = jest.fn();
+    global.fetch = fetchMock as any;
+  });
+
+  describe('register', () => {
+    it('rejects an email that already exists', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'existing' });
+      await expect(service.register('taken@example.com', 'password123')).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('creates the user, issues a token, and sends the confirmation email', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({ id: 'user-1', email: 'new@example.com' });
+
+      const result = await service.register('new@example.com', 'password123');
+
+      expect(prisma.emailVerificationToken.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ userId: 'user-1' }) }),
+      );
+      expect(mail.sendConfirmationEmail).toHaveBeenCalledWith(
+        'new@example.com',
+        expect.stringContaining('http://localhost:8080/auth/confirm?token='),
+      );
+      expect(result).toEqual({ id: 'user-1', email: 'new@example.com' });
+    });
+
+    it('deletes the user and surfaces a 503 if the confirmation email fails to send', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({ id: 'user-1', email: 'new@example.com' });
+      mail.sendConfirmationEmail.mockRejectedValue(new Error('SMTP down'));
+
+      await expect(service.register('new@example.com', 'password123')).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
+    });
+  });
+
+  describe('confirmEmail', () => {
+    it('rejects a token that does not exist', async () => {
+      prisma.emailVerificationToken.findUnique.mockResolvedValue(null);
+      await expect(service.confirmEmail('nope')).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('rejects an expired token', async () => {
+      prisma.emailVerificationToken.findUnique.mockResolvedValue({
+        userId: 'user-1',
+        expiresAt: new Date(Date.now() - 1000),
+      });
+      await expect(service.confirmEmail('expired')).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('marks the user verified and deletes the token on success', async () => {
+      prisma.emailVerificationToken.findUnique.mockResolvedValue({
+        userId: 'user-1',
+        expiresAt: new Date(Date.now() + 1000),
+      });
+      await service.confirmEmail('good-token');
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { emailVerified: true },
+      });
+      expect(prisma.emailVerificationToken.delete).toHaveBeenCalledWith({ where: { token: 'good-token' } });
+    });
+  });
+
+  describe('login', () => {
+    it('rejects an unknown email', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      await expect(service.login('nobody@example.com', 'password123')).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+    });
+
+    it('rejects a wrong password', async () => {
+      const passwordHash = await hashPassword('the-real-password');
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash, emailVerified: true });
+      await expect(service.login('user@example.com', 'wrong-password')).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+    });
+
+    it('rejects a correct password on an unconfirmed account', async () => {
+      const passwordHash = await hashPassword('the-real-password');
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash, emailVerified: false });
+      await expect(service.login('user@example.com', 'the-real-password')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+    });
+
+    it('creates a session for a verified user with the right password', async () => {
+      const passwordHash = await hashPassword('the-real-password');
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+        passwordHash,
+        emailVerified: true,
+      });
+      prisma.session.create.mockResolvedValue({ id: 'session-1', expiresAt: new Date() });
+
+      const result = await service.login('user@example.com', 'the-real-password');
+
+      expect(prisma.session.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ userId: 'user-1' }) }),
+      );
+      expect(result.user).toEqual({ id: 'user-1', email: 'user@example.com' });
+      expect(result.session.id).toBe('session-1');
+    });
+  });
+
+  describe('logout', () => {
+    it('deletes the session row', async () => {
+      await service.logout('session-1');
+      expect(prisma.session.deleteMany).toHaveBeenCalledWith({ where: { id: 'session-1' } });
+    });
+  });
+
+  describe('getUserBySession', () => {
+    it('returns null when the session does not exist', async () => {
+      prisma.session.findUnique.mockResolvedValue(null);
+      await expect(service.getUserBySession('nope')).resolves.toBeNull();
+    });
+
+    it('returns null when the session has expired', async () => {
+      prisma.session.findUnique.mockResolvedValue({
+        expiresAt: new Date(Date.now() - 1000),
+        user: { id: 'user-1', email: 'a@example.com' },
+      });
+      await expect(service.getUserBySession('expired')).resolves.toBeNull();
+    });
+
+    it('returns the user for a valid session', async () => {
+      prisma.session.findUnique.mockResolvedValue({
+        expiresAt: new Date(Date.now() + 1000),
+        user: { id: 'user-1', email: 'a@example.com' },
+      });
+      await expect(service.getUserBySession('valid')).resolves.toEqual({ id: 'user-1', email: 'a@example.com' });
+    });
+  });
+
+  describe('linkGithubAccount', () => {
+    function mockGithubExchange(profileId = 197103084) {
+      fetchMock.mockImplementation((url: string) => {
+        if (url.includes('/login/oauth/access_token')) {
+          return Promise.resolve({ json: () => Promise.resolve({ access_token: 'gho_token' }) });
+        }
+        if (url.includes('/api.github.com/user')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: profileId, login: 'octocat' }) });
+        }
+        throw new Error(`Unexpected fetch to ${url}`);
+      });
+    }
+
+    it('creates a new OAuthAccount when none exists for this GitHub id', async () => {
+      mockGithubExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue(null);
+
+      await service.linkGithubAccount('user-1', 'auth-code');
+
+      expect(prisma.oAuthAccount.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ provider: 'github', providerAccountId: '197103084', userId: 'user-1' }),
+        }),
+      );
+    });
+
+    it('refreshes the token when the same user re-links the same GitHub account', async () => {
+      mockGithubExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue({ id: 'oauth-1', userId: 'user-1' });
+
+      await service.linkGithubAccount('user-1', 'auth-code');
+
+      expect(prisma.oAuthAccount.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'oauth-1' } }),
+      );
+      expect(prisma.oAuthAccount.create).not.toHaveBeenCalled();
+    });
+
+    it('refuses to relink a GitHub account already owned by a different user', async () => {
+      mockGithubExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue({ id: 'oauth-1', userId: 'someone-else' });
+
+      await expect(service.linkGithubAccount('user-1', 'auth-code')).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.oAuthAccount.update).not.toHaveBeenCalled();
+      expect(prisma.oAuthAccount.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects when GitHub does not return an access token', async () => {
+      fetchMock.mockResolvedValue({ json: () => Promise.resolve({ error: 'bad_verification_code' }) });
+      await expect(service.linkGithubAccount('user-1', 'bad-code')).rejects.toThrow(/did not return an access token/);
+    });
+
+    it('rejects when the server has no TOKEN_ENCRYPTION_KEY configured', async () => {
+      config.get.mockImplementation((key: string) => (key === 'TOKEN_ENCRYPTION_KEY' ? undefined : 'set'));
+      await expect(service.linkGithubAccount('user-1', 'auth-code')).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+});
