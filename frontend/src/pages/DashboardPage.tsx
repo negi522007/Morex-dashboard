@@ -15,6 +15,8 @@ const POLL_INTERVAL_MS = 15_000
 interface User {
   id: string
   email: string
+  firstName: string | null
+  lastName: string | null
 }
 
 export function DashboardPage() {
@@ -103,7 +105,8 @@ export function DashboardPage() {
 
   if (!user || !about) return null
 
-  const initial = user.email.charAt(0).toUpperCase()
+  const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email
+  const initial = (user.firstName || user.email).charAt(0).toUpperCase()
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -119,7 +122,7 @@ export function DashboardPage() {
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                 {initial}
               </div>
-              <span className="text-sm font-medium text-gray-700">{user.email}</span>
+              <span className="text-sm font-medium text-gray-700">{displayName}</span>
             </div>
             <button
               onClick={handleLogout}
