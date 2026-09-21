@@ -13,6 +13,16 @@ the overall project (backend, Docker, architecture) see the [root README](./READ
 | GitHub account linking (button) | ✅ Done |
 | Per-widget custom rendering (pretty RSS/GitHub/market-data views) | ⏳ Not started — widgets currently render as generic key/value or list dumps |
 | Responsive / mobile layout | ⏳ Not tested |
+| Terms of Service / Privacy Policy acceptance at registration | ⏳ Not started — see "Planned, not yet built" below |
+| In-app / online documentation page | ⏳ Not started — see "Planned, not yet built" below |
+
+> **2026-09-21 note:** `RegisterPage.tsx` and the `User` shape in `DashboardPage.tsx` were edited directly
+> (not just documented) to add `firstName`/`lastName` fields and a "confirm password" field, backing the
+> matching backend change (`User.firstName`/`lastName`, optional, see `ARCHITECTURE.md`). This was a
+> one-off, explicitly requested exception — Exauce needed to test his own backend change end-to-end
+> without waiting on a frontend PR. It is **not** a standing arrangement: frontend code stays Morayo's,
+> and anything below in "Planned, not yet built" is written up for Morayo to implement, not something
+> that got built in the same way.
 
 ## Tech stack
 
@@ -148,6 +158,33 @@ back to its last-known-server position while the user is still moving it.
 `cachedData` generically — arrays become a truncated list, objects become key/value pairs, everything
 else gets stringified. Building a real per-service look (e.g. an actual RSS feed list, a GitHub commit
 timeline, a price chart) is a separate, not-yet-started piece of work.
+
+## Planned, not yet built
+
+Written up here as a spec for whoever picks it up (Morayo) — not implemented, on purpose (see the
+2026-09-21 note above).
+
+### Terms of Service / Privacy Policy acceptance at registration
+
+`RegisterPage.tsx` currently has no legal-consent step at all. Needed:
+- A required checkbox on the register form: "I agree to the [Terms of Service](/terms) and
+  [Privacy Policy](/privacy)" — submission blocked (button stays disabled, or client-side validation
+  error) until checked. No backend flag exists to record *that* consent was given or *when* — if that
+  needs to be provable later, it's a new `User` field/migration, not just a frontend checkbox.
+- Two new routes/pages, `/terms` and `/privacy`, each rendering actual legal content. That content
+  doesn't exist anywhere yet and isn't something to draft casually — get real Terms of
+  Service/Privacy Policy text (a template adapted to what this app actually does: what data is
+  collected — email, optional name, OAuth tokens — and why) before wiring the pages up for real, rather
+  than shipping placeholder legal text that reads as genuine.
+
+### In-app / online documentation page
+
+Right now the project's documentation (`README.md`, `API.md`, `ARCHITECTURE.md`, ...) only exists as
+markdown files in the repo — nothing links to any of it from the running app itself. Needed: reserve a
+route (e.g. `/docs`) that gives a signed-in (or even signed-out) visitor a way to reach documentation
+without going to GitHub — at minimum a link out to the repo's docs, ideally rendering the most
+user-relevant parts (what the app does, how to add a widget) directly. Exact scope/design still open;
+this is a placeholder for the route and the intent, not a finished spec.
 
 ## Known gaps / intentional simplifications
 

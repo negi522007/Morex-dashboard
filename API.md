@@ -63,12 +63,20 @@ disagree).
 
 Public. Body:
 ```json
-{ "email": "user@example.com", "password": "at least 8 characters" }
+{
+  "email": "user@example.com",
+  "password": "at least 8 characters",
+  "firstName": "Ada",
+  "lastName": "Lovelace"
+}
 ```
+`firstName`/`lastName` are optional — omit them entirely rather than send empty strings. There is no
+endpoint to set them later yet (no profile-edit route exists), so right now registration is the only
+chance to set them.
 
 | Status | When |
 |---|---|
-| `201` | Created. Body: `{ id, email }`. A confirmation email was sent — the account can't log in yet. |
+| `201` | Created. Body: `{ id, email, firstName, lastName }` (`firstName`/`lastName` are `null` if not provided). A confirmation email was sent — the account can't log in yet. |
 | `400` | Invalid email format, or password under 8 characters. |
 | `409` | An account with this email already exists. |
 | `503` | The confirmation email failed to send — the account was **not** created (safe to retry). |
@@ -92,7 +100,7 @@ Public. Body:
 
 | Status | When |
 |---|---|
-| `200` | Body: `{ id, email }`. `Set-Cookie: dashboard_session=...` attached. |
+| `200` | Body: `{ id, email, firstName, lastName }`. `Set-Cookie: dashboard_session=...` attached. |
 | `400` | Invalid email format, or missing password. |
 | `401` | Unknown email or wrong password (same message for both — doesn't reveal which). |
 | `403` | Correct credentials, but the email hasn't been confirmed yet. |
@@ -111,7 +119,7 @@ Public. Body:
 
 | Status | When |
 |---|---|
-| `200` | `{ id, email }` for the current user. |
+| `200` | `{ id, email, firstName, lastName }` for the current user (`firstName`/`lastName` are `null` if never set). |
 | `401` | No valid session. |
 
 ### `GET /auth/github`

@@ -66,14 +66,17 @@ The walkthrough below uses `curl` directly against the API — useful to underst
 independently of the UI. For the actual app, use the frontend at `http://localhost:5173` instead; it
 makes these exact same requests. Full endpoint reference: [API.md](./API.md).
 
-**1. Create an account and confirm it.**
+**1. Create an account and confirm it.** (`firstName`/`lastName` are optional — omit them if you don't
+care to set them.)
 ```bash
 curl -X POST http://localhost:8080/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","password":"a-real-password"}'
+  -d '{"email":"you@example.com","password":"a-real-password","firstName":"Ada","lastName":"Lovelace"}'
 ```
-Open `http://localhost:8025` (Mailhog's inbox, bundled — no real email needed in dev) and click the
-confirmation link, or grab the link's `token` and hit it directly:
+By default this lands in **Mailhog** (`http://localhost:8025`), not a real inbox — see
+[CONTRIBUTING.md](./CONTRIBUTING.md#sending-real-confirmation-emails-not-just-to-mailhog) to configure
+real delivery instead. Open Mailhog and click the confirmation link, or grab the link's `token` and hit
+it directly:
 ```bash
 curl "http://localhost:8080/auth/confirm?token=<paste-the-token-here>"
 ```

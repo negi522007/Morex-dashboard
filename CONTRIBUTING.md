@@ -99,8 +99,33 @@ See `.env.example` at the repo root for the full list with inline comments; the 
 | `SESSION_COOKIE_NAME` | Name of the session cookie | Has a default |
 | `COOKIE_SECURE` | `"true"` only once served over real HTTPS | Has a default (`false`) |
 | `TOKEN_ENCRYPTION_KEY` | 32-byte hex key (`openssl rand -hex 32`) for encrypting stored OAuth tokens/credentials | Always, once any auth-requiring service is used |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | Outgoing mail | Defaults point at the bundled Mailhog |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` | Outgoing mail | Defaults point at the bundled Mailhog — real delivery needs real values (see below) |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` / `GITHUB_OAUTH_CALLBACK_URL` | GitHub OAuth App credentials | Only for the GitHub linking flow |
+
+### Sending real confirmation emails (not just to Mailhog)
+
+`docker-compose.yml` does **not** force `SMTP_HOST`/`SMTP_PORT` — whatever is in your `.env` is what the
+server actually uses, so pointing it at a real provider works with no code changes. Fastest option if
+you already have a Gmail account, no third-party signup needed:
+
+1. Turn on 2-Step Verification: <https://myaccount.google.com/security>
+2. Generate an app password: <https://myaccount.google.com/apppasswords> (name it anything, e.g.
+   "Dashboard")
+3. Set in `.env`:
+   ```
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=you@gmail.com
+   SMTP_PASSWORD=<the 16-character app password, no spaces>
+   SMTP_FROM=you@gmail.com
+   ```
+4. Recreate the `server` container so it picks up the new `.env` (`docker compose up -d --force-recreate
+   server` — env vars are read at container start, not hot-reloaded).
+
+Outlook/other providers work the same way if they support app passwords for SMTP; the host/port just
+differ. We tried Brevo first — as of this writing their signup flow pushes new accounts toward a paid
+plan before showing (if it still exists) a free tier, so we went with Gmail instead. Worth re-checking if
+you'd rather use a dedicated transactional provider.
 
 Hit something unexpected? Check [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) first — several non-obvious
 issues below are already solved there.

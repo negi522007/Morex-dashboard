@@ -101,6 +101,8 @@ erDiagram
         string id PK
         string email UK
         string passwordHash "nullable"
+        string firstName "nullable"
+        string lastName "nullable"
         boolean emailVerified
     }
     Session {
@@ -141,7 +143,10 @@ erDiagram
 ```
 
 - **User** — platform account. `passwordHash` is nullable (an account can be created via OAuth only),
-  `emailVerified` blocks login until confirmation has happened.
+  `emailVerified` blocks login until confirmation has happened. `firstName`/`lastName` are optional,
+  settable only at registration for now (no profile-edit endpoint exists yet) — added on request after
+  the fact, not part of the original design; `register`/`login`/`getUserBySession` all funnel through a
+  shared `toPublicUser()` projection in `auth.service.ts` so the three stay in sync.
 - **Session** — a server-side session record; its `id` is the unguessable value stored in the login
   cookie. Deleting a row logs that session out immediately (see Authentication below).
 - **EmailVerificationToken** — time-limited token for signup email confirmation.
@@ -421,7 +426,7 @@ npm run test:cov  # with a coverage report
 - `AboutService` — the exact shape served at `/about.json`, including that `requiresAuth` and `fetchData`
   never leak into the public response.
 
-83 tests across 10 suites, all passing, as of this writing.
+84 tests across 10 suites, all passing, as of this writing.
 
 **What's deliberately NOT covered by these unit tests, and why:** controllers are left untested directly
 — they're thin delegators to the services above, so testing them would mostly re-test NestJS's own

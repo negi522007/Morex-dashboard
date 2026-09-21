@@ -63,13 +63,22 @@ TLS termination in `docker-compose.yml`. Fixed by gating `Secure` on `COOKIE_SEC
 var, default `false`) instead of `NODE_ENV`. `curl` will happily show you the `Set-Cookie` header
 regardless — a browser is a stricter test than `curl` here, worth checking both.
 
-## Registering an account "succeeds" (`201`) but the confirmation email never arrives / `550 Invalid syntax in MAIL command`
+## Registering an account "succeeds" (`201`) but no confirmation email shows up in my real inbox
+
+By default every email goes to **Mailhog** (`http://localhost:8025`), not a real mailbox — that's
+intentional (see `docker-compose.yml`'s comment on the `mailhog` service), so `docker-compose up` works
+without any real SMTP account. If you registered with your own real address expecting it in your actual
+inbox, check Mailhog first — the email is there. To get real delivery instead, configure a real SMTP
+provider in `.env` (see [CONTRIBUTING.md](./CONTRIBUTING.md#sending-real-confirmation-emails-not-just-to-mailhog))
+— and recreate the `server` container afterward, since env vars are only read at container start.
+
+## Registering "succeeds" (`201`) but the confirmation email fails with `550 Invalid syntax in MAIL command`
 
 Almost always a stale `backend/.env` (or root `.env`) — if `.env.example` gained new/changed variables
 (`SMTP_FROM`, `APP_URL`, ...) after your `.env` was first created with `cp`, your `.env` still has the
-old (often empty) values. `SMTP_FROM=` (empty) produces a malformed `MAIL FROM:` command that Mailhog
-rejects. Re-copy `.env.example` → `.env` (merging in any secrets you'd already set) whenever
-`.env.example` changes.
+old (often empty) values. `SMTP_FROM=` (empty) produces a malformed `MAIL FROM:` command that the SMTP
+server (Mailhog or a real one) rejects. Re-copy `.env.example` → `.env` (merging in any secrets you'd
+already set) whenever `.env.example` changes.
 
 ## GitHub OAuth: "Be careful! The `redirect_uri` is not associated with this application"
 
@@ -85,6 +94,20 @@ The OAuth scope requested at linking time (`read:user user:email`) deliberately 
 regardless of a linked account**; only public repos work. Verified directly: the team's own private
 Epitech repo 404s, `nestjs/nest` (public) works. This is expected behavior, not a bug — see
 `github.provider.ts`'s comment on the tradeoff if it needs revisiting later.
+
+## GitHub OAuth linking fails with `409 "This GitHub account is already linked to another user"`
+
+Not a bug — the whole point of the unique constraint on `(provider, providerAccountId)` (see
+`ARCHITECTURE.md`'s OAuth section). Your real GitHub identity can only be linked to **one** platform
+user at a time. Hit this while testing with multiple throwaway accounts? Find who currently holds it and
+either log in as that account instead, or free it up:
+```sql
+SELECT o."providerAccountId", u.email FROM "OAuthAccount" o
+  JOIN "User" u ON u.id = o."userId" WHERE o.provider = 'github';
+
+DELETE FROM "OAuthAccount" WHERE provider = 'github' AND "providerAccountId" = '<id from above>';
+```
+(via `docker compose exec db psql -U dashboard -d dashboard -c "..."` from the repo root.)
 
 ## Chrome DevTools console: "Don't paste code you don't understand" warning blocks a pasted `fetch(...)`
 
