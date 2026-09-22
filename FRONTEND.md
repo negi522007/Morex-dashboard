@@ -186,6 +186,24 @@ without going to GitHub — at minimum a link out to the repo's docs, ideally re
 user-relevant parts (what the app does, how to add a widget) directly. Exact scope/design still open;
 this is a placeholder for the route and the intent, not a finished spec.
 
+### GitHub repo picker (dropdown instead of free-text)
+
+Backend and contract are done — this is purely a `WidgetFormModal.tsx` rendering change. Every
+`WidgetParam` in `/about.json` can now carry an optional `optionsUrl` (see
+`service-provider.interface.ts`); GitHub's three widgets set it to `/services/github/repos` on their
+`repo` param. When a param has `optionsUrl` set:
+1. `GET` that URL (session cookie goes automatically, same as every other call) — response is
+   `{ value, label }[]` (see [API.md](./API.md#get-servicesgithubrepos)).
+2. Render a `<select>` populated from that array instead of the current free-text `<input>`, submitting
+   the chosen `value` as the config value exactly like today.
+3. Handle the 400 case (`{"message":"No linked GitHub account for this user..."}`) — probably fall back
+   to the current free-text input with that message shown, since the user may not have linked GitHub yet
+   (no UI currently shows link status either — see the gap below).
+
+This was worth building generically rather than as a GitHub-only special case: any future service
+(Steam's game list, Maps' cinema list) can reuse the exact same `optionsUrl` handling in
+`WidgetFormModal` with zero additional frontend work once its backend sets the field.
+
 ## Known gaps / intentional simplifications
 
 - No "resend confirmation email" flow — if a signup's token expires (24h) or the email never arrives,

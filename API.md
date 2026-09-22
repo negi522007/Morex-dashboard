@@ -220,8 +220,70 @@ Reconfigure *and* move share this one endpoint — send whichever of `config`, `
 
 ---
 
+## Services
+
+Service-specific endpoints that aren't widget data itself — currently just GitHub's repo picker.
+
+### `GET /services/github/repos`
+
+🔒 Session required. Backs the "repo" field's dropdown wherever a GitHub widget's `params` include
+`"optionsUrl": "/services/github/repos"` (see `about.json`) — fetch this, render a `<select>` from the
+`{ value, label }` array instead of a free-text input, and submit `value` as the `repo` config param.
+
+| Status | When |
+|---|---|
+| `200` | Array of `{ value, label }`, each `value` an `"owner/repo"` string. Up to 100 repos, most recently updated first — no pagination yet. |
+| `400` | No GitHub account linked for this user (connect one via `GET /auth/github` first), or GitHub rejected the request. |
+| `401` | No valid session. |
+| `503` | Server missing `TOKEN_ENCRYPTION_KEY`. |
+
+---
+
+## Admin
+
+🔒 Session required **and** the account must have `isAdmin: true` (see
+[ARCHITECTURE.md#admin-user-management](./ARCHITECTURE.md#admin-user-management) for how an account
+becomes an admin — there is no API for that). Every route here 403s for a non-admin, same as a missing
+session 401s.
+
+### `GET /admin/users`
+
+| Status | When |
+|---|---|
+| `200` | Array of every user: `{ id, email, firstName, lastName, emailVerified, isAdmin, isBanned, createdAt, widgetCount, linkedAccountsCount, sessionCount }`. Never includes `passwordHash`. |
+| `403` | Not an admin. |
+
+### `PATCH /admin/users/:id/ban`
+
+Blocks login and deletes every existing session for that user in the same transaction — effective
+immediately, not on next token expiry (there's no token to expire).
+
+| Status | When |
+|---|---|
+| `204` | Banned. |
+| `400` | Target is yourself, or another admin. |
+| `404` | User not found. |
+
+### `PATCH /admin/users/:id/unban`
+
+| Status | When |
+|---|---|
+| `204` | Unbanned — can log in again. |
+| `404` | User not found. |
+
+### `DELETE /admin/users/:id`
+
+Permanent — cascades to the user's sessions, widget instances, OAuth links, etc.
+
+| Status | When |
+|---|---|
+| `204` | Deleted. |
+| `400` | Target is yourself, or another admin. |
+| `404` | User not found. |
+
+---
+
 ## Not built yet
 
 - Weather, Steam, and Maps/Cinema services — once they exist, `/about.json` and the `serviceName` values
   usable in `/widgets` will include them automatically, no doc update needed on this side.
-- An admin/user-management module (the brief lists it as useful, not mandatory).

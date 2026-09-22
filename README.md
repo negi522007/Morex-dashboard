@@ -167,5 +167,8 @@ important, what isn't and why.
 - [x] Usage walkthrough, contributor guide, and troubleshooting doc
 - [x] Bootstrap the React app (`frontend/`): auth pages (login/register), protected dashboard route
 - [x] Widget dashboard UI: add/reconfigure/move/resize/delete, backed by the real API (see [FRONTEND.md](./FRONTEND.md))
+- [x] `AdminModule`: list/ban/unban/delete users — not required by the brief, built anyway
+- [x] GitHub repo picker: `GET /services/github/repos` + `WidgetParam.optionsUrl` contract
 - [ ] Services: Weather, Steam, Maps/Cinema
 - [ ] Per-widget custom rendering (currently a generic key/value dump — see frontend README's "Known gaps")
+- [ ] Frontend: repo picker dropdown (backend/contract done, see [FRONTEND.md](./FRONTEND.md)), Terms of Service/Privacy Policy acceptance, in-app docs page
