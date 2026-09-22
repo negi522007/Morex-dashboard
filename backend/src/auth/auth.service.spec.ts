@@ -80,6 +80,34 @@ describe('AuthService', () => {
       expect(result).toEqual({ id: 'user-1', email: 'new@example.com', firstName: 'Ada', lastName: 'Lovelace' });
     });
 
+    it('auto-promotes to admin when the email is in ADMIN_EMAILS, case-insensitively', async () => {
+      config.get.mockImplementation((key: string): string | undefined =>
+        key === 'ADMIN_EMAILS' ? 'boss@example.com, ADMIN@EXAMPLE.COM' : 'set',
+      );
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({ id: 'user-1', email: 'admin@example.com' });
+
+      await service.register('admin@example.com', 'password123');
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ isAdmin: true }) }),
+      );
+    });
+
+    it('does not promote an email that is not in ADMIN_EMAILS', async () => {
+      config.get.mockImplementation((key: string): string | undefined =>
+        key === 'ADMIN_EMAILS' ? 'boss@example.com' : 'set',
+      );
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({ id: 'user-1', email: 'nobody@example.com' });
+
+      await service.register('nobody@example.com', 'password123');
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ isAdmin: false }) }),
+      );
+    });
+
     it('deletes the user and surfaces a 503 if the confirmation email fails to send', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue({ id: 'user-1', email: 'new@example.com' });
@@ -134,6 +162,20 @@ describe('AuthService', () => {
       await expect(service.login('user@example.com', 'wrong-password')).rejects.toBeInstanceOf(
         UnauthorizedException,
       );
+    });
+
+    it('rejects a correct password on a banned account, even before checking email confirmation', async () => {
+      const passwordHash = await hashPassword('the-real-password');
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        passwordHash,
+        emailVerified: true,
+        isBanned: true,
+      });
+      await expect(service.login('user@example.com', 'the-real-password')).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(prisma.session.create).not.toHaveBeenCalled();
     });
 
     it('rejects a correct password on an unconfirmed account', async () => {

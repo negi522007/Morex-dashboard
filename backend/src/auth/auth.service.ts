@@ -32,10 +32,17 @@ export interface PublicUser {
   email: string;
   firstName: string | null;
   lastName: string | null;
+  isAdmin: boolean;
 }
 
-function toPublicUser(user: { id: string; email: string; firstName: string | null; lastName: string | null }): PublicUser {
-  return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName };
+function toPublicUser(user: {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  isAdmin: boolean;
+}): PublicUser {
+  return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, isAdmin: user.isAdmin };
 }
 
 @Injectable()
@@ -55,8 +62,18 @@ export class AuthService {
     }
 
     const passwordHash = await hashPassword(password);
+    const adminEmails = (this.config.get<string>('ADMIN_EMAILS') ?? '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
     const user = await this.prisma.user.create({
-      data: { email, passwordHash, firstName: firstName || null, lastName: lastName || null },
+      data: {
+        email,
+        passwordHash,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        isAdmin: adminEmails.includes(email.toLowerCase()),
+      },
     });
 
     const token = randomBytes(32).toString('hex');
@@ -97,6 +114,9 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+    if (user.isBanned) {
+      throw new ForbiddenException('This account has been suspended');
     }
     if (!user.emailVerified) {
       throw new ForbiddenException('Please confirm your email before logging in');
