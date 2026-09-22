@@ -48,11 +48,13 @@ async function githubGet(path: string, auth: ServiceAuthContext | undefined, wid
   return res.json();
 }
 
+const REPO_OPTIONS_URL = '/services/github/repos';
+
 const recentCommits: WidgetDefinition = {
   name: 'recent_commits',
   description: 'Display the most recent commit messages and authors for a repository',
   params: [
-    { name: 'repo', type: 'string', required: true },
+    { name: 'repo', type: 'string', required: true, optionsUrl: REPO_OPTIONS_URL },
     { name: 'number', type: 'integer' },
   ],
   async fetchData(config, auth) {
@@ -73,7 +75,7 @@ const openIssues: WidgetDefinition = {
   name: 'open_issues',
   description: 'Display the currently open issues for a repository',
   params: [
-    { name: 'repo', type: 'string', required: true },
+    { name: 'repo', type: 'string', required: true, optionsUrl: REPO_OPTIONS_URL },
     { name: 'number', type: 'integer' },
   ],
   async fetchData(config, auth) {
@@ -96,7 +98,7 @@ const openIssues: WidgetDefinition = {
 const repoStats: WidgetDefinition = {
   name: 'repo_stats',
   description: 'Display star, fork, and open issue counts for a repository',
-  params: [{ name: 'repo', type: 'string', required: true }],
+  params: [{ name: 'repo', type: 'string', required: true, optionsUrl: REPO_OPTIONS_URL }],
   async fetchData(config, auth) {
     const repo = parseRepo(config, 'repo_stats');
     const data = await githubGet(`/repos/${repo}`, auth, 'repo_stats');
@@ -109,9 +111,23 @@ const repoStats: WidgetDefinition = {
   },
 };
 
+export interface RepoOption {
+  value: string;
+  label: string;
+}
+
 @Injectable()
 export class GithubProvider implements ServiceProvider {
   name = 'github';
   requiresAuth = true;
   widgets: WidgetDefinition[] = [recentCommits, openIssues, repoStats];
+
+  // Backs GET /services/github/repos (github-repos.controller.ts) — feeds
+  // the repo picker on the "add widget" form. First 100 repos, most
+  // recently updated first; no pagination yet (matches "avoid designing for
+  // hypothetical needs" — revisit if someone with 100+ repos hits this).
+  async listRepos(auth: ServiceAuthContext): Promise<RepoOption[]> {
+    const repos = await githubGet('/user/repos?per_page=100&sort=updated', auth, 'list_repos');
+    return (repos as any[]).map((repo) => ({ value: repo.full_name, label: repo.full_name }));
+  }
 }
