@@ -143,10 +143,11 @@ erDiagram
 ```
 
 - **User** — platform account. `passwordHash` is nullable (an account can be created via OAuth only),
-  `emailVerified` blocks login until confirmation has happened. `firstName`/`lastName` are optional,
-  settable only at registration for now (no profile-edit endpoint exists yet) — added on request after
-  the fact, not part of the original design; `register`/`login`/`getUserBySession` all funnel through a
-  shared `toPublicUser()` projection in `auth.service.ts` so the three stay in sync.
+  `emailVerified` blocks login until confirmation has happened. `firstName`/`lastName` are **required**
+  at registration and editable afterward via `PATCH /auth/me` (self) or `PATCH /admin/users/:id`
+  (admin) — added on request after the fact, not part of the original design; `register`/`login`/
+  `getUserBySession` all funnel through a shared `toPublicUser()` projection in `auth.service.ts` so the
+  three stay in sync. `isAdmin`/`isBanned` — see [Admin](#admin-user-management) below.
 - **Session** — a server-side session record; its `id` is the unguessable value stored in the login
   cookie. Deleting a row logs that session out immediately (see Authentication below).
 - **EmailVerificationToken** — time-limited token for signup email confirmation.
@@ -174,6 +175,12 @@ on it having run first).
   "build everything mentioned" one: build the feature, don't gold-plate its edges.
 - **`GET /admin/users`** — every user, with `_count`-derived `widgetCount`/`linkedAccountsCount`/
   `sessionCount`, never `passwordHash`.
+- **`PATCH /admin/users/:id`** — edit a user's name and/or manually flip `emailVerified` (unblocks
+  someone whose confirmation email never arrived, without needing a "resend" flow to exist). Deliberately
+  **not** password (an admin silently setting someone's password is a bigger footgun than the convenience
+  is worth) and **not** `isAdmin`/`isBanned` (those already have their own guarded endpoints below — one
+  field, one code path, not two ways to flip the same bit). Mirrors the user's own `PATCH /auth/me`
+  (same file, same "no email change here" reasoning) but for an admin acting on someone else.
 - **`PATCH /admin/users/:id/ban`** — sets `isBanned` **and** deletes every `Session` row for that user in
   one transaction. This is the concrete payoff of choosing sessions over JWT
   ([see below](#why-sessions-instead-of-jwt)): verified directly — a user's active, working session dies
@@ -480,11 +487,15 @@ npm run test:cov  # with a coverage report
 - `GithubProvider.listRepos` — maps GitHub's response into `{ value, label }` options, and every widget's
   `repo` param actually points `optionsUrl` at the right endpoint.
 - `AdminGuard`/`AdminService` — non-admin and missing-user rejections, the self-ban/self-delete and
-  ban-another-admin/delete-another-admin guards, and that `ban` both flips `isBanned` and clears sessions.
+  ban-another-admin/delete-another-admin guards, `ban` both flipping `isBanned` and clearing sessions,
+  and `updateUser` never touching password/isAdmin/isBanned.
 - `AuthService.login`/`register` — a banned account is rejected at login (before the email-confirmation
   check), and `ADMIN_EMAILS` promotes matching (case-insensitive) emails at registration.
+- `AuthService.updateProfile` — empty-update and blank-name rejection, a wrong `currentPassword`
+  rejected, a short `newPassword` rejected, and a successful password change clearing every session
+  *except* the one making the request.
 
-104 tests across 12 suites, all passing, as of this writing.
+113 tests across 12 suites, all passing, as of this writing.
 
 **What's deliberately NOT covered by these unit tests, and why:** controllers are left untested directly
 — they're thin delegators to the services above, so testing them would mostly re-test NestJS's own

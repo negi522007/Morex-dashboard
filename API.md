@@ -70,14 +70,12 @@ Public. Body:
   "lastName": "Lovelace"
 }
 ```
-`firstName`/`lastName` are optional — omit them entirely rather than send empty strings. There is no
-endpoint to set them later yet (no profile-edit route exists), so right now registration is the only
-chance to set them.
+`firstName`/`lastName` are **required**. Editable later via `PATCH /auth/me` (see below).
 
 | Status | When |
 |---|---|
-| `201` | Created. Body: `{ id, email, firstName, lastName }` (`firstName`/`lastName` are `null` if not provided). A confirmation email was sent — the account can't log in yet. |
-| `400` | Invalid email format, or password under 8 characters. |
+| `201` | Created. Body: `{ id, email, firstName, lastName, isAdmin }`. A confirmation email was sent — the account can't log in yet. |
+| `400` | Invalid email format, password under 8 characters, or missing `firstName`/`lastName`. |
 | `409` | An account with this email already exists. |
 | `503` | The confirmation email failed to send — the account was **not** created (safe to retry). |
 
@@ -100,7 +98,7 @@ Public. Body:
 
 | Status | When |
 |---|---|
-| `200` | Body: `{ id, email, firstName, lastName }`. `Set-Cookie: dashboard_session=...` attached. |
+| `200` | Body: `{ id, email, firstName, lastName, isAdmin }`. `Set-Cookie: dashboard_session=...` attached. |
 | `400` | Invalid email format, or missing password. |
 | `401` | Unknown email or wrong password (same message for both — doesn't reveal which). |
 | `403` | Correct credentials, but the email hasn't been confirmed yet. |
@@ -119,8 +117,25 @@ Public. Body:
 
 | Status | When |
 |---|---|
-| `200` | `{ id, email, firstName, lastName }` for the current user (`firstName`/`lastName` are `null` if never set). |
+| `200` | `{ id, email, firstName, lastName, isAdmin }` for the current user. |
 | `401` | No valid session. |
+
+### `PATCH /auth/me`
+
+🔒 Session required. Update your own name and/or change your password — **not** email (would need its
+own re-verification flow, out of scope for now). Body: any of
+```json
+{ "firstName": "Ada", "lastName": "Lovelace", "currentPassword": "the-old-one", "newPassword": "at-least-8-chars" }
+```
+`currentPassword` is required (and checked) only when `newPassword` is present. A successful password
+change deletes every **other** session for this user — the one making the request stays logged in, every
+other one is logged out immediately.
+
+| Status | When |
+|---|---|
+| `200` | Updated user, same shape as `GET /auth/me`. |
+| `400` | Empty body, a blank name, or `newPassword` under 8 characters. |
+| `401` | `currentPassword` is wrong (only checked when changing password), or no valid session. |
 
 ### `GET /auth/github`
 
@@ -252,6 +267,21 @@ session 401s.
 |---|---|
 | `200` | Array of every user: `{ id, email, firstName, lastName, emailVerified, isAdmin, isBanned, createdAt, widgetCount, linkedAccountsCount, sessionCount }`. Never includes `passwordHash`. |
 | `403` | Not an admin. |
+
+### `PATCH /admin/users/:id`
+
+Edit a user's name and/or manually flip `emailVerified` — useful to unblock someone whose confirmation
+email never arrived. **Not** password, **not** `isAdmin`/`isBanned` (those have their own dedicated,
+guarded endpoints and aren't editable here on purpose). Body: any of
+```json
+{ "firstName": "Ada", "lastName": "Lovelace", "emailVerified": true }
+```
+
+| Status | When |
+|---|---|
+| `200` | Updated user, same shape as one row from `GET /admin/users` (minus the counts). |
+| `400` | Empty body, or a blank name. |
+| `404` | User not found. |
 
 ### `PATCH /admin/users/:id/ban`
 

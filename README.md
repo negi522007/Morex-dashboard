@@ -66,8 +66,8 @@ The walkthrough below uses `curl` directly against the API — useful to underst
 independently of the UI. For the actual app, use the frontend at `http://localhost:5173` instead; it
 makes these exact same requests. Full endpoint reference: [API.md](./API.md).
 
-**1. Create an account and confirm it.** (`firstName`/`lastName` are optional — omit them if you don't
-care to set them.)
+**1. Create an account and confirm it.** (`firstName`/`lastName` are required; editable later via
+`PATCH /auth/me`.)
 ```bash
 curl -X POST http://localhost:8080/auth/register \
   -H "Content-Type: application/json" \
@@ -167,7 +167,8 @@ important, what isn't and why.
 - [x] Usage walkthrough, contributor guide, and troubleshooting doc
 - [x] Bootstrap the React app (`frontend/`): auth pages (login/register), protected dashboard route
 - [x] Widget dashboard UI: add/reconfigure/move/resize/delete, backed by the real API (see [FRONTEND.md](./FRONTEND.md))
-- [x] `AdminModule`: list/ban/unban/delete users — not required by the brief, built anyway
+- [x] `AdminModule`: list/edit/ban/unban/delete users — not required by the brief, built anyway
+- [x] Profile editing: `PATCH /auth/me` (self: name, password) and `PATCH /admin/users/:id` (admin: name, emailVerified)
 - [x] GitHub repo picker: `GET /services/github/repos` + `WidgetParam.optionsUrl` contract
 - [ ] Services: Weather, Steam, Maps/Cinema
 - [ ] Per-widget custom rendering (currently a generic key/value dump — see frontend README's "Known gaps")

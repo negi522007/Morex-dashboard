@@ -15,14 +15,16 @@ the overall project (backend, Docker, architecture) see the [root README](./READ
 | Responsive / mobile layout | ⏳ Not tested |
 | Terms of Service / Privacy Policy acceptance at registration | ⏳ Not started — see "Planned, not yet built" below |
 | In-app / online documentation page | ⏳ Not started — see "Planned, not yet built" below |
+| Profile editing (settings page: name, password) | ⏳ Not started — backend done (`PATCH /auth/me`), no UI — see "Planned, not yet built" below |
 
-> **2026-09-21 note:** `RegisterPage.tsx` and the `User` shape in `DashboardPage.tsx` were edited directly
-> (not just documented) to add `firstName`/`lastName` fields and a "confirm password" field, backing the
-> matching backend change (`User.firstName`/`lastName`, optional, see `ARCHITECTURE.md`). This was a
-> one-off, explicitly requested exception — Exauce needed to test his own backend change end-to-end
-> without waiting on a frontend PR. It is **not** a standing arrangement: frontend code stays Morayo's,
-> and anything below in "Planned, not yet built" is written up for Morayo to implement, not something
-> that got built in the same way.
+> **2026-09-21/23 notes:** `RegisterPage.tsx` and the `User` shape in `DashboardPage.tsx` were edited
+> directly (not just documented) twice: first to add `firstName`/`lastName` (then optional) and a
+> "confirm password" field, then again on the 23rd when `firstName`/`lastName` became **required** —
+> `RegisterPage.tsx`'s inputs now have `required` and the request body always sends both, matching the
+> backend. Both were one-off, explicitly requested exceptions — Exauce needed to test his own backend
+> changes end-to-end without waiting on a frontend PR. Not a standing arrangement: frontend code stays
+> Morayo's, and anything below in "Planned, not yet built" is written up for Morayo to implement, not
+> something that got built the same way.
 
 ## Tech stack
 
@@ -203,6 +205,22 @@ Backend and contract are done — this is purely a `WidgetFormModal.tsx` renderi
 This was worth building generically rather than as a GitHub-only special case: any future service
 (Steam's game list, Maps' cinema list) can reuse the exact same `optionsUrl` handling in
 `WidgetFormModal` with zero additional frontend work once its backend sets the field.
+
+### Profile editing (settings page)
+
+No UI exists to change your own name or password after registration — the backend is ready
+(`PATCH /auth/me`, see [API.md](./API.md#patch-authme)), nothing on the frontend calls it. Needed: a
+settings page/modal (reachable from the header, next to the "Connected accounts" card is a reasonable
+spot) with:
+- Name fields pre-filled from `GET /auth/me`, submitted via `PATCH /auth/me` with just `{ firstName,
+  lastName }`.
+- A separate "change password" section: `currentPassword` + `newPassword` (+ a client-side "confirm new
+  password" match check, same pattern as `RegisterPage.tsx`'s existing confirm-password field) submitted
+  via the same endpoint. **After a successful password change, every other session is killed server-side
+  automatically** — nothing extra to do here, but worth a "you'll be logged out everywhere else" note in
+  the UI so it isn't a surprise.
+- Email is intentionally not editable anywhere — the backend doesn't support it (see `API.md`), don't add
+  a field for it.
 
 ## Known gaps / intentional simplifications
 
