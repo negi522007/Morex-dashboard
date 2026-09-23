@@ -343,6 +343,16 @@ export class AuthService {
     return toPublicUser(session.user);
   }
 
+  // Used only by GET /auth/me: the frontend has no other way to know
+  // whether the current user has a GitHub account linked (needed to show
+  // "Link" vs "Unlink" instead of always "Link"). Not folded into
+  // toPublicUser/PublicUser itself, since register/login/getUserBySession
+  // don't need the extra query this requires.
+  async hasLinkedGithub(userId: string): Promise<boolean> {
+    const account = await this.prisma.oAuthAccount.findFirst({ where: { userId, provider: 'github' } });
+    return account !== null;
+  }
+
   // Self-service profile edit. Email change is deliberately out of scope —
   // it needs its own re-verification flow (confirm the NEW address before
   // switching) to avoid an easy account-lockout/takeover footgun, which is

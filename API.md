@@ -117,8 +117,12 @@ Public. Body:
 
 | Status | When |
 |---|---|
-| `200` | `{ id, email, firstName, lastName, isAdmin }` for the current user. |
+| `200` | `{ id, email, firstName, lastName, isAdmin, githubLinked }` for the current user. |
 | `401` | No valid session. |
+
+`githubLinked` is the only way the frontend can know whether GitHub is connected — there's no other
+endpoint that exposes it. Use it to show "Link"/"Unlink" (and, once built, whether widget rate limits
+apply) instead of guessing from whether a widget happens to work.
 
 ### `PATCH /auth/me`
 

@@ -108,10 +108,11 @@ export class AuthController {
   @UseGuards(SessionGuard)
   @ApiCookieAuth('dashboard_session')
   @ApiOperation({ summary: 'Get the currently logged-in user — useful to check auth state on app load' })
-  @ApiResponse({ status: 200, description: 'The current user' })
+  @ApiResponse({ status: 200, description: 'The current user, plus whether GitHub is linked' })
   @ApiResponse({ status: 401, description: 'No valid session' })
-  me(@CurrentUser() user: { id: string; email: string; firstName: string | null; lastName: string | null }) {
-    return user;
+  async me(@CurrentUser() user: { id: string; email: string; firstName: string | null; lastName: string | null }) {
+    const githubLinked = await this.authService.hasLinkedGithub(user.id);
+    return { ...user, githubLinked };
   }
 
   @Patch('me')

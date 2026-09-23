@@ -236,6 +236,21 @@ describe('AuthService', () => {
     });
   });
 
+  describe('hasLinkedGithub', () => {
+    it('returns true when an OAuthAccount exists for this user', async () => {
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1' });
+      await expect(service.hasLinkedGithub('user-1')).resolves.toBe(true);
+      expect(prisma.oAuthAccount.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'user-1', provider: 'github' },
+      });
+    });
+
+    it('returns false when none exists', async () => {
+      prisma.oAuthAccount.findFirst.mockResolvedValue(null);
+      await expect(service.hasLinkedGithub('user-1')).resolves.toBe(false);
+    });
+  });
+
   describe('linkGithubAccount', () => {
     function mockGithubExchange(profileId = 197103084) {
       fetchMock.mockImplementation((url: string) => {
