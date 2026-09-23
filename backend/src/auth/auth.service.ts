@@ -22,6 +22,13 @@ interface GithubTokenResponse {
 interface GithubProfile {
   id: number;
   login: string;
+  name: string | null;
+}
+
+interface GithubEmail {
+  email: string;
+  primary: boolean;
+  verified: boolean;
 }
 
 const EMAIL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
@@ -133,19 +140,14 @@ export class AuthService {
     await this.prisma.session.deleteMany({ where: { id: sessionId } });
   }
 
-  // Links a GitHub account to an ALREADY authenticated user (userId comes
-  // from the session, never from anything GitHub returns) — this is
-  // authorization for the widget, not an alternate login path. The unique
-  // constraint on (provider, providerAccountId) is what stops one GitHub
-  // account from being linked to two different platform users; we check it
-  // explicitly rather than upserting, so a re-link attempt by a different
-  // user fails loudly instead of silently reassigning ownership.
-  async linkGithubAccount(userId: string, code: string): Promise<void> {
+  // Shared by both GitHub flows (link and login): exchange the OAuth `code`
+  // for an access token, then fetch the profile it belongs to. Throws
+  // BadRequestException on any failure — both callers want that.
+  private async exchangeGithubCode(code: string): Promise<{ accessToken: string; profile: GithubProfile }> {
     const clientId = this.config.get<string>('GITHUB_CLIENT_ID');
     const clientSecret = this.config.get<string>('GITHUB_CLIENT_SECRET');
     const redirectUri = this.config.get<string>('GITHUB_OAUTH_CALLBACK_URL');
-    const encryptionKey = this.config.get<string>('TOKEN_ENCRYPTION_KEY');
-    if (!clientId || !clientSecret || !redirectUri || !encryptionKey) {
+    if (!clientId || !clientSecret || !redirectUri) {
       throw new ServiceUnavailableException('GitHub OAuth is not configured on the server');
     }
 
@@ -173,8 +175,39 @@ export class AuthService {
       throw new BadRequestException('Could not fetch the GitHub profile for this token');
     }
     const profile = (await profileRes.json()) as GithubProfile;
+    return { accessToken: tokenData.access_token, profile };
+  }
+
+  // GitHub only returns `email` on the profile itself when the user has made
+  // it public. `user:email` (already in our scope) grants the dedicated
+  // /user/emails endpoint instead, which is the only reliable way to get a
+  // verified address — and "verified" matters here: we're about to trust
+  // this email enough to log someone into an existing account.
+  private async fetchVerifiedGithubEmail(accessToken: string): Promise<string | null> {
+    const res = await fetch('https://api.github.com/user/emails', {
+      headers: { Authorization: `Bearer ${accessToken}`, 'User-Agent': 'dashboard-app' },
+    });
+    if (!res.ok) return null;
+    const emails = (await res.json()) as GithubEmail[];
+    const verified = emails.filter((e) => e.verified);
+    return (verified.find((e) => e.primary) ?? verified[0])?.email ?? null;
+  }
+
+  // Links a GitHub account to an ALREADY authenticated user (userId comes
+  // from the session, never from anything GitHub returns) — this is
+  // authorization for the widget, not an alternate login path. The unique
+  // constraint on (provider, providerAccountId) is what stops one GitHub
+  // account from being linked to two different platform users; we check it
+  // explicitly rather than upserting, so a re-link attempt by a different
+  // user fails loudly instead of silently reassigning ownership.
+  async linkGithubAccount(userId: string, code: string): Promise<void> {
+    const encryptionKey = this.config.get<string>('TOKEN_ENCRYPTION_KEY');
+    if (!encryptionKey) {
+      throw new ServiceUnavailableException('GitHub OAuth is not configured on the server');
+    }
+    const { accessToken, profile } = await this.exchangeGithubCode(code);
     const providerAccountId = String(profile.id);
-    const accessTokenEncrypted = encryptToken(tokenData.access_token, encryptionKey);
+    const accessTokenEncrypted = encryptToken(accessToken, encryptionKey);
 
     const existing = await this.prisma.oAuthAccount.findUnique({
       where: { provider_providerAccountId: { provider: 'github', providerAccountId } },
@@ -194,6 +227,80 @@ export class AuthService {
         data: { provider: 'github', providerAccountId, userId, accessTokenEncrypted },
       });
     }
+  }
+
+  // "Sign in with GitHub": unlike linkGithubAccount, this needs no existing
+  // session — it establishes one. Three cases, in order:
+  //  1. This GitHub account is already linked to a platform user -> log
+  //     them in.
+  //  2. It isn't, but its verified email matches an existing local account
+  //     -> link it to that account and log them in (never create a second
+  //     User for the same real person).
+  //  3. Neither -> register a brand new account. emailVerified is set to
+  //     true immediately: GitHub already verified this address, so making
+  //     the user click a second confirmation link would just be friction
+  //     with no added trust.
+  async loginWithGithub(code: string): Promise<{ session: { id: string; expiresAt: Date }; user: PublicUser }> {
+    const encryptionKey = this.config.get<string>('TOKEN_ENCRYPTION_KEY');
+    if (!encryptionKey) {
+      throw new ServiceUnavailableException('GitHub OAuth is not configured on the server');
+    }
+    const { accessToken, profile } = await this.exchangeGithubCode(code);
+    const providerAccountId = String(profile.id);
+    const accessTokenEncrypted = encryptToken(accessToken, encryptionKey);
+
+    const existingAccount = await this.prisma.oAuthAccount.findUnique({
+      where: { provider_providerAccountId: { provider: 'github', providerAccountId } },
+      include: { user: true },
+    });
+
+    let user;
+    if (existingAccount) {
+      user = existingAccount.user;
+      await this.prisma.oAuthAccount.update({
+        where: { id: existingAccount.id },
+        data: { accessTokenEncrypted },
+      });
+    } else {
+      const verifiedEmail = await this.fetchVerifiedGithubEmail(accessToken);
+      if (!verifiedEmail) {
+        throw new BadRequestException('Your GitHub account has no verified email address to sign in with');
+      }
+
+      const existingUser = await this.prisma.user.findUnique({ where: { email: verifiedEmail } });
+      if (existingUser) {
+        user = existingUser;
+      } else {
+        const nameParts = (profile.name ?? profile.login).trim().split(/\s+/).filter(Boolean);
+        const adminEmails = (this.config.get<string>('ADMIN_EMAILS') ?? '')
+          .split(',')
+          .map((e) => e.trim().toLowerCase())
+          .filter(Boolean);
+        user = await this.prisma.user.create({
+          data: {
+            email: verifiedEmail,
+            firstName: nameParts[0] ?? profile.login,
+            lastName: nameParts.slice(1).join(' ') || profile.login,
+            emailVerified: true,
+            isAdmin: adminEmails.includes(verifiedEmail.toLowerCase()),
+          },
+        });
+      }
+
+      await this.prisma.oAuthAccount.create({
+        data: { provider: 'github', providerAccountId, userId: user.id, accessTokenEncrypted },
+      });
+    }
+
+    if (user.isBanned) {
+      throw new ForbiddenException('This account has been suspended');
+    }
+
+    const session = await this.prisma.session.create({
+      data: { userId: user.id, expiresAt: new Date(Date.now() + SESSION_TTL_MS) },
+    });
+
+    return { session, user: toPublicUser(user) };
   }
 
   async getUserBySession(sessionId: string) {

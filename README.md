@@ -131,7 +131,7 @@ curl -b cookies.txt -X POST http://localhost:8080/auth/logout
 
 - **Backend**: Node.js / NestJS + Prisma + PostgreSQL
 - **Frontend**: React + Tailwind + react-grid-layout
-- **Auth**: server-side sessions, DB-backed (local credentials + email confirmation on signup) + OAuth 2.0 (GitHub, for widget authorization/linking)
+- **Auth**: server-side sessions, DB-backed — local credentials (email confirmation on signup) or "Sign in with GitHub" (OAuth 2.0, auto-registers on first use); an already-local account can also just *link* GitHub afterwards for widget authorization without changing how it logs in
 - **Refresh**: in-process scheduler (`@nestjs/schedule`), no external job queue
 
 For the technical architecture, the `ServiceProvider` contract, the data model, diagrams, the testing
@@ -157,7 +157,7 @@ important, what isn't and why.
 ## TODO
 
 - [x] Bootstrap the NestJS app (`backend/`), Prisma, and a working `/about.json`
-- [x] `AuthModule`: signup, email confirmation, session login/logout, GitHub OAuth linking
+- [x] `AuthModule`: signup, email confirmation, session login/logout, GitHub OAuth linking, "Sign in with GitHub"
 - [x] `TimerModule`: refresh scheduler
 - [x] `WidgetsModule`: add/reconfigure/move/delete widget instances
 - [x] Services: RSS, Market data, GitHub

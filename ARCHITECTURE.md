@@ -317,9 +317,14 @@ Two distinct mechanisms, as required by the brief:
   `Secure` cookies over plain HTTP and docker-compose has no TLS termination today). Every request looks
   the session up server-side; nothing is trusted purely on the client's say-so.
 - **Authorization**: OAuth 2.0 (GitHub for now) to let a widget access a third-party API on the user's
-  behalf. A user already registered locally must be able to *link* their GitHub account afterwards (not
-  only log in via GitHub); on an OAuth login whose email matches an existing account, link to that
-  existing account rather than creating a new one.
+  behalf. A user already registered locally can *link* their GitHub account afterwards (`GET
+  /auth/github`) without it changing how they log in.
+- **GitHub is also a full alternative *authentication* method** (`GET /auth/github/login`), on top of —
+  not instead of — local email/password: an existing account gets logged in directly, a GitHub email that
+  matches an existing local account gets linked and logged in (never a second `User` for the same
+  person), and anyone new gets a fresh, already-verified account. Both flows share one GitHub OAuth App
+  and one registered callback URL; the callback tells them apart by which CSRF state cookie is present,
+  not by anything in the URL a user could tamper with.
 
 ### Registration & email confirmation
 
@@ -430,6 +435,59 @@ sequenceDiagram
     end
 ```
 
+### "Sign in with GitHub" (login, not linking)
+
+```mermaid
+sequenceDiagram
+    actor U as User (not logged in)
+    participant C as Client (browser)
+    participant G as GithubOAuthController
+    participant GH as github.com
+    participant S as AuthService
+    participant DB as Postgres
+
+    U->>C: click "Sign in with GitHub"
+    C->>G: GET /auth/github/login (no session cookie needed)
+    G->>G: generate random state, Set-Cookie github_oauth_login_state
+    G-->>C: 302 redirect to github.com/login/oauth/authorize
+    C->>GH: follow redirect
+    U->>GH: log in + approve
+    GH-->>C: 302 redirect to /auth/github/callback?code=...&state=...
+    C->>G: GET /auth/github/callback (login-state cookie sent, no session cookie)
+    G->>G: login-state cookie present -> this is the login flow
+    G->>S: loginWithGithub(code)
+    S->>GH: POST /login/oauth/access_token
+    GH-->>S: access_token
+    S->>GH: GET /user (Bearer token)
+    GH-->>S: profile {id, login, name}
+    S->>DB: findUnique OAuthAccount(provider, providerAccountId)
+    alt already linked
+        DB-->>S: existing user
+    else not linked yet
+        S->>GH: GET /user/emails (Bearer token)
+        GH-->>S: emails[] with verified flags
+        alt no verified email
+            S-->>G: 400 Bad Request
+        else verified email found
+            S->>DB: findUnique User(email)
+            alt matching local account exists
+                DB-->>S: existing user
+            else no match
+                S->>DB: create User (emailVerified=true, no password)
+            end
+            S->>DB: create OAuthAccount
+        end
+    end
+    alt user is banned
+        S-->>G: 403 Forbidden
+        G-->>C: 302 redirect to FRONTEND_URL/login?error=...
+    else ok
+        S->>DB: create Session
+        S-->>G: {session, user}
+        G-->>C: 302 redirect to FRONTEND_URL/dashboard + Set-Cookie dashboard_session=...
+    end
+```
+
 ### Why sessions instead of JWT
 
 JWT was the default in the original proposal, carried over by convention rather than evaluated against
@@ -474,7 +532,10 @@ npm run test:cov  # with a coverage report
   `ServiceFetchError` rather than a raw exception.
 - `AuthService` — register (incl. the rollback when the confirmation email fails to send), confirmEmail,
   login, logout, `linkGithubAccount` (new link, re-link by the same user, conflict when another user
-  already owns that GitHub identity, GitHub error responses).
+  already owns that GitHub identity, GitHub error responses), `loginWithGithub` (direct login when already
+  linked, linking-by-verified-email onto an existing local account without duplicating it, registering a
+  brand-new already-verified account, the no-verified-email rejection, and a banned user being rejected
+  even with a valid linked GitHub account).
 - `SessionGuard` — missing cookie, stale/unknown session, valid session attaching `req.user`.
 - `WidgetsService` — config validation against a widget's declared `params`, the `requiresAuth` precheck,
   and ownership scoping on update/remove (a widget instance belonging to another user 404s).
@@ -495,7 +556,7 @@ npm run test:cov  # with a coverage report
   rejected, a short `newPassword` rejected, and a successful password change clearing every session
   *except* the one making the request.
 
-113 tests across 12 suites, all passing, as of this writing.
+119 tests across 12 suites, all passing, as of this writing.
 
 **What's deliberately NOT covered by these unit tests, and why:** controllers are left untested directly
 — they're thin delegators to the services above, so testing them would mostly re-test NestJS's own

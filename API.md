@@ -149,16 +149,43 @@ to GitHub's consent screen.
 | `400` | GitHub OAuth isn't configured on the server (missing env vars). |
 | `401` | No valid session. |
 
-### `GET /auth/github/callback`
+### `GET /auth/github/login`
 
-🔒 Session required. GitHub redirects here after consent — the frontend never calls this directly.
-Plain-text response.
+No session required — this is **"Sign in with GitHub"**, a real alternative to `POST /auth/login`, not
+just account linking. Navigate the browser here directly (a normal `<a href>`, not `fetch`); it
+302-redirects to GitHub's consent screen with a separate CSRF state cookie from the link flow above (both
+share the one registered OAuth callback URL, told apart by which cookie GitHub's redirect carries back).
 
 | Status | When |
 |---|---|
-| `200` | `"GitHub account linked. You can close this tab."` |
-| `400` | Missing/mismatched CSRF state, or GitHub rejected the code. |
-| `409` | This GitHub account is already linked to a *different* platform user. |
+| `302` | Redirect to GitHub. |
+| `400` | GitHub OAuth isn't configured on the server (missing env vars). |
+
+What happens once GitHub redirects back, in order:
+1. **This GitHub account is already linked to a platform user** → log them in.
+2. **It isn't, but GitHub reports a verified email matching an existing local account** → link this
+   GitHub account to that one and log them in (never a second `User` for the same person).
+3. **Neither** → register a brand-new account from the GitHub profile (`name` split into
+   first/last, falling back to the GitHub username if there's no display name) with `emailVerified: true`
+   right away — GitHub already verified that address, so a second confirmation email would be pure
+   friction. No password is set; this account can only ever sign in via GitHub unless its owner sets one
+   through a password-reset flow (not built — see `PROJECT_LOG.md`'s "what's left").
+
+If GitHub reports **no verified email at all**, or the resulting account is banned, the flow fails — see
+the callback below.
+
+### `GET /auth/github/callback`
+
+GitHub redirects here after consent for **both** flows above — the frontend never calls this directly.
+Behavior depends on which flow started it:
+
+| Status | When |
+|---|---|
+| `200` | Link flow: `"GitHub account linked. You can close this tab."` (plain text). |
+| `302` | Login flow, success: redirects to `<FRONTEND_URL>/dashboard`, session cookie set. |
+| `302` | Login flow, failure (no verified email, or the account is banned): redirects to `<FRONTEND_URL>/login?error=<message>`. |
+| `400` | Missing/mismatched CSRF state (either flow), or GitHub rejected the code. |
+| `409` | Link flow only: this GitHub account is already linked to a *different* platform user. |
 
 ---
 

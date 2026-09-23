@@ -5,32 +5,106 @@ import { randomBytes } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { SessionGuard } from './session.guard';
-import { CurrentUser } from './current-user.decorator';
+import { setSessionCookie } from '../common/session-cookie.util';
 
-const STATE_COOKIE = 'github_oauth_state';
+// Two different flows share one GitHub OAuth App (and therefore one
+// registered callback URL), so they're told apart by which state cookie is
+// present when GitHub redirects back — never by a route param, which the
+// user could tamper with. Both cookies are scoped to /auth/github so they
+// still reach /auth/github/callback, a sibling path.
+const LINK_STATE_COOKIE = 'github_oauth_state';
+const LOGIN_STATE_COOKIE = 'github_oauth_login_state';
+const STATE_COOKIE_PATH = '/auth/github';
 const STATE_TTL_MS = 10 * 60 * 1000;
 
 @ApiTags('auth')
-@ApiCookieAuth('dashboard_session')
 @Controller('auth/github')
-@UseGuards(SessionGuard)
 export class GithubOAuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly config: ConfigService,
   ) {}
 
-  // Linking, not login: this route requires an existing session (see class
-  // decorator) — GitHub OAuth here is authorization for widgets, not an
-  // alternate way to authenticate.
+  // Linking, not login: this route requires an existing session — GitHub
+  // OAuth here is authorization for widgets, added on top of an account
+  // that already exists. For "Sign in with GitHub" itself, see /login below.
   @Get()
+  @UseGuards(SessionGuard)
+  @ApiCookieAuth('dashboard_session')
   @ApiOperation({
     summary: 'Start the GitHub OAuth linking flow. Navigate the browser here directly — do not fetch() it.',
   })
   @ApiResponse({ status: 302, description: 'Redirect to GitHub login/consent' })
   @ApiResponse({ status: 400, description: 'GitHub OAuth is not configured on the server' })
   @ApiResponse({ status: 401, description: 'No valid session' })
-  start(@Res() res: Response) {
+  startLink(@Res() res: Response) {
+    this.redirectToGithub(res, LINK_STATE_COOKIE);
+  }
+
+  // "Sign in with GitHub": no session required — this flow can create one.
+  // Safe to point a plain <a href> at directly (real top-level navigation,
+  // same reasoning as the link flow: GitHub's consent screen can't be
+  // reached via fetch()).
+  @Get('login')
+  @ApiOperation({
+    summary:
+      'Start "Sign in with GitHub". Creates an account automatically (or links to a matching-email account) if none exists yet.',
+  })
+  @ApiResponse({ status: 302, description: 'Redirect to GitHub login/consent' })
+  @ApiResponse({ status: 400, description: 'GitHub OAuth is not configured on the server' })
+  startLogin(@Res() res: Response) {
+    this.redirectToGithub(res, LOGIN_STATE_COOKIE);
+  }
+
+  @Get('callback')
+  @ApiOperation({ summary: "GitHub's redirect target after consent — the frontend never calls this directly" })
+  @ApiResponse({ status: 200, description: 'Link flow: account linked, plain text response' })
+  @ApiResponse({ status: 302, description: 'Login flow: session cookie set, redirected back to the frontend' })
+  @ApiResponse({ status: 400, description: 'Invalid/expired CSRF state, or GitHub rejected the code' })
+  @ApiResponse({ status: 409, description: 'Link flow: this GitHub account is already linked to a different user' })
+  async callback(@Query('code') code: string, @Query('state') state: string, @Req() req: Request, @Res() res: Response) {
+    const linkStateCookie = req.cookies?.[LINK_STATE_COOKIE];
+    const loginStateCookie = req.cookies?.[LOGIN_STATE_COOKIE];
+    res.clearCookie(LINK_STATE_COOKIE, { path: STATE_COOKIE_PATH });
+    res.clearCookie(LOGIN_STATE_COOKIE, { path: STATE_COOKIE_PATH });
+
+    if (!code || !state) {
+      throw new BadRequestException('Missing code or state');
+    }
+
+    if (linkStateCookie) {
+      if (state !== linkStateCookie) {
+        throw new BadRequestException('Invalid or expired OAuth state');
+      }
+      const sessionCookieName = this.config.get<string>('SESSION_COOKIE_NAME') ?? 'dashboard_session';
+      const sessionId = req.cookies?.[sessionCookieName];
+      const user = sessionId ? await this.authService.getUserBySession(sessionId) : null;
+      if (!user) {
+        throw new BadRequestException('Your session expired before GitHub redirected back — log in and try again');
+      }
+      await this.authService.linkGithubAccount(user.id, code);
+      return res.status(200).send('GitHub account linked. You can close this tab.');
+    }
+
+    if (loginStateCookie) {
+      if (state !== loginStateCookie) {
+        throw new BadRequestException('Invalid or expired OAuth state');
+      }
+      const frontendUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+      try {
+        const { session } = await this.authService.loginWithGithub(code);
+        setSessionCookie(res, this.config, session.id, session.expiresAt);
+        return res.redirect(`${frontendUrl}/dashboard`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'GitHub sign-in failed';
+        return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(message)}`);
+      }
+    }
+
+    throw new BadRequestException('Invalid or expired OAuth state');
+  }
+
+  private redirectToGithub(res: Response, stateCookieName: string) {
     const clientId = this.config.get<string>('GITHUB_CLIENT_ID');
     const redirectUri = this.config.get<string>('GITHUB_OAUTH_CALLBACK_URL');
     if (!clientId || !redirectUri) {
@@ -38,12 +112,12 @@ export class GithubOAuthController {
     }
 
     const state = randomBytes(16).toString('hex');
-    res.cookie(STATE_COOKIE, state, {
+    res.cookie(stateCookieName, state, {
       httpOnly: true,
       sameSite: 'lax',
       secure: this.config.get<string>('COOKIE_SECURE') === 'true',
       maxAge: STATE_TTL_MS,
-      path: '/auth/github',
+      path: STATE_COOKIE_PATH,
     });
 
     const params = new URLSearchParams({
@@ -53,28 +127,5 @@ export class GithubOAuthController {
       state,
     });
     res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
-  }
-
-  @Get('callback')
-  @ApiOperation({ summary: "GitHub's redirect target after consent — the frontend never calls this directly" })
-  @ApiResponse({ status: 200, description: 'GitHub account linked, plain text response' })
-  @ApiResponse({ status: 400, description: 'Invalid/expired CSRF state, or GitHub rejected the code' })
-  @ApiResponse({ status: 409, description: 'This GitHub account is already linked to a different user' })
-  async callback(
-    @Query('code') code: string,
-    @Query('state') state: string,
-    @Req() req: Request,
-    @CurrentUser() user: { id: string; email: string },
-    @Res() res: Response,
-  ) {
-    const cookieState = req.cookies?.[STATE_COOKIE];
-    res.clearCookie(STATE_COOKIE, { path: '/auth/github' });
-
-    if (!code || !state || !cookieState || state !== cookieState) {
-      throw new BadRequestException('Invalid or expired OAuth state');
-    }
-
-    await this.authService.linkGithubAccount(user.id, code);
-    res.status(200).send('GitHub account linked. You can close this tab.');
   }
 }

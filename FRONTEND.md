@@ -9,6 +9,7 @@ the overall project (backend, Docker, architecture) see the [root README](./READ
 | Area | Status |
 |---|---|
 | Auth (register, login, logout, session check) | ✅ Done |
+| "Sign in with GitHub" (LoginPage) | ✅ Done |
 | Widget dashboard (add / reconfigure / move / resize / delete) | ✅ Done |
 | GitHub account linking (button) | ✅ Done |
 | Per-widget custom rendering (pretty RSS/GitHub/market-data views) | ⏳ Not started — widgets currently render as generic key/value or list dumps |
@@ -25,6 +26,14 @@ the overall project (backend, Docker, architecture) see the [root README](./READ
 > changes end-to-end without waiting on a frontend PR. Not a standing arrangement: frontend code stays
 > Morayo's, and anything below in "Planned, not yet built" is written up for Morayo to implement, not
 > something that got built the same way.
+>
+> **2026-09-23:** `LoginPage.tsx` got a third one-off exception, same reasoning: a "Continue with GitHub"
+> link (`<a href="/auth/github/login">`, a real top-level navigation, not a `fetch()` — same reasoning as
+> the existing GitHub-linking button) so the new `GET /auth/github/login` backend route (see
+> [API.md](./API.md#get-authgithublogin)) could actually be tested end-to-end. It also reads an `?error=`
+> query param (set by the backend's callback on a failed GitHub sign-in) into the same error banner the
+> form already had. Feel free to reshape/restyle this — the requirement is just that it keeps being a
+> real `<a href>` to that exact path.
 
 ## Tech stack
 
