@@ -12,7 +12,16 @@ model User {
   id            String   @id @default(uuid())
   email         String   @unique
   passwordHash  String?
+  firstName     String?
+  lastName      String?
   emailVerified Boolean  @default(false)
+  // Set only via ADMIN_EMAILS at registration time, or a direct DB edit —
+  // there is deliberately no API endpoint to promote a user to admin
+  // (privilege-escalation surface not worth the convenience).
+  isAdmin       Boolean  @default(false)
+  // Blocks login and kills every existing Session row the moment it's set
+  // (see AdminService.ban) — instant, unlike a JWT-based approach would be.
+  isBanned      Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

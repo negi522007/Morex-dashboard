@@ -4,6 +4,12 @@ export interface WidgetParam {
   name: string;
   type: WidgetParamType;
   required?: boolean;
+  // If set, the frontend should GET this path (session-authenticated, same
+  // origin) to fetch [{ value, label }] choices and render a dropdown
+  // instead of a free-text input — e.g. GitHub's "repo" param points here
+  // at /services/github/repos. Absent means "plain text/number input",
+  // same as before this field existed.
+  optionsUrl?: string;
 }
 
 export interface ServiceAuthContext {

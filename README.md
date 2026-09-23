@@ -66,14 +66,17 @@ The walkthrough below uses `curl` directly against the API — useful to underst
 independently of the UI. For the actual app, use the frontend at `http://localhost:5173` instead; it
 makes these exact same requests. Full endpoint reference: [API.md](./API.md).
 
-**1. Create an account and confirm it.**
+**1. Create an account and confirm it.** (`firstName`/`lastName` are required; editable later via
+`PATCH /auth/me`.)
 ```bash
 curl -X POST http://localhost:8080/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","password":"a-real-password"}'
+  -d '{"email":"you@example.com","password":"a-real-password","firstName":"Ada","lastName":"Lovelace"}'
 ```
-Open `http://localhost:8025` (Mailhog's inbox, bundled — no real email needed in dev) and click the
-confirmation link, or grab the link's `token` and hit it directly:
+By default this lands in **Mailhog** (`http://localhost:8025`), not a real inbox — see
+[CONTRIBUTING.md](./CONTRIBUTING.md#sending-real-confirmation-emails-not-just-to-mailhog) to configure
+real delivery instead. Open Mailhog and click the confirmation link, or grab the link's `token` and hit
+it directly:
 ```bash
 curl "http://localhost:8080/auth/confirm?token=<paste-the-token-here>"
 ```
@@ -128,7 +131,7 @@ curl -b cookies.txt -X POST http://localhost:8080/auth/logout
 
 - **Backend**: Node.js / NestJS + Prisma + PostgreSQL
 - **Frontend**: React + Tailwind + react-grid-layout
-- **Auth**: server-side sessions, DB-backed (local credentials + email confirmation on signup) + OAuth 2.0 (GitHub, for widget authorization/linking)
+- **Auth**: server-side sessions, DB-backed — local credentials (email confirmation on signup) or "Sign in with GitHub" (OAuth 2.0, auto-registers on first use); an already-local account can also just *link* GitHub afterwards for widget authorization without changing how it logs in
 - **Refresh**: in-process scheduler (`@nestjs/schedule`), no external job queue
 
 For the technical architecture, the `ServiceProvider` contract, the data model, diagrams, the testing
@@ -137,7 +140,8 @@ approach, and the technology-choice justification (decision matrix), see
 see [API.md](./API.md). For local dev setup, adding a new service, and commit conventions, see
 [CONTRIBUTING.md](./CONTRIBUTING.md). Hit something weird? Check
 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — it's real issues hit while building this, not hypothetical
-ones.
+ones. What data this app collects and why: [PRIVACY.md](./PRIVACY.md). Team organization, a dated
+timeline of what got built and decided, and what's left: [PROJECT_LOG.md](./PROJECT_LOG.md).
 
 ## Testing
 
@@ -153,7 +157,7 @@ important, what isn't and why.
 ## TODO
 
 - [x] Bootstrap the NestJS app (`backend/`), Prisma, and a working `/about.json`
-- [x] `AuthModule`: signup, email confirmation, session login/logout, GitHub OAuth linking
+- [x] `AuthModule`: signup, email confirmation, session login/logout, GitHub OAuth linking, "Sign in with GitHub"
 - [x] `TimerModule`: refresh scheduler
 - [x] `WidgetsModule`: add/reconfigure/move/delete widget instances
 - [x] Services: RSS, Market data, GitHub
@@ -164,5 +168,12 @@ important, what isn't and why.
 - [x] Usage walkthrough, contributor guide, and troubleshooting doc
 - [x] Bootstrap the React app (`frontend/`): auth pages (login/register), protected dashboard route
 - [x] Widget dashboard UI: add/reconfigure/move/resize/delete, backed by the real API (see [FRONTEND.md](./FRONTEND.md))
+- [x] `AdminModule`: list/edit/ban/unban/delete users — not required by the brief, built anyway
+- [x] Profile editing: `PATCH /auth/me` (self: name, password) and `PATCH /admin/users/:id` (admin: name, emailVerified)
+- [x] GitHub repo picker: `GET /services/github/repos` + `WidgetParam.optionsUrl` contract
+- [x] Live API docs ([Swagger UI](http://localhost:8080/docs) once the server is running), generated from the code
+- [x] Privacy note ([PRIVACY.md](./PRIVACY.md)) — plain-language, not fabricated legal text
+- [x] Project log: team organization, a dated decision timeline, what's left ([PROJECT_LOG.md](./PROJECT_LOG.md))
 - [ ] Services: Weather, Steam, Maps/Cinema
 - [ ] Per-widget custom rendering (currently a generic key/value dump — see frontend README's "Known gaps")
+- [ ] Frontend: repo picker dropdown (backend/contract done, see [FRONTEND.md](./FRONTEND.md)), Terms of Service/Privacy Policy acceptance, in-app docs page

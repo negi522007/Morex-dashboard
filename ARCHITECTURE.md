@@ -9,6 +9,7 @@ list), see [README.md](./README.md).
 /backend
   /src
     /auth        # signup, email confirmation, session login/logout, GitHub OAuth + linking
+    /admin       # user management: list/ban/unban/delete (admin-only)
     /mail        # SMTP sending (Mailhog in dev, a real provider in prod)
     /prisma      # PrismaService/PrismaModule (the DB client, not the schema itself)
     /services
@@ -17,7 +18,7 @@ list), see [README.md](./README.md).
       services.module.ts              # wires every concrete provider into the registry
       /rss           # done
       /market-data   # done
-      /github        # done
+      /github        # done (+ a repos endpoint feeding the frontend's repo picker)
       /weather       # not started (Morayo)
       /steam         # not started (Morayo)
       /maps          # not started (Morayo)
@@ -28,7 +29,7 @@ list), see [README.md](./README.md).
   prisma/
     schema.prisma
     migrations/
-/frontend          # not started (Morayo)
+/frontend        # React/Vite/Tailwind — see FRONTEND.md for its own structure and status
   /src
     /components
     /pages
@@ -36,9 +37,6 @@ list), see [README.md](./README.md).
 /bonus
 docker-compose.yml
 ```
-
-There is no `/admin` module (user management) yet — the brief lists it as useful, not mandatory, and
-nothing in the current scope has needed it.
 
 ## Module graph
 
@@ -101,7 +99,11 @@ erDiagram
         string id PK
         string email UK
         string passwordHash "nullable"
+        string firstName "nullable"
+        string lastName "nullable"
         boolean emailVerified
+        boolean isAdmin
+        boolean isBanned
     }
     Session {
         string id PK "the session cookie value"
@@ -141,7 +143,11 @@ erDiagram
 ```
 
 - **User** — platform account. `passwordHash` is nullable (an account can be created via OAuth only),
-  `emailVerified` blocks login until confirmation has happened.
+  `emailVerified` blocks login until confirmation has happened. `firstName`/`lastName` are **required**
+  at registration and editable afterward via `PATCH /auth/me` (self) or `PATCH /admin/users/:id`
+  (admin) — added on request after the fact, not part of the original design; `register`/`login`/
+  `getUserBySession` all funnel through a shared `toPublicUser()` projection in `auth.service.ts` so the
+  three stay in sync. `isAdmin`/`isBanned` — see [Admin](#admin-user-management) below.
 - **Session** — a server-side session record; its `id` is the unguessable value stored in the login
   cookie. Deleting a row logs that session out immediately (see Authentication below).
 - **EmailVerificationToken** — time-limited token for signup email confirmation.
@@ -152,6 +158,64 @@ erDiagram
 - **WidgetInstance** — one widget instance placed on a user's dashboard: `config` (validated against the
   `WidgetDefinition`'s `params`), `refreshRateSeconds`, `position` (for react-grid-layout), `cachedData` +
   `lastRefreshedAt` (last result cached by the scheduler).
+
+## Admin (user management)
+
+Listed by the brief as "very useful" rather than mandatory — built anyway; the standard for this project
+is to cover everything the brief mentions, not just what's required.
+
+Files: `backend/src/admin/`. Every route is `SessionGuard` + `AdminGuard` (in that order — `AdminGuard`
+only reads `req.user.isAdmin`, which `SessionGuard` is what attaches, so it must run second and depends
+on it having run first).
+
+- **Becoming an admin** — deliberately has no API endpoint. The only paths are `ADMIN_EMAILS` in `.env`
+  (checked once, at registration) or a direct DB edit for an account that already exists (documented in
+  `.env.example`). An admin-promotion endpoint would be a privilege-escalation surface disproportionate
+  to what this project needs — this is the "avoid over-engineering" advice cutting the other way from the
+  "build everything mentioned" one: build the feature, don't gold-plate its edges.
+- **`GET /admin/users`** — every user, with `_count`-derived `widgetCount`/`linkedAccountsCount`/
+  `sessionCount`, never `passwordHash`.
+- **`PATCH /admin/users/:id`** — edit a user's name and/or manually flip `emailVerified` (unblocks
+  someone whose confirmation email never arrived, without needing a "resend" flow to exist). Deliberately
+  **not** password (an admin silently setting someone's password is a bigger footgun than the convenience
+  is worth) and **not** `isAdmin`/`isBanned` (those already have their own guarded endpoints below — one
+  field, one code path, not two ways to flip the same bit). Mirrors the user's own `PATCH /auth/me`
+  (same file, same "no email change here" reasoning) but for an admin acting on someone else.
+- **`PATCH /admin/users/:id/ban`** — sets `isBanned` **and** deletes every `Session` row for that user in
+  one transaction. This is the concrete payoff of choosing sessions over JWT
+  ([see below](#why-sessions-instead-of-jwt)): verified directly — a user's active, working session dies
+  immediately on ban, not "eventually once a token expires." A banned user is also blocked at the next
+  `login()` call itself (`ForbiddenException`, checked before the email-confirmation check).
+- **`PATCH /admin/users/:id/unban`** — reversible, unlike delete.
+- **`DELETE /admin/users/:id`** — permanent; cascades to sessions, widget instances, OAuth links, etc. via
+  the schema's existing `onDelete: Cascade` relations.
+- An admin can't ban/delete themselves, and can't ban/delete another admin, via this API — simple guards
+  against an admin locking themselves out or an admin-vs-admin dispute playing out through the API rather
+  than a direct DB edit.
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant C as Client
+    participant A as AdminController
+    participant S as AdminService
+    participant DB as Postgres
+
+    Admin->>C: click "Ban" on a user
+    C->>A: PATCH /admin/users/:id/ban
+    Note over A: SessionGuard, then AdminGuard (checks req.user.isAdmin)
+    A->>S: ban(targetId, adminId)
+    alt target is the admin themselves, or another admin
+        S-->>A: 400 Bad Request
+    else target not found
+        S-->>A: 404 Not Found
+    else valid target
+        S->>DB: transaction: isBanned=true + delete every Session for target
+        S-->>A: ok
+        A-->>C: 204 No Content
+    end
+    Note over DB: The target's browser, mid-session elsewhere,<br/>is logged out on its very next request — no delay.
+```
 
 ## Widgets (add / reconfigure / move / delete)
 
@@ -253,9 +317,14 @@ Two distinct mechanisms, as required by the brief:
   `Secure` cookies over plain HTTP and docker-compose has no TLS termination today). Every request looks
   the session up server-side; nothing is trusted purely on the client's say-so.
 - **Authorization**: OAuth 2.0 (GitHub for now) to let a widget access a third-party API on the user's
-  behalf. A user already registered locally must be able to *link* their GitHub account afterwards (not
-  only log in via GitHub); on an OAuth login whose email matches an existing account, link to that
-  existing account rather than creating a new one.
+  behalf. A user already registered locally can *link* their GitHub account afterwards (`GET
+  /auth/github`) without it changing how they log in.
+- **GitHub is also a full alternative *authentication* method** (`GET /auth/github/login`), on top of —
+  not instead of — local email/password: an existing account gets logged in directly, a GitHub email that
+  matches an existing local account gets linked and logged in (never a second `User` for the same
+  person), and anyone new gets a fresh, already-verified account. Both flows share one GitHub OAuth App
+  and one registered callback URL; the callback tells them apart by which CSRF state cookie is present,
+  not by anything in the URL a user could tamper with.
 
 ### Registration & email confirmation
 
@@ -366,6 +435,59 @@ sequenceDiagram
     end
 ```
 
+### "Sign in with GitHub" (login, not linking)
+
+```mermaid
+sequenceDiagram
+    actor U as User (not logged in)
+    participant C as Client (browser)
+    participant G as GithubOAuthController
+    participant GH as github.com
+    participant S as AuthService
+    participant DB as Postgres
+
+    U->>C: click "Sign in with GitHub"
+    C->>G: GET /auth/github/login (no session cookie needed)
+    G->>G: generate random state, Set-Cookie github_oauth_login_state
+    G-->>C: 302 redirect to github.com/login/oauth/authorize
+    C->>GH: follow redirect
+    U->>GH: log in + approve
+    GH-->>C: 302 redirect to /auth/github/callback?code=...&state=...
+    C->>G: GET /auth/github/callback (login-state cookie sent, no session cookie)
+    G->>G: login-state cookie present -> this is the login flow
+    G->>S: loginWithGithub(code)
+    S->>GH: POST /login/oauth/access_token
+    GH-->>S: access_token
+    S->>GH: GET /user (Bearer token)
+    GH-->>S: profile {id, login, name}
+    S->>DB: findUnique OAuthAccount(provider, providerAccountId)
+    alt already linked
+        DB-->>S: existing user
+    else not linked yet
+        S->>GH: GET /user/emails (Bearer token)
+        GH-->>S: emails[] with verified flags
+        alt no verified email
+            S-->>G: 400 Bad Request
+        else verified email found
+            S->>DB: findUnique User(email)
+            alt matching local account exists
+                DB-->>S: existing user
+            else no match
+                S->>DB: create User (emailVerified=true, no password)
+            end
+            S->>DB: create OAuthAccount
+        end
+    end
+    alt user is banned
+        S-->>G: 403 Forbidden
+        G-->>C: 302 redirect to FRONTEND_URL/login?error=...
+    else ok
+        S->>DB: create Session
+        S-->>G: {session, user}
+        G-->>C: 302 redirect to FRONTEND_URL/dashboard + Set-Cookie dashboard_session=...
+    end
+```
+
 ### Why sessions instead of JWT
 
 JWT was the default in the original proposal, carried over by convention rather than evaluated against
@@ -410,7 +532,12 @@ npm run test:cov  # with a coverage report
   `ServiceFetchError` rather than a raw exception.
 - `AuthService` — register (incl. the rollback when the confirmation email fails to send), confirmEmail,
   login, logout, `linkGithubAccount` (new link, re-link by the same user, conflict when another user
-  already owns that GitHub identity, GitHub error responses).
+  already owns that GitHub identity, GitHub error responses), `loginWithGithub` (direct login when already
+  linked, linking-by-verified-email onto an existing local account without duplicating it, registering a
+  brand-new already-verified account, the no-verified-email rejection, and a banned user being rejected
+  even with a valid linked GitHub account), `unlinkGithubAccount` (no linked account → 404, no
+  password on the account → blocked with 409, otherwise deleted), and `hasLinkedGithub` (backs
+  `GET /auth/me`'s `githubLinked` field).
 - `SessionGuard` — missing cookie, stale/unknown session, valid session attaching `req.user`.
 - `WidgetsService` — config validation against a widget's declared `params`, the `requiresAuth` precheck,
   and ownership scoping on update/remove (a widget instance belonging to another user 404s).
@@ -420,8 +547,18 @@ npm run test:cov  # with a coverage report
   not running concurrently.
 - `AboutService` — the exact shape served at `/about.json`, including that `requiresAuth` and `fetchData`
   never leak into the public response.
+- `GithubProvider.listRepos` — maps GitHub's response into `{ value, label }` options, and every widget's
+  `repo` param actually points `optionsUrl` at the right endpoint.
+- `AdminGuard`/`AdminService` — non-admin and missing-user rejections, the self-ban/self-delete and
+  ban-another-admin/delete-another-admin guards, `ban` both flipping `isBanned` and clearing sessions,
+  and `updateUser` never touching password/isAdmin/isBanned.
+- `AuthService.login`/`register` — a banned account is rejected at login (before the email-confirmation
+  check), and `ADMIN_EMAILS` promotes matching (case-insensitive) emails at registration.
+- `AuthService.updateProfile` — empty-update and blank-name rejection, a wrong `currentPassword`
+  rejected, a short `newPassword` rejected, and a successful password change clearing every session
+  *except* the one making the request.
 
-83 tests across 10 suites, all passing, as of this writing.
+124 tests across 12 suites, all passing, as of this writing.
 
 **What's deliberately NOT covered by these unit tests, and why:** controllers are left untested directly
 — they're thin delegators to the services above, so testing them would mostly re-test NestJS's own

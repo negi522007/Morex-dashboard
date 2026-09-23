@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Patch,
   Post,
   Query,
   Req,
@@ -16,6 +17,7 @@ import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { SessionGuard } from './session.guard';
 import { CurrentUser } from './current-user.decorator';
+import { setSessionCookie } from '../common/session-cookie.util';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -29,14 +31,33 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'Create an account. Sends a confirmation email; login is blocked until confirmed.' })
-  @ApiBody({ schema: { example: { email: 'user@example.com', password: 'at least 8 characters' } } })
+  @ApiBody({
+    schema: {
+      example: {
+        email: 'user@example.com',
+        password: 'at least 8 characters',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+      },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Account created, confirmation email sent' })
-  @ApiResponse({ status: 400, description: 'Invalid email, or password under 8 characters' })
+  @ApiResponse({ status: 400, description: 'Invalid email, password under 8 characters, or missing firstName/lastName' })
   @ApiResponse({ status: 409, description: 'An account with this email already exists' })
   @ApiResponse({ status: 503, description: 'Confirmation email failed to send — account was NOT created' })
-  async register(@Body() body: { email?: string; password?: string }) {
+  async register(
+    @Body() body: { email?: string; password?: string; firstName?: string; lastName?: string },
+  ) {
     const { email, password } = this.validateCredentials(body);
-    return this.authService.register(email, password);
+    const firstName = body.firstName?.trim();
+    const lastName = body.lastName?.trim();
+    if (!firstName) {
+      throw new BadRequestException('First name is required');
+    }
+    if (!lastName) {
+      throw new BadRequestException('Last name is required');
+    }
+    return this.authService.register(email, password, firstName, lastName);
   }
 
   @Get('confirm')
@@ -65,7 +86,7 @@ export class AuthController {
   ) {
     const { email, password } = this.validateCredentials(body);
     const { session, user } = await this.authService.login(email, password);
-    this.setSessionCookie(res, session.id, session.expiresAt);
+    setSessionCookie(res, this.config, session.id, session.expiresAt);
     return user;
   }
 
@@ -87,10 +108,40 @@ export class AuthController {
   @UseGuards(SessionGuard)
   @ApiCookieAuth('dashboard_session')
   @ApiOperation({ summary: 'Get the currently logged-in user — useful to check auth state on app load' })
-  @ApiResponse({ status: 200, description: 'The current user' })
+  @ApiResponse({ status: 200, description: 'The current user, plus whether GitHub is linked' })
   @ApiResponse({ status: 401, description: 'No valid session' })
-  me(@CurrentUser() user: { id: string; email: string }) {
-    return user;
+  async me(@CurrentUser() user: { id: string; email: string; firstName: string | null; lastName: string | null }) {
+    const githubLinked = await this.authService.hasLinkedGithub(user.id);
+    return { ...user, githubLinked };
+  }
+
+  @Patch('me')
+  @UseGuards(SessionGuard)
+  @ApiCookieAuth('dashboard_session')
+  @ApiOperation({
+    summary: 'Update your own name and/or change your password. Email change is not supported here.',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        currentPassword: 'the-old-password',
+        newPassword: 'at-least-8-characters',
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Updated user. A password change kills every OTHER session.' })
+  @ApiResponse({ status: 400, description: 'Empty body, a blank name, or new password under 8 characters' })
+  @ApiResponse({ status: 401, description: 'currentPassword is wrong (only checked when changing password)' })
+  updateMe(
+    @CurrentUser() user: { id: string },
+    @Req() req: Request,
+    @Body() body: { firstName?: string; lastName?: string; currentPassword?: string; newPassword?: string },
+  ) {
+    const cookieName = this.config.get<string>('SESSION_COOKIE_NAME') ?? 'dashboard_session';
+    const sessionId = req.cookies?.[cookieName];
+    return this.authService.updateProfile(user.id, sessionId, body);
   }
 
   private validateCredentials(body: { email?: string; password?: string }) {
@@ -103,20 +154,5 @@ export class AuthController {
       throw new BadRequestException('Password must be at least 8 characters');
     }
     return { email, password };
-  }
-
-  private setSessionCookie(res: Response, sessionId: string, expiresAt: Date) {
-    const cookieName = this.config.get<string>('SESSION_COOKIE_NAME') ?? 'dashboard_session';
-    // Tied to an explicit flag, not NODE_ENV: this deploys over plain HTTP
-    // (docker-compose has no TLS termination), and a real browser silently
-    // drops "Secure" cookies on non-HTTPS connections. Flip COOKIE_SECURE=true
-    // once the app is actually served over HTTPS.
-    res.cookie(cookieName, sessionId, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: this.config.get<string>('COOKIE_SECURE') === 'true',
-      expires: expiresAt,
-      path: '/',
-    });
   }
 }

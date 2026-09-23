@@ -17,6 +17,13 @@ describe('GithubProvider', () => {
     expect(provider.widgets.map((w) => w.name).sort()).toEqual(['open_issues', 'recent_commits', 'repo_stats']);
   });
 
+  it('points every "repo" param at the repo-picker options endpoint', () => {
+    for (const widget of provider.widgets) {
+      const repoParam = widget.params.find((p) => p.name === 'repo');
+      expect(repoParam?.optionsUrl).toBe('/services/github/repos');
+    }
+  });
+
   it('rejects a "repo" param that is not in "owner/name" form, for every widget', async () => {
     await expect(recentCommits.fetchData({ repo: 'not-a-valid-repo' })).rejects.toBeInstanceOf(ServiceFetchError);
     await expect(openIssues.fetchData({ repo: '' })).rejects.toBeInstanceOf(ServiceFetchError);
@@ -97,5 +104,30 @@ describe('GithubProvider', () => {
   it('raises ServiceFetchError on a 404 (private or nonexistent repo) instead of throwing raw', async () => {
     mockFetchOnce({ ok: false, status: 404 });
     await expect(repoStats.fetchData({ repo: 'someone/private-repo' })).rejects.toBeInstanceOf(ServiceFetchError);
+  });
+
+  describe('listRepos', () => {
+    it('maps full_name into { value, label } options', async () => {
+      mockFetchOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            { full_name: 'octocat/Hello-World' },
+            { full_name: 'octocat/Spoon-Knife' },
+          ]),
+      });
+
+      const result = await provider.listRepos({ accessToken: 'gho_token' });
+
+      expect(result).toEqual([
+        { value: 'octocat/Hello-World', label: 'octocat/Hello-World' },
+        { value: 'octocat/Spoon-Knife', label: 'octocat/Spoon-Knife' },
+      ]);
+    });
+
+    it('raises ServiceFetchError on a non-2xx response instead of throwing raw', async () => {
+      mockFetchOnce({ ok: false, status: 401 });
+      await expect(provider.listRepos({ accessToken: 'bad_token' })).rejects.toBeInstanceOf(ServiceFetchError);
+    });
   });
 });
