@@ -119,4 +119,50 @@ describe('AdminService', () => {
       expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'u2' }, data: { isBanned: false } });
     });
   });
+
+  describe('updateUser', () => {
+    it('404s on an unknown user', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      await expect(service.updateUser('nope', { firstName: 'A' })).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('rejects an empty update', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u2' });
+      await expect(service.updateUser('u2', {})).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects a blank name', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u2' });
+      await expect(service.updateUser('u2', { firstName: '   ' })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('updates name and manually flips emailVerified, never touching isAdmin/isBanned/password', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u2' });
+      prisma.user.update.mockResolvedValue({
+        id: 'u2',
+        email: 'a@example.com',
+        firstName: 'Grace',
+        lastName: 'Hopper',
+        emailVerified: true,
+        isAdmin: false,
+        isBanned: false,
+      });
+
+      const result = await service.updateUser('u2', { firstName: 'Grace', lastName: 'Hopper', emailVerified: true });
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'u2' },
+        data: { firstName: 'Grace', lastName: 'Hopper', emailVerified: true },
+      });
+      expect(result).toEqual({
+        id: 'u2',
+        email: 'a@example.com',
+        firstName: 'Grace',
+        lastName: 'Hopper',
+        emailVerified: true,
+        isAdmin: false,
+        isBanned: false,
+      });
+    });
+  });
 });

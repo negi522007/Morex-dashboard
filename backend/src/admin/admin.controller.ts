@@ -1,5 +1,5 @@
-import { Controller, Delete, Get, HttpCode, Param, Patch, UseGuards } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SessionGuard } from '../auth/session.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AdminGuard } from './admin.guard';
@@ -18,6 +18,21 @@ export class AdminController {
   @ApiResponse({ status: 403, description: 'Not an admin' })
   list() {
     return this.adminService.listUsers();
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: "Edit a user's name and/or manually flip emailVerified — not password, not admin/ban status (use the dedicated endpoints for those)",
+  })
+  @ApiBody({ schema: { example: { firstName: 'Ada', lastName: 'Lovelace', emailVerified: true } } })
+  @ApiResponse({ status: 200, description: 'Updated user' })
+  @ApiResponse({ status: 400, description: 'Empty body, or a blank name' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  update(
+    @Param('id') id: string,
+    @Body() body: { firstName?: string; lastName?: string; emailVerified?: boolean },
+  ) {
+    return this.adminService.updateUser(id, body);
   }
 
   @Patch(':id/ban')

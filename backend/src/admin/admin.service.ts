@@ -68,6 +68,52 @@ export class AdminService {
     await this.prisma.user.delete({ where: { id: userId } });
   }
 
+  // Name and a manual emailVerified override only — never email (same
+  // "needs its own re-verification flow" reasoning as the user's own
+  // PATCH /auth/me) and never password (an admin silently setting
+  // someone's password is a bigger footgun than the convenience is worth;
+  // isAdmin/isBanned already have their own dedicated, guarded endpoints
+  // and deliberately aren't editable through this generic one). The
+  // emailVerified override is real, requested-in-practice value: it
+  // unblocks a user whose confirmation email never arrived, without
+  // needing a "resend confirmation" flow to exist yet.
+  async updateUser(
+    userId: string,
+    updates: { firstName?: string; lastName?: string; emailVerified?: boolean },
+  ) {
+    await this.findUserOrThrow(userId);
+
+    const data: { firstName?: string; lastName?: string; emailVerified?: boolean } = {};
+    if (updates.firstName !== undefined) {
+      const trimmed = updates.firstName.trim();
+      if (!trimmed) throw new BadRequestException('First name cannot be blank');
+      data.firstName = trimmed;
+    }
+    if (updates.lastName !== undefined) {
+      const trimmed = updates.lastName.trim();
+      if (!trimmed) throw new BadRequestException('Last name cannot be blank');
+      data.lastName = trimmed;
+    }
+    if (updates.emailVerified !== undefined) {
+      data.emailVerified = updates.emailVerified;
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('Nothing to update: provide firstName, lastName, and/or emailVerified');
+    }
+
+    const updated = await this.prisma.user.update({ where: { id: userId }, data });
+    return {
+      id: updated.id,
+      email: updated.email,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      emailVerified: updated.emailVerified,
+      isAdmin: updated.isAdmin,
+      isBanned: updated.isBanned,
+    };
+  }
+
   private async findUserOrThrow(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
