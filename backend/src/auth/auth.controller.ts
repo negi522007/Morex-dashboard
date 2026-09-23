@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Patch,
   Post,
   Query,
   Req,
@@ -40,17 +41,21 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 201, description: 'Account created, confirmation email sent' })
-  @ApiResponse({ status: 400, description: 'Invalid email, or password under 8 characters' })
+  @ApiResponse({ status: 400, description: 'Invalid email, password under 8 characters, or missing firstName/lastName' })
   @ApiResponse({ status: 409, description: 'An account with this email already exists' })
   @ApiResponse({ status: 503, description: 'Confirmation email failed to send — account was NOT created' })
   async register(
     @Body() body: { email?: string; password?: string; firstName?: string; lastName?: string },
   ) {
     const { email, password } = this.validateCredentials(body);
-    // Optional and editable later (no profile-edit endpoint yet) — never
-    // required, so trimmed-empty just becomes "not provided".
-    const firstName = body.firstName?.trim() || undefined;
-    const lastName = body.lastName?.trim() || undefined;
+    const firstName = body.firstName?.trim();
+    const lastName = body.lastName?.trim();
+    if (!firstName) {
+      throw new BadRequestException('First name is required');
+    }
+    if (!lastName) {
+      throw new BadRequestException('Last name is required');
+    }
     return this.authService.register(email, password, firstName, lastName);
   }
 
@@ -106,6 +111,35 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'No valid session' })
   me(@CurrentUser() user: { id: string; email: string; firstName: string | null; lastName: string | null }) {
     return user;
+  }
+
+  @Patch('me')
+  @UseGuards(SessionGuard)
+  @ApiCookieAuth('dashboard_session')
+  @ApiOperation({
+    summary: 'Update your own name and/or change your password. Email change is not supported here.',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        currentPassword: 'the-old-password',
+        newPassword: 'at-least-8-characters',
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Updated user. A password change kills every OTHER session.' })
+  @ApiResponse({ status: 400, description: 'Empty body, a blank name, or new password under 8 characters' })
+  @ApiResponse({ status: 401, description: 'currentPassword is wrong (only checked when changing password)' })
+  updateMe(
+    @CurrentUser() user: { id: string },
+    @Req() req: Request,
+    @Body() body: { firstName?: string; lastName?: string; currentPassword?: string; newPassword?: string },
+  ) {
+    const cookieName = this.config.get<string>('SESSION_COOKIE_NAME') ?? 'dashboard_session';
+    const sessionId = req.cookies?.[cookieName];
+    return this.authService.updateProfile(user.id, sessionId, body);
   }
 
   private validateCredentials(body: { email?: string; password?: string }) {

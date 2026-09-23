@@ -1,4 +1,10 @@
-import { ConflictException, ForbiddenException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { hashPassword } from './password.util';
 
@@ -41,27 +47,13 @@ describe('AuthService', () => {
   describe('register', () => {
     it('rejects an email that already exists', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: 'existing' });
-      await expect(service.register('taken@example.com', 'password123')).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.register('taken@example.com', 'password123', 'Test', 'User'),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(prisma.user.create).not.toHaveBeenCalled();
     });
 
     it('creates the user, issues a token, and sends the confirmation email', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
-      prisma.user.create.mockResolvedValue({ id: 'user-1', email: 'new@example.com' });
-
-      const result = await service.register('new@example.com', 'password123');
-
-      expect(prisma.emailVerificationToken.create).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ userId: 'user-1' }) }),
-      );
-      expect(mail.sendConfirmationEmail).toHaveBeenCalledWith(
-        'new@example.com',
-        expect.stringContaining('http://localhost:8080/auth/confirm?token='),
-      );
-      expect(result).toEqual({ id: 'user-1', email: 'new@example.com', firstName: undefined, lastName: undefined });
-    });
-
-    it('stores optional firstName/lastName when provided, and null when omitted', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue({
         id: 'user-1',
@@ -77,6 +69,13 @@ describe('AuthService', () => {
           data: expect.objectContaining({ firstName: 'Ada', lastName: 'Lovelace' }),
         }),
       );
+      expect(prisma.emailVerificationToken.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ userId: 'user-1' }) }),
+      );
+      expect(mail.sendConfirmationEmail).toHaveBeenCalledWith(
+        'new@example.com',
+        expect.stringContaining('http://localhost:8080/auth/confirm?token='),
+      );
       expect(result).toEqual({ id: 'user-1', email: 'new@example.com', firstName: 'Ada', lastName: 'Lovelace' });
     });
 
@@ -87,7 +86,7 @@ describe('AuthService', () => {
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue({ id: 'user-1', email: 'admin@example.com' });
 
-      await service.register('admin@example.com', 'password123');
+      await service.register('admin@example.com', 'password123', 'Test', 'User');
 
       expect(prisma.user.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ isAdmin: true }) }),
@@ -101,7 +100,7 @@ describe('AuthService', () => {
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue({ id: 'user-1', email: 'nobody@example.com' });
 
-      await service.register('nobody@example.com', 'password123');
+      await service.register('nobody@example.com', 'password123', 'Test', 'User');
 
       expect(prisma.user.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ isAdmin: false }) }),
@@ -113,9 +112,9 @@ describe('AuthService', () => {
       prisma.user.create.mockResolvedValue({ id: 'user-1', email: 'new@example.com' });
       mail.sendConfirmationEmail.mockRejectedValue(new Error('SMTP down'));
 
-      await expect(service.register('new@example.com', 'password123')).rejects.toBeInstanceOf(
-        ServiceUnavailableException,
-      );
+      await expect(
+        service.register('new@example.com', 'password123', 'Test', 'User'),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
       expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
     });
   });
@@ -294,6 +293,72 @@ describe('AuthService', () => {
         ServiceUnavailableException,
       );
       expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateProfile', () => {
+    it('rejects an empty update', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: null });
+      await expect(service.updateProfile('user-1', 'session-1', {})).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('updates firstName/lastName without touching the password', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'irrelevant' });
+      prisma.user.update.mockResolvedValue({
+        id: 'user-1',
+        email: 'a@example.com',
+        firstName: 'Grace',
+        lastName: 'Hopper',
+        isAdmin: false,
+      });
+
+      const result = await service.updateProfile('user-1', 'session-1', { firstName: 'Grace', lastName: 'Hopper' });
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { firstName: 'Grace', lastName: 'Hopper' },
+      });
+      expect(prisma.session.deleteMany).not.toHaveBeenCalled();
+      expect(result.firstName).toBe('Grace');
+    });
+
+    it('rejects a blank name', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'irrelevant' });
+      await expect(service.updateProfile('user-1', 'session-1', { firstName: '   ' })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('rejects a password change with the wrong current password', async () => {
+      const passwordHash = await hashPassword('the-real-password');
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash });
+      await expect(
+        service.updateProfile('user-1', 'session-1', { currentPassword: 'wrong', newPassword: 'new-password-123' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects a new password under 8 characters', async () => {
+      const passwordHash = await hashPassword('the-real-password');
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash });
+      await expect(
+        service.updateProfile('user-1', 'session-1', { currentPassword: 'the-real-password', newPassword: 'short' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('changes the password and kills every OTHER session, keeping the current one', async () => {
+      const passwordHash = await hashPassword('the-real-password');
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash });
+      prisma.user.update.mockResolvedValue({ id: 'user-1', email: 'a@example.com', firstName: null, lastName: null, isAdmin: false });
+
+      await service.updateProfile('user-1', 'current-session', {
+        currentPassword: 'the-real-password',
+        newPassword: 'brand-new-password',
+      });
+
+      expect(prisma.session.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', NOT: { id: 'current-session' } },
+      });
     });
   });
 });

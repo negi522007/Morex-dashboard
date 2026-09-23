@@ -53,9 +53,9 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  // firstName/lastName are optional and editable later — there is no
-  // profile-edit endpoint yet, so for now this is the only way to set them.
-  async register(email: string, password: string, firstName?: string, lastName?: string) {
+  // firstName/lastName are required — enforced in AuthController, not here,
+  // consistent with how email/password validation is also controller-side.
+  async register(email: string, password: string, firstName: string, lastName: string) {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
       throw new ConflictException('An account with this email already exists');
@@ -70,8 +70,8 @@ export class AuthService {
       data: {
         email,
         passwordHash,
-        firstName: firstName || null,
-        lastName: lastName || null,
+        firstName,
+        lastName,
         isAdmin: adminEmails.includes(email.toLowerCase()),
       },
     });
@@ -205,5 +205,60 @@ export class AuthService {
       return null;
     }
     return toPublicUser(session.user);
+  }
+
+  // Self-service profile edit. Email change is deliberately out of scope —
+  // it needs its own re-verification flow (confirm the NEW address before
+  // switching) to avoid an easy account-lockout/takeover footgun, which is
+  // enough extra machinery to be its own feature, not a field on this one.
+  // Changing the password kills every OTHER session (not the one making
+  // this request) — same reasoning as admin ban: a password change should
+  // invalidate access anyone else still has, immediately.
+  async updateProfile(
+    userId: string,
+    currentSessionId: string,
+    updates: { firstName?: string; lastName?: string; currentPassword?: string; newPassword?: string },
+  ): Promise<PublicUser> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const data: { firstName?: string; lastName?: string; passwordHash?: string } = {};
+
+    if (updates.firstName !== undefined) {
+      const trimmed = updates.firstName.trim();
+      if (!trimmed) throw new BadRequestException('First name cannot be blank');
+      data.firstName = trimmed;
+    }
+    if (updates.lastName !== undefined) {
+      const trimmed = updates.lastName.trim();
+      if (!trimmed) throw new BadRequestException('Last name cannot be blank');
+      data.lastName = trimmed;
+    }
+
+    let killOtherSessions = false;
+    if (updates.newPassword !== undefined) {
+      if (!updates.currentPassword || !user.passwordHash || !(await verifyPassword(updates.currentPassword, user.passwordHash))) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+      if (updates.newPassword.length < 8) {
+        throw new BadRequestException('New password must be at least 8 characters');
+      }
+      data.passwordHash = await hashPassword(updates.newPassword);
+      killOtherSessions = true;
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('Nothing to update: provide firstName, lastName, and/or newPassword (with currentPassword)');
+    }
+
+    const updated = await this.prisma.user.update({ where: { id: userId }, data });
+
+    if (killOtherSessions) {
+      await this.prisma.session.deleteMany({ where: { userId, NOT: { id: currentSessionId } } });
+    }
+
+    return toPublicUser(updated);
   }
 }
