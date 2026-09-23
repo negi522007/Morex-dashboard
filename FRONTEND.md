@@ -13,7 +13,7 @@ the overall project (backend, Docker, architecture) see the [root README](./READ
 | GitHub account linking (button) | ✅ Done |
 | Per-widget custom rendering (pretty RSS/GitHub/market-data views) | ⏳ Not started — widgets currently render as generic key/value or list dumps |
 | Responsive / mobile layout | ⏳ Not tested |
-| Terms of Service / Privacy Policy acceptance at registration | ⏳ Not started — see "Planned, not yet built" below |
+| Privacy note acceptance at registration | ⏳ Not started — content exists ([PRIVACY.md](./PRIVACY.md)), no UI yet — see "Planned, not yet built" below |
 | In-app / online documentation page | ⏳ Not started — see "Planned, not yet built" below |
 | Profile editing (settings page: name, password) | ⏳ Not started — backend done (`PATCH /auth/me`), no UI — see "Planned, not yet built" below |
 
@@ -166,18 +166,21 @@ timeline, a price chart) is a separate, not-yet-started piece of work.
 Written up here as a spec for whoever picks it up (Morayo) — not implemented, on purpose (see the
 2026-09-21 note above).
 
-### Terms of Service / Privacy Policy acceptance at registration
+### Privacy note acceptance at registration
 
-`RegisterPage.tsx` currently has no legal-consent step at all. Needed:
-- A required checkbox on the register form: "I agree to the [Terms of Service](/terms) and
-  [Privacy Policy](/privacy)" — submission blocked (button stays disabled, or client-side validation
-  error) until checked. No backend flag exists to record *that* consent was given or *when* — if that
+`RegisterPage.tsx` currently has no consent step at all. Needed:
+- A required checkbox on the register form: "I've read the [privacy note](/privacy)" — submission
+  blocked until checked. No backend flag exists to record *that* consent was given or *when* — if that
   needs to be provable later, it's a new `User` field/migration, not just a frontend checkbox.
-- Two new routes/pages, `/terms` and `/privacy`, each rendering actual legal content. That content
-  doesn't exist anywhere yet and isn't something to draft casually — get real Terms of
-  Service/Privacy Policy text (a template adapted to what this app actually does: what data is
-  collected — email, optional name, OAuth tokens — and why) before wiring the pages up for real, rather
-  than shipping placeholder legal text that reads as genuine.
+- A `/privacy` route rendering [`PRIVACY.md`](./PRIVACY.md)'s content — that content **does** exist now
+  (plain-language, honest about what's collected and what isn't built yet — e.g. no self-service account
+  deletion), written deliberately as a real privacy note rather than fabricated Terms-of-Service legal
+  text (this is a student project, not a company; pretend-legal text would be more misleading than no
+  text at all). Render the markdown or port it to JSX, whichever fits the rest of the app better — the
+  content is the part that mattered, not the format it's in here.
+- No separate "Terms of Service" page is planned — there's no commercial terms to state for a project
+  like this one; the privacy note covers what actually matters (what data, why, and what control you
+  have over it).
 
 ### In-app / online documentation page
 

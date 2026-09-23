@@ -140,7 +140,8 @@ approach, and the technology-choice justification (decision matrix), see
 see [API.md](./API.md). For local dev setup, adding a new service, and commit conventions, see
 [CONTRIBUTING.md](./CONTRIBUTING.md). Hit something weird? Check
 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — it's real issues hit while building this, not hypothetical
-ones.
+ones. What data this app collects and why: [PRIVACY.md](./PRIVACY.md). Team organization, a dated
+timeline of what got built and decided, and what's left: [PROJECT_LOG.md](./PROJECT_LOG.md).
 
 ## Testing
 
@@ -170,6 +171,9 @@ important, what isn't and why.
 - [x] `AdminModule`: list/edit/ban/unban/delete users — not required by the brief, built anyway
 - [x] Profile editing: `PATCH /auth/me` (self: name, password) and `PATCH /admin/users/:id` (admin: name, emailVerified)
 - [x] GitHub repo picker: `GET /services/github/repos` + `WidgetParam.optionsUrl` contract
+- [x] Live API docs ([Swagger UI](http://localhost:8080/docs) once the server is running), generated from the code
+- [x] Privacy note ([PRIVACY.md](./PRIVACY.md)) — plain-language, not fabricated legal text
+- [x] Project log: team organization, a dated decision timeline, what's left ([PROJECT_LOG.md](./PROJECT_LOG.md))
 - [ ] Services: Weather, Steam, Maps/Cinema
 - [ ] Per-widget custom rendering (currently a generic key/value dump — see frontend README's "Known gaps")
 - [ ] Frontend: repo picker dropdown (backend/contract done, see [FRONTEND.md](./FRONTEND.md)), Terms of Service/Privacy Policy acceptance, in-app docs page
