@@ -30,10 +30,8 @@ export function RegisterPage() {
         body: JSON.stringify({
           email,
           password,
-          // Optional — omit entirely rather than send empty strings, so a
-          // blank field doesn't overwrite a default with "".
-          ...(firstName.trim() && { firstName: firstName.trim() }),
-          ...(lastName.trim() && { lastName: lastName.trim() }),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
         }),
       })
       setSubmitted(true)
@@ -71,11 +69,12 @@ export function RegisterPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="firstName" className="mb-1 block text-sm font-medium text-gray-700">
-                  First name <span className="text-gray-400">(optional)</span>
+                  First name
                 </label>
                 <input
                   id="firstName"
                   type="text"
+                  required
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="Ada"
@@ -84,11 +83,12 @@ export function RegisterPage() {
               </div>
               <div>
                 <label htmlFor="lastName" className="mb-1 block text-sm font-medium text-gray-700">
-                  Last name <span className="text-gray-400">(optional)</span>
+                  Last name
                 </label>
                 <input
                   id="lastName"
                   type="text"
+                  required
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Lovelace"
