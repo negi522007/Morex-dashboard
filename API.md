@@ -149,6 +149,17 @@ to GitHub's consent screen.
 | `400` | GitHub OAuth isn't configured on the server (missing env vars). |
 | `401` | No valid session. |
 
+### `DELETE /auth/github`
+
+🔒 Session required. Unlinks the current user's GitHub account.
+
+| Status | When |
+|---|---|
+| `204` | Unlinked. |
+| `401` | No valid session. |
+| `404` | No linked GitHub account for this user. |
+| `409` | This account has no password — unlinking would remove the only way to log in. Set a password first (not currently possible via the API — see `PROJECT_LOG.md`'s "what's left"). |
+
 ### `GET /auth/github/login`
 
 No session required — this is **"Sign in with GitHub"**, a real alternative to `POST /auth/login`, not

@@ -218,6 +218,13 @@ This was worth building generically rather than as a GitHub-only special case: a
 (Steam's game list, Maps' cinema list) can reuse the exact same `optionsUrl` handling in
 `WidgetFormModal` with zero additional frontend work once its backend sets the field.
 
+### Unlink GitHub button
+
+Backend is ready (`DELETE /auth/github`, see [API.md](./API.md#delete-authgithub)) — no frontend call to
+it yet. A natural spot is next to the existing "Link GitHub account" card: once linked, show an "Unlink"
+button instead. Handle the `409` case (blocked because this account has no password) by showing its
+message — there's no "set a password" flow yet for a GitHub-only account to fall back on.
+
 ### Profile editing (settings page)
 
 No UI exists to change your own name or password after registration — the backend is ready

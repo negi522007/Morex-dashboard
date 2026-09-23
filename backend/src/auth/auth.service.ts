@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -227,6 +228,34 @@ export class AuthService {
         data: { provider: 'github', providerAccountId, userId, accessTokenEncrypted },
       });
     }
+  }
+
+  // The other end of linkGithubAccount/loginWithGithub. Blocked when GitHub
+  // is the user's ONLY way in (no passwordHash) — since "Sign in with
+  // GitHub" now exists, unlinking a passwordless account would otherwise
+  // lock them out with no recovery path. Revoking from GitHub's own side
+  // (Settings > Applications) still works regardless; this just makes OUR
+  // side agree with that instead of holding a dead, undeletable token.
+  async unlinkGithubAccount(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const account = await this.prisma.oAuthAccount.findFirst({
+      where: { userId, provider: 'github' },
+    });
+    if (!account) {
+      throw new NotFoundException('No linked GitHub account for this user');
+    }
+
+    if (!user.passwordHash) {
+      throw new ConflictException(
+        'This account has no password — unlinking GitHub would lock you out. Set a password first.',
+      );
+    }
+
+    await this.prisma.oAuthAccount.delete({ where: { id: account.id } });
   }
 
   // "Sign in with GitHub": unlike linkGithubAccount, this needs no existing

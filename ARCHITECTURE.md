@@ -535,7 +535,8 @@ npm run test:cov  # with a coverage report
   already owns that GitHub identity, GitHub error responses), `loginWithGithub` (direct login when already
   linked, linking-by-verified-email onto an existing local account without duplicating it, registering a
   brand-new already-verified account, the no-verified-email rejection, and a banned user being rejected
-  even with a valid linked GitHub account).
+  even with a valid linked GitHub account), and `unlinkGithubAccount` (no linked account → 404, no
+  password on the account → blocked with 409, otherwise deleted).
 - `SessionGuard` — missing cookie, stale/unknown session, valid session attaching `req.user`.
 - `WidgetsService` — config validation against a widget's declared `params`, the `requiresAuth` precheck,
   and ownership scoping on update/remove (a widget instance belonging to another user 404s).
@@ -556,7 +557,7 @@ npm run test:cov  # with a coverage report
   rejected, a short `newPassword` rejected, and a successful password change clearing every session
   *except* the one making the request.
 
-119 tests across 12 suites, all passing, as of this writing.
+122 tests across 12 suites, all passing, as of this writing.
 
 **What's deliberately NOT covered by these unit tests, and why:** controllers are left untested directly
 — they're thin delegators to the services above, so testing them would mostly re-test NestJS's own

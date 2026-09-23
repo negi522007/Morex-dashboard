@@ -1,10 +1,11 @@
-import { BadRequestException, Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Delete, Get, HttpCode, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { randomBytes } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { SessionGuard } from './session.guard';
+import { CurrentUser } from './current-user.decorator';
 import { setSessionCookie } from '../common/session-cookie.util';
 
 // Two different flows share one GitHub OAuth App (and therefore one
@@ -54,6 +55,22 @@ export class GithubOAuthController {
   @ApiResponse({ status: 400, description: 'GitHub OAuth is not configured on the server' })
   startLogin(@Res() res: Response) {
     this.redirectToGithub(res, LOGIN_STATE_COOKIE);
+  }
+
+  @Delete()
+  @HttpCode(204)
+  @UseGuards(SessionGuard)
+  @ApiCookieAuth('dashboard_session')
+  @ApiOperation({ summary: 'Unlink the current user\'s GitHub account' })
+  @ApiResponse({ status: 204, description: 'Unlinked' })
+  @ApiResponse({ status: 401, description: 'No valid session' })
+  @ApiResponse({ status: 404, description: 'No linked GitHub account for this user' })
+  @ApiResponse({
+    status: 409,
+    description: 'This account has no password — unlinking would remove the only way to log in',
+  })
+  async unlink(@CurrentUser() user: { id: string }) {
+    await this.authService.unlinkGithubAccount(user.id);
   }
 
   @Get('callback')

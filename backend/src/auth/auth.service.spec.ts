@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -13,7 +14,7 @@ function makePrismaMock() {
     user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     emailVerificationToken: { create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
     session: { create: jest.fn(), deleteMany: jest.fn(), findUnique: jest.fn() },
-    oAuthAccount: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+    oAuthAccount: { findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
   };
 }
@@ -293,6 +294,33 @@ describe('AuthService', () => {
         ServiceUnavailableException,
       );
       expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('unlinkGithubAccount', () => {
+    it('rejects if the user has no linked GitHub account', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'salt:hash' });
+      prisma.oAuthAccount.findFirst.mockResolvedValue(null);
+
+      await expect(service.unlinkGithubAccount('user-1')).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.oAuthAccount.delete).not.toHaveBeenCalled();
+    });
+
+    it('refuses to unlink when the account has no password (would lock the user out)', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: null });
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1' });
+
+      await expect(service.unlinkGithubAccount('user-1')).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.oAuthAccount.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes the OAuthAccount when the user has a password to fall back on', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'salt:hash' });
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1' });
+
+      await service.unlinkGithubAccount('user-1');
+
+      expect(prisma.oAuthAccount.delete).toHaveBeenCalledWith({ where: { id: 'oauth-1' } });
     });
   });
 

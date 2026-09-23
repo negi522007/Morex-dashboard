@@ -34,8 +34,11 @@ want the technical detail behind any of this (hashing, encryption), see
 ## Your control over it
 
 - You can change your name or password any time (in account settings).
-- You can disconnect your GitHub account from GitHub's own side (Settings → Applications) at any point —
-  doing so revokes the token we hold; the next widget refresh will simply fail until you reconnect.
+- You can disconnect your GitHub account yourself (`DELETE /auth/github`, no frontend button yet — see
+  `FRONTEND.md`), or from GitHub's own side (Settings → Applications). Either way, any GitHub widgets you
+  have will simply fail on their next refresh until you reconnect. If GitHub is your *only* way to log in
+  (you signed up via "Sign in with GitHub" and never set a password), unlinking is blocked — there's
+  currently no way to add a password after the fact, so removing GitHub would lock you out entirely.
 - There is currently no self-service "delete my account" button — if you want your account and its data
   removed, ask an admin. (Worth knowing plainly: this is a gap we haven't closed yet, not a hidden
   policy.)
