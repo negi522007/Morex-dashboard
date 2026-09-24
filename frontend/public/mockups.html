@@ -1,0 +1,1305 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex mockups</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  /* ---------- Themes (colour palettes, independent of light/dark) ---------- */
+  :root, [data-theme="galaxy"] {
+    --bg: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/accueil_photo.jpg) 50% 28%/cover;
+    --a1: #818cf8; --a2: #38bdf8; --glow: 99 102 241; --img: url(/accueil_photo.jpg);
+  }
+  [data-theme="aurora"] {
+    --bg: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/aurore_boreale.jpeg) 50% 30%/cover;
+    --a1: #2dd4bf; --a2: #a78bfa; --glow: 45 212 191; --img: url(/aurore_boreale.jpeg);
+  }
+  [data-theme="moon"] {
+    --bg: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/cheval.jpeg) 50% 28%/cover;
+    --a1: #60a5fa; --a2: #e2e8f0; --glow: 59 130 246; --img: url(/cheval.jpeg);
+  }
+  [data-theme="dolphins"] {
+    --bg: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/dauphins_theme.jpeg) 50% 58%/cover;
+    --a1: #fb7185; --a2: #fb923c; --glow: 251 113 133; --img: url(/dauphins_theme.jpeg);
+  }
+  [data-theme="forest"] {
+    --bg: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/foret_theme.jpeg) 50% 42%/cover;
+    --a1: #4ade80; --a2: #2dd4bf; --glow: 16 185 129; --img: url(/foret_theme.jpeg);
+  }
+  [data-theme="mystic"] {
+    --bg: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/mystical_theme.jpeg) 50% 42%/cover;
+    --a1: #f43f5e; --a2: #fda4af; --glow: 244 63 94; --img: url(/mystical_theme.jpeg);
+  }
+  [data-theme="ocean"] {
+    --bg: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/ocean_theme.jpeg) 50% 32%/cover;
+    --a1: #22d3ee; --a2: #3b82f6; --glow: 34 211 238; --img: url(/ocean_theme.jpeg);
+  }
+  [data-theme="beach"] {
+    --bg: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/plage_theme.jpeg) 50% 62%/cover;
+    --a1: #fb923c; --a2: #f472b6; --glow: 249 115 22; --img: url(/plage_theme.jpeg);
+  }
+  [data-theme="desertNight"] {
+    --bg: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/sahara_night.jpeg) 50% 68%/cover;
+    --a1: #fcd34d; --a2: #d6b370; --glow: 234 179 8; --img: url(/sahara_night.jpeg);
+  }
+  [data-theme="desertMoon"] {
+    --bg: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/sahara_theme.jpeg) 50% 10%/cover;
+    --a1: #c084fc; --a2: #f0abfc; --glow: 168 85 247; --img: url(/sahara_theme.jpeg);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background: #020617; }
+  /* Full-page theme background with a slow drift / zoom, and a fade when the theme changes */
+  body::before { content: ""; position: fixed; inset: -6%; z-index: -1; pointer-events: none; background: var(--bg);
+    animation: bgDrift 45s ease-in-out infinite alternate; }
+  body.theme-in::before { animation: bgDrift 45s ease-in-out infinite alternate, bgFade .9s ease-out; }
+  @keyframes bgDrift { from { transform: scale(1) translate3d(0, 0, 0); } to { transform: scale(1.12) translate3d(-2%, -1.5%, 0); } }
+  @keyframes bgFade { from { opacity: 0; filter: blur(12px); } to { opacity: 1; filter: none; } }
+  button, input, select { font: inherit; color: inherit; }
+  .glass { background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); border-radius: 24px; }
+  .grad { background: linear-gradient(90deg, #fff, var(--a1) 60%, var(--a2)); -webkit-background-clip: text;
+    background-clip: text; color: transparent; }
+  .muted { color: rgb(255 255 255 / .65); }
+  svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---------- Shared pieces ---------- */
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 22px; }
+  .brand img { height: 36px; }
+  .search { position: relative; flex: 1; max-width: 520px; }
+  .search input { width: 100%; height: 50px; padding: 0 22px 0 58px; border-radius: 999px; outline: none; transition: .25s;
+    background: linear-gradient(180deg, rgb(255 255 255 / .12), rgb(255 255 255 / .05)); border: 1px solid rgb(255 255 255 / .18);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .15), 0 10px 30px -12px rgb(var(--glow) / .5); backdrop-filter: blur(20px); }
+  .search input:hover { border-color: rgb(255 255 255 / .3); }
+  .search input:focus { border-color: rgb(255 255 255 / .5); box-shadow: inset 0 1px 0 rgb(255 255 255 / .2), 0 0 0 4px rgb(var(--glow) / .25), 0 14px 40px -10px rgb(var(--glow) / .7); }
+  .search input::placeholder { color: rgb(255 255 255 / .55); }
+  .search .lens { position: absolute; z-index: 1; left: 6px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%;
+    display: grid; place-items: center; pointer-events: none; color: #fff;
+    background: linear-gradient(135deg, var(--a1), var(--a2)); box-shadow: 0 4px 14px rgb(var(--glow) / .6); }
+  .search .lens svg { width: 18px; height: 18px; }
+  .results { position: absolute; top: calc(100% + 8px); left: 0; right: 0; padding: 8px; display: none; z-index: 20; background: rgb(15 23 42 / .92); }
+  .search:focus-within .results { display: block; }
+  .results h6 { margin: 8px 12px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: rgb(255 255 255 / .5); font-weight: 500; }
+  .results a { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 12px; color: #fff; text-decoration: none; font-size: 14px; }
+  .results a:hover { background: rgb(255 255 255 / .08); }
+  .results a span { font-size: 12px; color: rgb(255 255 255 / .5); }
+
+  .pill-menu { position: relative; }
+  .pill-menu > button { height: 44px; padding: 0 14px; border-radius: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer;
+    background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); white-space: nowrap; }
+  .menu { position: absolute; right: 0; top: calc(100% + 8px); padding: 8px; min-width: 200px; display: none; z-index: 30; background: rgb(15 23 42 / .92); }
+  .pill-menu.open .menu { display: block; }
+  .menu button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; background: transparent;
+    border-radius: 12px; cursor: pointer; text-align: left; font-size: 14px; }
+  .menu button:hover { background: rgb(255 255 255 / .1); }
+  .menu.theme-grid { width: 380px; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pill-menu.open .menu.theme-grid { display: grid; }
+  .theme-grid button { flex-direction: column; align-items: stretch; gap: 6px; padding: 6px; font-size: 13px; }
+  .theme-grid .thumb { height: 64px; border-radius: 10px; background-size: cover; background-position: center; border: 2px solid transparent; }
+  .theme-grid button.on .thumb { border-color: #fff; box-shadow: 0 0 14px rgb(var(--glow) / .7); }
+  .swatch { width: 18px; height: 18px; border-radius: 50%; flex: none; }
+
+  .avatar { width: 44px; height: 44px; border-radius: 50%; cursor: pointer; overflow: hidden; flex: none; background: rgb(255 255 255 / .1);
+    box-shadow: 0 0 0 2px rgb(255 255 255 / .3), 0 0 20px rgb(var(--glow) / .5); }
+  .avatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
+
+  .clock { font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .date::first-letter { text-transform: uppercase; }
+  .hello { font-weight: 600; letter-spacing: -.02em; margin: 0; }
+  .bio { line-height: 1.7; margin: 0; }
+  .edit-link { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: var(--a2); cursor: pointer; background: none; border: 0; padding: 0; }
+  .hint { font-size: 13px; color: rgb(255 255 255 / .5); display: flex; align-items: center; gap: 8px; }
+
+  /* ---------- Widgets ---------- */
+  .widgets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); grid-auto-rows: 128px; grid-auto-flow: dense; gap: 24px; }
+  .w { grid-row: span 2; overflow: visible; min-height: 0; position: relative; padding: 22px; display: flex; flex-direction: column; gap: 14px; transition: transform .25s, box-shadow .25s, opacity .25s;
+    user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  body:not(.editing) .w:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -12px rgb(var(--glow) / .35); }
+  .w.pressing { transform: scale(.97); }
+  .w-head { display: flex; align-items: center; gap: 12px; }
+  .w-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none;
+    background: linear-gradient(135deg, rgb(var(--glow) / .5), rgb(255 255 255 / .06)); }
+  .w-title { font-weight: 600; font-size: 15px; }
+  .w-sub { font-size: 12px; color: rgb(255 255 255 / .55); }
+  .w-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+  .w-list li { display: flex; gap: 10px; align-items: baseline; }
+  .w-list li::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--a2); flex: none; transform: translateY(-2px); }
+  .w-list small { color: rgb(255 255 255 / .5); margin-left: auto; white-space: nowrap; font-size: 12px; }
+  .big-num { font-size: 40px; font-weight: 600; letter-spacing: -.02em; }
+  .delta { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: rgb(52 211 153 / .15); color: #6ee7b7; }
+  .w-foot { margin-top: auto; font-size: 12px; color: rgb(255 255 255 / .45); display: flex; justify-content: space-between; }
+  .add { border-style: dashed; align-items: center; justify-content: center; text-align: center; min-height: 220px; cursor: pointer; color: rgb(255 255 255 / .7); }
+  .add .plus { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; font-weight: 300;
+    background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .2); }
+  .spark { width: 100%; flex: 1; min-height: 50px; }
+  .w-list { overflow: hidden; }
+
+  /* World clock widget: list when small, 24 h timeline once it's wide enough */
+  .w[data-kind="world"] { grid-column: span 2; grid-row: span 2; }
+  .wl-line { position: relative; flex: 1; min-height: 170px; }
+  .wl-line .bar { position: absolute; left: 0; right: 0; top: 50%; height: 12px; transform: translateY(-50%); border-radius: 999px;
+    background: linear-gradient(90deg, #0b1026 0%, #1e1b4b 20%, #f9a8d4 26%, #fcd34d 32%, #38bdf8 45%, #7dd3fc 60%, #fb7185 74%, #7c3aed 80%, #1e1b4b 88%, #0b1026 100%); }
+  .wl-line .hrs { position: absolute; left: 0; right: 0; top: calc(50% + 10px); display: flex; justify-content: space-between; font-size: 10px; color: rgb(255 255 255 / .45); }
+  .wl-pin { position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; white-space: nowrap; }
+  .wl-pin.up { bottom: calc(50% + 8px); } .wl-pin.down { top: calc(50% + 8px); flex-direction: column-reverse; }
+  .wl-pin .lbl { padding: 4px 9px; border-radius: 10px; background: rgb(15 23 42 / .85); border: 1px solid rgb(255 255 255 / .15); font-size: 11px; text-align: center; }
+  .wl-pin .lbl b { font-size: 14px; font-variant-numeric: tabular-nums; }
+  .wl-pin .stem { width: 2px; height: 12px; background: rgb(255 255 255 / .6); }
+  .wl-pin .dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px #fff; }
+  .wl-pin.me .dot { background: var(--a2); box-shadow: 0 0 12px var(--a2); }
+
+  /* News: magazine */
+  .mag-hero { height: 70px; flex: none; border-radius: 16px; position: relative; overflow: hidden; background: linear-gradient(135deg, #1e1b4b, var(--a1) 60%, var(--a2)); }
+  .mag-hero::after { content: "🪐"; position: absolute; right: 14px; top: 12px; font-size: 42px; }
+  .mag-hero span { position: absolute; left: 12px; bottom: 10px; font-size: 11px; padding: 3px 9px; border-radius: 999px; background: rgb(0 0 0 / .4); }
+  .mag-title { margin: 0; font-size: 15px; line-height: 1.3; }
+  .mag-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: rgb(255 255 255 / .72); }
+  .mag-list li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mag-list li::before { content: "• "; color: var(--a2); }
+  /* Exchange rate: trend */
+  .fx-row { display: flex; align-items: center; gap: 10px; }
+  .fx-spark { width: 100%; flex: 1; min-height: 50px; }
+  .fx-mm { display: flex; justify-content: space-between; font-size: 12px; color: rgb(255 255 255 / .55); }
+  /* Price history: spinning coin */
+  .bt-row { display: flex; align-items: center; gap: 14px; }
+  .coin { width: 54px; height: 54px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 28px; font-weight: 800; color: #7c2d12;
+    background: radial-gradient(circle at 35% 30%, #fde68a, #f59e0b 70%); box-shadow: 0 0 24px rgb(245 158 11 / .6); animation: coinSpin 4s linear infinite; }
+  @keyframes coinSpin { to { transform: rotateY(360deg); } }
+  .bt-price { white-space: nowrap; font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .bt-chart { width: 100%; flex: 1; min-height: 60px; }
+  /* GitHub: terminal */
+  body .w.term-card { background: rgb(2 6 23 / .82); font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .term-bar { display: flex; gap: 6px; align-items: center; } .term-bar i { width: 11px; height: 11px; border-radius: 50%; }
+  .term-bar span { margin-left: 8px; font-size: 12px; color: rgb(255 255 255 / .45); }
+  .term { margin: 0; white-space: pre-wrap; font: 12.5px/1.7 'JetBrains Mono', ui-monospace, monospace; color: #cbd5e1; }
+  .term .p { color: #4ade80; } .term .h { color: #fbbf24; }
+  .term .cur { display: inline-block; width: 8px; height: 15px; background: #cbd5e1; vertical-align: -2px; animation: termBlink 1s steps(1) infinite; }
+  @keyframes termBlink { 50% { opacity: 0; } }
+
+  /* Weather widget: now + next 5 days with a min/max bar on a shared scale */
+  .wx-main { display: flex; align-items: center; gap: 14px; }
+  .wx-ico { font-size: 50px; line-height: 1; filter: drop-shadow(0 0 16px rgb(253 224 71 / .6)); }
+  .wx-t { font-size: 44px; font-weight: 600; line-height: 1; }
+  .wx-days { display: flex; flex-direction: column; gap: 7px; margin-top: auto; font-size: 13px; }
+  .wx-day { display: grid; grid-template-columns: 40px 22px 28px 1fr 28px; align-items: center; gap: 8px; }
+  .wx-day .lo { color: rgb(255 255 255 / .55); }
+  .wx-range { height: 6px; border-radius: 999px; background: rgb(255 255 255 / .1); position: relative; }
+  .wx-range i { position: absolute; top: 0; bottom: 0; border-radius: inherit; background: linear-gradient(90deg, #38bdf8, #fde047, #fb923c); }
+  .w[data-kind="weather"] { grid-row: span 2; }
+
+  /* Widget decorations: stickers that sit on the card's edges */
+  .deco { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+  .deco i { font-style: normal; position: absolute; line-height: 1; }
+  .dc-flowers i { font-size: 30px; animation: sway 3s ease-in-out infinite alternate; transform-origin: bottom center; }
+  .dc-flowers i:nth-child(1) { left: -14px; top: -18px; } .dc-flowers i:nth-child(2) { left: 12px; top: -22px; font-size: 24px; animation-delay: -1s; }
+  .dc-flowers i:nth-child(3) { left: -18px; top: 14px; font-size: 22px; animation-delay: -2s; }
+  @keyframes sway { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+  .dc-balloons svg { position: absolute; left: -14px; top: -86px; width: 74px; animation: bob 3.2s ease-in-out infinite alternate; }
+  @keyframes bob { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-8px) rotate(3deg); } }
+  .dc-stars i { font-size: 20px; animation: twinkle 1.8s ease-in-out infinite; }
+  .dc-stars i:nth-child(1) { left: -8px; top: -10px; } .dc-stars i:nth-child(2) { right: 18px; top: -12px; font-size: 14px; animation-delay: -.6s; }
+  .dc-stars i:nth-child(3) { right: -8px; bottom: 20px; animation-delay: -1.2s; } .dc-stars i:nth-child(4) { left: 30%; bottom: -10px; font-size: 13px; animation-delay: -.3s; }
+  @keyframes twinkle { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
+  .dc-butterflies i { font-size: 26px; animation: flutter .35s ease-in-out infinite alternate, drift 5s ease-in-out infinite alternate; }
+  .dc-butterflies i:nth-child(1) { right: -12px; top: -16px; } .dc-butterflies i:nth-child(2) { right: 34px; top: -26px; font-size: 18px; animation-delay: -.2s, -2s; }
+  @keyframes flutter { from { scale: 1 1; } to { scale: .55 1; } }
+  @keyframes drift { from { translate: 0 0; } to { translate: -10px -6px; } }
+  .dc-hearts i { font-size: 20px; right: 14px; bottom: 10px; opacity: 0; animation: floatUp 3.6s ease-in infinite; }
+  .dc-hearts i:nth-child(2) { right: 34px; font-size: 15px; animation-delay: -1.2s; } .dc-hearts i:nth-child(3) { right: 4px; font-size: 17px; animation-delay: -2.4s; }
+  @keyframes floatUp { 0% { opacity: 0; transform: translateY(0) scale(.6); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-90px) scale(1.1); } }
+  .dc-lights { position: absolute; left: 18px; right: 18px; top: -7px; height: 22px; display: flex; justify-content: space-between; align-items: flex-start;
+    border-top: 2px solid rgb(255 255 255 / .3); border-radius: 0 0 50% 50% / 0 0 14px 14px; }
+  .dc-lights b { width: 9px; height: 13px; border-radius: 50% 50% 45% 45%; margin-top: 3px; animation: blinkL 1.6s ease-in-out infinite; }
+  .dc-lights b:nth-child(4n+1) { background: #fde047; box-shadow: 0 0 10px #fde047; } .dc-lights b:nth-child(4n+2) { background: #f472b6; box-shadow: 0 0 10px #f472b6; animation-delay: -.4s; }
+  .dc-lights b:nth-child(4n+3) { background: #38bdf8; box-shadow: 0 0 10px #38bdf8; animation-delay: -.8s; } .dc-lights b:nth-child(4n) { background: #4ade80; box-shadow: 0 0 10px #4ade80; animation-delay: -1.2s; }
+  .dc-lights b:nth-child(even) { margin-top: 8px; }
+  @keyframes blinkL { 50% { opacity: .35; box-shadow: none; } }
+  .dc-clouds i { font-size: 28px; top: -18px; animation: cloud 9s ease-in-out infinite alternate; }
+  .dc-clouds i:nth-child(1) { left: 10%; } .dc-clouds i:nth-child(2) { left: 60%; font-size: 20px; top: -12px; animation-delay: -4s; }
+  @keyframes cloud { from { translate: -12px 0; } to { translate: 14px 0; } }
+  .dc-crown i { font-size: 34px; left: -16px; top: -22px; transform: rotate(-22deg); filter: drop-shadow(0 0 8px rgb(253 224 71 / .6)); }
+  .dc-bow i { font-size: 34px; left: 50%; top: -20px; transform: translateX(-50%); }
+  .dc-cat i { font-size: 34px; right: 18px; top: -30px; animation: peek 4s ease-in-out infinite; }
+  @keyframes peek { 0%, 70%, 100% { transform: translateY(0); } 80% { transform: translateY(-6px) rotate(-6deg); } }
+  .deco-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+  .deco-pick button { padding: 10px 4px; border-radius: 14px; background: rgb(255 255 255 / .06); border: 2px solid transparent; cursor: pointer; font-size: 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; color: rgb(255 255 255 / .8); }
+  .deco-pick button span { font-size: 24px; }
+  .deco-pick button:hover { background: rgb(255 255 255 / .12); }
+  .deco-pick button.on { border-color: #fff; background: rgb(255 255 255 / .12); }
+
+  /* Edit mode: long-press → widgets jiggle, badges appear, drag to reorder */
+  .badge { position: absolute; top: -11px; width: 30px; height: 30px; border-radius: 50%; display: none; place-items: center; cursor: pointer;
+    border: 0; font-size: 20px; font-weight: 600; line-height: 1; z-index: 2; box-shadow: 0 4px 12px rgb(0 0 0 / .4); }
+  .badge.del { left: -11px; background: #ef4444; color: #fff; }
+  .badge.edit { right: -11px; background: #fff; color: #111; font-size: 15px; }
+  .editing .w:not(.add) .badge { display: grid; animation: pop .25s ease-out; }
+  .editing .w:not(.add) { animation: jiggle .26s ease-in-out infinite alternate; cursor: grab; }
+  .editing .w:not(.add):nth-child(2n) { animation-duration: .3s; animation-delay: -.13s; }
+  .editing .w:not(.add):nth-child(3n) { animation-duration: .24s; animation-delay: -.07s; }
+  .resize { position: absolute; right: -11px; bottom: -11px; width: 30px; height: 30px; border-radius: 50%; display: none; place-items: center;
+    border: 0; background: #fff; color: #111; cursor: nwse-resize; z-index: 2; box-shadow: 0 4px 12px rgb(0 0 0 / .4); touch-action: none; }
+  .resize svg { width: 16px; height: 16px; }
+  .editing .w:not(.add) .resize { display: grid; animation: pop .25s ease-out; }
+  .w.resizing { animation: none !important; outline: 2px dashed rgb(255 255 255 / .6); outline-offset: 4px; }
+  .w.dragging { opacity: .35; animation: none !important; }
+  .w.removing { transform: scale(.5) !important; opacity: 0; animation: none !important; }
+  .w.appearing { animation: pop .35s ease-out; }
+  @keyframes jiggle { from { transform: rotate(-1.1deg) translateY(-1px); } to { transform: rotate(1.1deg) translateY(1px); } }
+  @keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* ---------- Widget skins (independent from the theme) ---------- */
+  body[data-wskin="neon"] .w { background: rgb(2 6 23 / .55); border: 1px solid var(--a1);
+    box-shadow: 0 0 22px rgb(var(--glow) / .45), inset 0 0 22px rgb(var(--glow) / .12); }
+  body[data-wskin="neon"] .w-title, body[data-wskin="neon"] .big-num { text-shadow: 0 0 12px rgb(var(--glow) / .9); }
+  body[data-wskin="pastel"] .w { background: linear-gradient(150deg, rgb(var(--glow) / .35), rgb(255 255 255 / .1)); border-color: rgb(255 255 255 / .3); border-radius: 32px; }
+  body[data-wskin="pastel"] .w-ico { background: rgb(255 255 255 / .25); border-radius: 50%; }
+  body[data-wskin="minimal"] .w { background: rgb(8 10 20 / .82); backdrop-filter: none; border: 1px solid rgb(255 255 255 / .06); border-radius: 16px; }
+  body[data-wskin="minimal"] .w-ico { background: none; border: 1px solid rgb(255 255 255 / .15); }
+  body[data-wskin="holo"] .w { border: 1.5px solid transparent;
+    background: linear-gradient(rgb(15 15 35 / .9), rgb(15 15 35 / .9)) padding-box,
+                linear-gradient(135deg, #f0abfc, #93c5fd, #6ee7b7, #fde68a, #f0abfc) border-box; }
+  body[data-wskin="holo"] .w-ico { background: linear-gradient(135deg, #f0abfc, #93c5fd, #6ee7b7); color: #111; }
+  body[data-wskin] .w.add { background: rgb(255 255 255 / .05); border: 1.5px dashed rgb(255 255 255 / .25); box-shadow: none; }
+
+  /* ---------- Layout A: Cockpit (sidebar) ---------- */
+  .A { display: grid; grid-template-columns: auto 1fr; min-height: 100vh; }
+  .A aside { width: 250px; transition: width .4s cubic-bezier(.2, .8, .2, 1), padding .4s; }
+  .A.collapsed aside { width: 84px; padding-left: 12px; padding-right: 12px; }
+  .side-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .A.collapsed .side-head { flex-direction: column; gap: 14px; }
+  .side-toggle { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 12px; cursor: pointer;
+    background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); transition: background .2s; }
+  .side-toggle:hover { background: rgb(255 255 255 / .16); }
+  .side-toggle svg { transition: transform .4s; }
+  .A.collapsed .side-toggle svg { transform: rotate(180deg); }
+  .A aside nav a span, .A aside .brand-name { white-space: nowrap; transition: opacity .25s .1s; }
+  .A.collapsed aside nav a span, .A.collapsed aside .brand-name { opacity: 0; width: 0; overflow: hidden; transition: none; }
+  .A.collapsed aside nav a { justify-content: center; padding: 12px 0; gap: 0; }
+  .A.collapsed aside .brand { gap: 0; }
+  .A aside { overflow-x: hidden; position: sticky; top: 16px; height: calc(100vh - 32px); align-self: start; overflow: auto; margin: 16px 0 16px 16px; padding: 24px 16px; display: flex; flex-direction: column; gap: 28px; }
+  .A nav { display: flex; flex-direction: column; gap: 4px; }
+  .A nav a { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; color: rgb(255 255 255 / .75); text-decoration: none; }
+  .A nav a.on, .A nav a:hover { background: rgb(255 255 255 / .1); color: #fff; }
+  .A nav a.on { box-shadow: inset 3px 0 0 var(--a2); }
+  .A main { padding: 16px 28px 90px; display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+  .A .top { display: flex; gap: 12px; align-items: center; }
+  .A .top { justify-content: flex-end; }
+  .A .search-row { display: flex; justify-content: flex-end; margin-top: 18px; position: relative; z-index: 5; }
+  /* Collapsed: only the magnifier. Click it and the bar unrolls to the left */
+  .A .search-row .search { flex: none; width: 50px; max-width: none; transition: width .45s cubic-bezier(.2, .8, .2, 1); }
+  .A .search-row .search.open { width: min(560px, 100%); }
+  .A .search-row .search { height: 50px; }
+  .A .search-row .search input { padding-right: 22px; transition: opacity .25s .15s; }
+  .A .search-row .search:not(.open) input { opacity: 0; pointer-events: none; transition: none; }
+  .A .search-row .search:not(.open)::before { content: ""; position: absolute; inset: 0; border-radius: 999px;
+    background: linear-gradient(180deg, rgb(255 255 255 / .12), rgb(255 255 255 / .05)); border: 1px solid rgb(255 255 255 / .18); }
+  .A .search-row .search .lens { pointer-events: auto; cursor: pointer; border: 0; padding: 0; }
+  .A .search-row .search:not(.open) .results { display: none; }
+  .A .hero { display: grid; grid-template-columns: minmax(0, 1fr) 300px 300px; gap: 20px; }
+  @media (max-width: 1500px) { .A .hero { grid-template-columns: 1fr 1fr; } .A .hello-card { grid-column: 1 / -1; } }
+  /* Journal card: a closed book on the dashboard, as big as the clock */
+  .journal-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 26px; cursor: pointer; perspective: 900px; }
+  .mini-title { margin: 0; font: 700 34px/1 Caveat, cursive; }
+  .mini-book { position: relative; width: 240px; height: 160px; perspective: 1000px; margin: 10px 0 4px; }
+  .mini-book::before { content: ""; position: absolute; inset: -9px -10px; border-radius: 12px; background: linear-gradient(145deg, var(--a1), var(--a2));
+    box-shadow: 0 16px 34px -10px rgb(0 0 0 / .7), 0 0 40px rgb(var(--glow) / .4); }
+  .mini-book .pg, .mini-book .face { background-color: #fbf5e9; background-image: repeating-linear-gradient(transparent 0 15px, #e3daf1 15px 16px); background-position: 0 30px; }
+  .mini-book .pg { position: absolute; top: 0; bottom: 0; width: 50%; }
+  .mini-book .l { left: 0; border-radius: 6px 0 0 6px; box-shadow: inset -16px 0 18px -14px rgb(0 0 0 / .4); }
+  .mini-book .r { right: 0; border-radius: 0 6px 6px 0; box-shadow: inset 16px 0 18px -14px rgb(0 0 0 / .4); }
+  .mini-book .ink { position: absolute; left: 12px; top: 10px; font: 600 15px/16px Caveat, cursive; color: #5b4ea0; }
+  .mini-book .leaf { position: absolute; left: 50%; top: 0; bottom: 0; width: 50%; transform-origin: left center; transform-style: preserve-3d;
+    animation: leafTurn 3.6s cubic-bezier(.45, .05, .3, 1) infinite; }
+  .mini-book .leaf:nth-of-type(4) { animation-delay: -1.2s; }
+  .mini-book .leaf:nth-of-type(5) { animation-delay: -2.4s; }
+  .mini-book .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 0 6px 6px 0; }
+  .mini-book .face.front { background-image: linear-gradient(90deg, rgb(0 0 0 / .16), transparent 20%), repeating-linear-gradient(transparent 0 15px, #e3daf1 15px 16px); }
+  .mini-book .face.back { transform: rotateY(180deg); border-radius: 6px 0 0 6px;
+    background-image: linear-gradient(-90deg, rgb(0 0 0 / .16), transparent 20%), repeating-linear-gradient(transparent 0 15px, #e3daf1 15px 16px); }
+  /* Each leaf turns, then vanishes on the left and quietly comes back on the right (it looks like the page beneath) */
+  @keyframes leafTurn {
+    0% { transform: rotateY(0); opacity: 1; }
+    33% { transform: rotateY(-180deg); opacity: 1; }
+    34% { transform: rotateY(-180deg); opacity: 0; }
+    35%, 100% { transform: rotateY(0); opacity: 0; }
+  }
+  .journal-card .last { font-size: 13px; color: rgb(255 255 255 / .65); text-align: center; }
+  .journal-card .write { padding: 10px 18px; border-radius: 999px; border: 0; background: #fff; color: #111; font-weight: 600; cursor: pointer; font-size: 14px; }
+  .A .hello-card { position: relative; overflow: hidden; display: flex; align-items: center; gap: 36px; padding: 44px 48px; min-height: 320px; }
+  .A .hello-card .orb { position: absolute; right: -140px; top: -160px; width: 480px; height: 480px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle at 38% 38%, rgb(var(--glow) / .55), rgb(var(--glow) / .12) 45%, transparent 68%); }
+  .A .hello-card .ghost { position: absolute; right: 10px; top: 50%; transform: translateY(-52%); pointer-events: none;
+    font-size: 300px; font-weight: 800; line-height: 1; letter-spacing: -.05em; color: transparent; -webkit-text-stroke: 2px rgb(255 255 255 / .16); }
+  .A .hello-card .ghost-sub { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: .35em; text-transform: uppercase; color: var(--a2); }
+  .A .hello-card .avatar { width: 136px; height: 136px; position: relative;
+    box-shadow: 0 0 0 4px rgb(255 255 255 / .2), 0 0 0 12px rgb(var(--glow) / .15), 0 0 60px rgb(var(--glow) / .6); }
+  .A .hello-card .txt { position: relative; max-width: 640px; min-width: 0; }
+  .A .hello { font-size: clamp(36px, 3.4vw, 54px); line-height: 1.1; margin-top: 6px; }
+  .A .bio { font-size: 16px; color: rgb(255 255 255 / .8); margin-top: 14px; }
+  .chips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; align-items: center; }
+  .chip { padding: 8px 14px; border-radius: 999px; background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); font-size: 13px; }
+  .A .clock-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 28px; position: relative; overflow: hidden; }
+  .planet-clock { position: relative; width: 240px; height: 240px; display: grid; place-items: center; }
+  .pc-orbit { position: absolute; inset: 0; border-radius: 50%; border: 1px dashed rgb(255 255 255 / .22); }
+  .pc-moon { position: absolute; inset: 0; transition: transform 1s linear; }
+  .pc-moon i { position: absolute; left: 50%; top: -7px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #fff; box-shadow: 0 0 14px #fff; }
+  .pc-moon b { position: absolute; left: 50%; top: -1px; width: 64px; height: 2px; margin-left: -66px; border-radius: 2px; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .75)); }
+  .pc-planet { width: 150px; height: 150px; border-radius: 50%; display: grid; place-content: center; text-align: center;
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--a1) 45%, #fff), var(--a1) 55%, #1e1b4b);
+    box-shadow: 0 0 60px rgb(var(--glow) / .6), inset -14px -16px 34px rgb(0 0 0 / .45); }
+  .pc-planet .clock { font-size: 40px; }
+  .dial { position: relative; width: 230px; aspect-ratio: 1; }
+  .dial svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+  .dial .track { fill: none; stroke: rgb(255 255 255 / .1); stroke-width: 5; }
+  .dial .ticks { fill: none; stroke: rgb(255 255 255 / .25); stroke-width: 2; stroke-dasharray: 1 46.12; }
+  .dial .prog { fill: none; stroke: url(#dialGrad); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 565.49; transition: stroke-dashoffset 1s linear; }
+  .dial .sat { transform-origin: 100px 100px; transition: transform 1s linear; }
+  .dial.wrap .prog, .dial.wrap .sat { transition: none; }
+  .dial-in { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .A .clock { font-size: 58px; line-height: 1; }
+  .secs { font-size: 13px; letter-spacing: .3em; color: rgb(255 255 255 / .55); margin-top: 6px; }
+
+  /* Account menu (opens from the avatar) */
+  .acct { position: relative; }
+  .acct .menu { min-width: 250px; }
+  .acct > .avatar { border-radius: 50%; padding: 0; border: 0; height: 44px; }
+  .acct-head { display: flex; gap: 12px; align-items: center; padding: 10px 12px 14px; border-bottom: 1px solid rgb(255 255 255 / .1); margin-bottom: 6px; }
+  .acct-head .avatar { width: 42px; height: 42px; box-shadow: none; }
+  .acct-head small { display: block; color: rgb(255 255 255 / .55); font-size: 12px; }
+  .menu .danger { color: #fca5a5; }
+  .menu hr { border: 0; border-top: 1px solid rgb(255 255 255 / .1); margin: 6px 0; }
+  .icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 14px; cursor: pointer; flex: none;
+    background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); font-weight: 600; font-size: 17px; }
+  .icon-btn:hover { background: rgb(255 255 255 / .16); }
+  .A aside .bottom { margin-top: auto; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid rgb(255 255 255 / .1); padding-top: 16px; }
+  .A aside .bottom a.danger { color: #fca5a5; }
+
+  /* Profile page */
+  .modal.profile-modal { max-width: 860px; padding: 0; }
+  .pf-cover { height: 130px; background: linear-gradient(120deg, rgb(var(--glow) / .8), var(--a2)); border-radius: 24px 24px 0 0; position: relative; }
+  .pf-top { display: flex; align-items: flex-start; gap: 20px; padding: 0 32px; margin-top: -56px; flex-wrap: wrap; }
+  .pf-top .avatar { width: 112px; height: 112px; box-shadow: 0 0 0 5px rgb(15 23 42), 0 0 40px rgb(var(--glow) / .5); position: relative; }
+  .pf-top .cam { position: absolute; right: 0; bottom: 0; width: 34px; height: 34px; border-radius: 50%; background: #fff; color: #111; display: grid; place-items: center; font-size: 15px; }
+  .pf-top h3 { margin: 0; font-size: 26px; }
+  .pf-body { padding: 24px 32px 32px; display: grid; gap: 18px; }
+  .pf-section { padding: 22px; border-radius: 20px; background: rgb(255 255 255 / .05); border: 1px solid rgb(255 255 255 / .1); }
+  .pf-section h4 { margin: 0 0 4px; font-size: 16px; }
+  .pf-section > p { margin: 0 0 6px; font-size: 13px; color: rgb(255 255 255 / .55); }
+  .pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+  .field textarea { padding: 14px 16px; border-radius: 18px; background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .18); outline: none; resize: vertical; min-height: 110px; font: inherit; color: inherit; line-height: 1.6; }
+  .field textarea::placeholder, .field input::placeholder { color: rgb(255 255 255 / .4); }
+  .field input[readonly] { opacity: .6; cursor: not-allowed; }
+  .field small { color: rgb(255 255 255 / .45); font-size: 12px; }
+  .pf-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+  .pf-actions .primary { width: auto; padding: 13px 28px; }
+  .danger-zone { border-color: rgb(239 68 68 / .35); background: rgb(239 68 68 / .06); }
+  .btn-danger { padding: 11px 20px; border-radius: 999px; border: 1px solid rgb(239 68 68 / .5); background: rgb(239 68 68 / .15); color: #fecaca; cursor: pointer; }
+  .soon { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgb(255 255 255 / .1); color: rgb(255 255 255 / .6); margin-left: 6px; vertical-align: middle; }
+
+  /* Journal: an open book whose pages turn on their own */
+  .modal.journal-modal { position: relative; max-width: 1000px; padding: 0; background: none; border: 0; backdrop-filter: none; overflow: visible; }
+  .book { position: relative; display: grid; grid-template-columns: 1fr 1fr; min-height: 560px; border-radius: 18px; padding: 14px; perspective: 2400px;
+    background: linear-gradient(135deg, var(--a1), var(--a2)); box-shadow: 0 30px 80px -20px rgb(0 0 0 / .8), 0 0 60px rgb(var(--glow) / .35); }
+  .page { position: relative; background: #fbf5e9; color: #3b3450; padding: 34px 36px; overflow: hidden; }
+  .page.left { border-radius: 10px 0 0 10px; box-shadow: inset -30px 0 40px -30px rgb(0 0 0 / .35); }
+  .page.right { border-radius: 0 10px 10px 0; box-shadow: inset 30px 0 40px -30px rgb(0 0 0 / .35); }
+  .book .page > * { transition: opacity .35s; }
+  .book.opening .page > * { opacity: 0; }
+  .book::after { content: ""; position: absolute; top: 14px; bottom: 14px; left: 50%; width: 2px; background: rgb(0 0 0 / .15); }
+  /* A flipping leaf sits on the right half and turns around the spine (or the reverse for going back) */
+  .flip { position: absolute; top: 14px; bottom: 14px; left: 50%; width: calc(50% - 14px); transform-style: preserve-3d; transform-origin: left center;
+    pointer-events: none; animation: flipFwd .75s cubic-bezier(.45, .05, .3, 1) both; }
+  .flip.rev { left: 14px; transform-origin: right center; animation-name: flipBack; }
+  @keyframes flipFwd { 0% { transform: rotateY(0); z-index: var(--z0, 6); } 50% { z-index: var(--z1, 6); } 100% { transform: rotateY(-180deg); z-index: var(--z1, 6); } }
+  @keyframes flipBack { 0% { transform: rotateY(0); z-index: 6; } 100% { transform: rotateY(180deg); z-index: 6; } }
+  .flip .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; background-color: #fbf5e9;
+    background-image: linear-gradient(90deg, rgb(0 0 0 / .18), transparent 12%), repeating-linear-gradient(transparent 0 33px, #e3daf1 33px 34px);
+    background-position: 0 0, 0 150px; border-radius: 0 10px 10px 0; }
+  .flip .face.back { transform: rotateY(180deg); border-radius: 10px 0 0 10px;
+    background-image: linear-gradient(-90deg, rgb(0 0 0 / .18), transparent 12%), repeating-linear-gradient(transparent 0 33px, #e3daf1 33px 34px); }
+  .flip.rev .face { border-radius: 10px 0 0 10px; } .flip.rev .face.back { border-radius: 0 10px 10px 0; }
+  .j-title { font-family: Caveat, cursive; font-size: 40px; font-weight: 700; margin: 0; color: #4c3f78; }
+  .j-private { font-size: 12px; color: #8a80a6; margin: 2px 0 18px; }
+  .j-new { width: 100%; padding: 12px; border-radius: 12px; border: 1.5px dashed #b9aee0; background: transparent; color: #5b4ea0; cursor: pointer; font-weight: 600; }
+  .j-new:hover { background: #f1eafc; }
+  .j-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 390px; overflow: auto; }
+  .j-list button { width: 100%; text-align: left; padding: 12px 14px; border-radius: 12px; border: 0; background: rgb(76 63 120 / .06); color: inherit; cursor: pointer; display: flex; gap: 12px; align-items: center; }
+  .j-list button.on { background: rgb(76 63 120 / .16); }
+  .j-list .mood { font-size: 22px; }
+  .j-list b { display: block; font-size: 13px; color: #4c3f78; }
+  .j-list span.prev { display: block; font-size: 13px; color: #7a7094; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+  .j-date { font-family: Caveat, cursive; font-size: 30px; color: #4c3f78; margin: 0; }
+  .j-moods { display: flex; gap: 6px; margin: 8px 0 12px; align-items: center; font-size: 13px; color: #8a80a6; flex-wrap: wrap; }
+  .j-moods button { font-size: 22px; border: 0; background: transparent; cursor: pointer; border-radius: 50%; width: 38px; height: 38px; opacity: .45; transition: .15s; }
+  .j-moods button.on, .j-moods button:hover { opacity: 1; background: rgb(76 63 120 / .1); transform: scale(1.1); }
+  .j-text { width: 100%; height: 380px; border: 0; outline: none; resize: none; background: transparent; color: #2f2946;
+    font: 500 25px/34px Caveat, cursive; padding: 0 4px;
+    background-image: repeating-linear-gradient(transparent 0 33px, #d9cfee 33px 34px); background-attachment: local; }
+  .j-text::placeholder { color: #b3a9cc; }
+  .j-saved { position: absolute; right: 30px; bottom: 18px; font-size: 12px; color: #8a80a6; }
+  .j-close { position: absolute; top: -16px; right: -16px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: #fff; color: #111; cursor: pointer; font-size: 20px; z-index: 12; box-shadow: 0 6px 20px rgb(0 0 0 / .4); }
+  @media (max-width: 900px) { .book { grid-template-columns: 1fr; } .page.left { border-radius: 10px 10px 0 0; } .page.right { border-radius: 0 0 10px 10px; } .book::after { display: none; } }
+
+  /* Help */
+  .faq details { padding: 14px 16px; border-radius: 16px; background: rgb(255 255 255 / .05); border: 1px solid rgb(255 255 255 / .1); margin-top: 10px; }
+  .faq summary { cursor: pointer; font-weight: 500; list-style: none; display: flex; justify-content: space-between; gap: 10px; }
+  .faq summary::after { content: "+"; font-size: 20px; line-height: 1; color: var(--a2); }
+  .faq details[open] summary::after { content: "−"; }
+  .faq details p { margin: 10px 0 0; color: rgb(255 255 255 / .7); font-size: 14px; line-height: 1.6; }
+
+  /* ---------- Modals ---------- */
+  .modal-bg { position: fixed; inset: 0; background: rgb(0 0 0 / .55); display: none; place-items: center; z-index: 60; padding: 16px; }
+  .modal-bg.open { display: grid; }
+  .modal { width: 100%; max-width: 480px; padding: 28px; background: rgb(15 23 42 / .88); max-height: calc(100vh - 32px); overflow: auto; }
+  .modal h3 { margin: 0 0 4px; font-size: 22px; }
+  .primary { width: 100%; padding: 14px; border-radius: 999px; border: 0; background: #fff; color: #111; font-weight: 600; cursor: pointer; }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; font-size: 14px; color: rgb(255 255 255 / .8); }
+  .field input, .field select { padding: 12px 16px; border-radius: 999px; background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .18); outline: none; }
+  .field select option { background: #0f172a; }
+  .picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 18px; }
+  .picker button { text-align: left; padding: 16px; border-radius: 18px; background: rgb(255 255 255 / .06); border: 1px solid rgb(255 255 255 / .14); cursor: pointer; display: flex; flex-direction: column; gap: 8px; }
+  .picker button:hover { background: rgb(255 255 255 / .12); }
+
+  /* Avatar editor (Bitmoji-style, powered by DiceBear "avataaars") */
+  .av-modal { max-width: 820px; }
+  .av-grid { display: grid; grid-template-columns: 240px 1fr; gap: 24px; margin-top: 20px; }
+  .av-preview { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .av-preview .big { width: 220px; height: 220px; border-radius: 50%; overflow: hidden; background: rgb(255 255 255 / .08);
+    box-shadow: 0 0 0 4px rgb(255 255 255 / .2), 0 0 40px rgb(var(--glow) / .5); }
+  .av-preview .big img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .av-preview .row { display: flex; gap: 8px; width: 100%; }
+  .av-preview .row > * { flex: 1; }
+  .gender { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 5px; margin-bottom: 14px; border-radius: 999px;
+    background: rgb(255 255 255 / .06); border: 1px solid rgb(255 255 255 / .12); }
+  .gender button { padding: 10px; border: 0; border-radius: 999px; background: transparent; cursor: pointer; font-weight: 500; font-size: 14px; white-space: nowrap; }
+  .gender button.on { background: linear-gradient(135deg, var(--a1), var(--a2)); color: #fff; box-shadow: 0 4px 16px rgb(var(--glow) / .5); }
+  .soft { white-space: nowrap; padding: 11px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .2); background: rgb(255 255 255 / .08); cursor: pointer; font-size: 14px; text-align: center; }
+  .soft:hover { background: rgb(255 255 255 / .16); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tabs button { flex: none; padding: 8px 14px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .15); background: transparent; cursor: pointer; font-size: 13px; }
+  .tabs button.on { background: #fff; color: #111; font-weight: 600; }
+  .opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px; margin-top: 14px; max-height: 300px; scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / .25) transparent; overflow: auto; padding: 4px; }
+  .opts button { aspect-ratio: 1; border-radius: 18px; border: 2px solid transparent; background: rgb(255 255 255 / .07); cursor: pointer; padding: 4px; transition: .15s; }
+  .opts button:hover { background: rgb(255 255 255 / .14); }
+  .opts button.on { border-color: #fff; box-shadow: 0 0 16px rgb(var(--glow) / .6); }
+  .opts img { width: 100%; height: 100%; display: block; }
+  .opts .color { border-radius: 50%; padding: 0; width: 64px; height: 64px; justify-self: center; }
+  .opts .none { font-size: 12px; color: rgb(255 255 255 / .6); }
+
+  @media (max-width: 900px) {
+    .A { grid-template-columns: 1fr; } .A aside { display: none; }
+    .A .hero, .av-grid { grid-template-columns: 1fr; }
+    .A .hello-card { flex-direction: column; text-align: center; padding: 32px 24px; }
+    .A .hello-card .ghost { font-size: 200px; right: 50%; transform: translate(50%, -52%); }
+    .A .hello-card .chips { justify-content: center; }
+    .A main { padding: 16px 16px 90px; }
+    .pf-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body data-theme="galaxy" data-wskin="glass">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="btFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f59e0b" stop-opacity=".4" /><stop offset="1" stop-color="#f59e0b" stop-opacity="0" /></linearGradient><linearGradient id="dialGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--a1)" /><stop offset="1" stop-color="var(--a2)" /></linearGradient></defs></svg>
+
+<!-- ================= Layout A ================= -->
+<div class="A collapsed" data-layout="A">
+  <aside class="glass">
+    <div class="side-head">
+      <div class="brand"><img src="/logo.svg" alt="" /><span class="brand-name">Morex</span></div>
+      <button class="side-toggle" id="sideToggle" aria-label="Menu"><svg class="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+    </div>
+    <nav>
+      <a class="on" href="#"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span data-t="navDash"></span></a>
+      <a href="#" data-open-profile><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span data-t="navProfile"></span></a>
+      <a href="#"><svg class="i" viewBox="0 0 24 24"><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg><span data-t="navSettings"></span></a>
+    </nav>
+    <nav class="bottom">
+      <a href="#" data-open-help><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01"/></svg><span data-t="help"></span></a>
+      <a href="#" class="danger" data-open-logout><svg class="i" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l-5-5 5-5M5 12h11"/></svg><span data-t="logout"></span></a>
+    </nav>
+  </aside>
+  <main>
+    <div class="top" data-slot="toolbar"></div>
+    <div class="hero">
+      <div class="glass hello-card">
+        <div class="orb" aria-hidden="true"></div>
+        <div class="ghost" data-slot="dayNum" aria-hidden="true"></div>
+        <div class="avatar" data-slot="avatar" data-open-avatar></div>
+        <div class="txt">
+          <p class="ghost-sub"><span data-slot="weekday"></span> · <span data-slot="month"></span></p>
+          <h1 class="hello"><span data-slot="hello"></span>, <span class="grad">Morayo</span></h1>
+          <p class="bio" data-slot="bio"></p>
+          <div class="chips">
+            <button class="edit-link" data-t="editBio"></button>
+          </div>
+        </div>
+      </div>
+      <div class="glass clock-card">
+        <div class="planet-clock">
+          <div class="pc-orbit"></div>
+          <div class="pc-moon" data-slot="moon"><b></b><i></i></div>
+          <div class="pc-planet"><div class="clock" data-slot="clock"></div><div class="secs" data-slot="secs"></div></div>
+        </div>
+      </div>
+      <div class="glass journal-card" data-open-journal role="button" tabindex="0">
+        <p class="mini-title" data-t="journal"></p>
+        <div class="mini-book" aria-hidden="true">
+          <div class="pg l"><span class="ink">Cher journal,<br />aujourd'hui…</span></div>
+          <div class="pg r"></div>
+          <div class="leaf"><div class="face front"></div><div class="face back"></div></div>
+          <div class="leaf"><div class="face front"></div><div class="face back"></div></div>
+          <div class="leaf"><div class="face front"></div><div class="face back"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="search-row" data-slot="searchRow"></div>
+    <div class="widgets" data-slot="widgets"></div>
+  </main>
+</div>
+
+
+<!-- Toolbar: search + language + theme + widget style + avatar -->
+<template id="toolbar">
+  <div class="search">
+    <button class="lens" data-search-toggle aria-label="Rechercher"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+    <input data-ph="search" data-search />
+    <div class="results glass">
+      <h6 data-t="resWidgets"></h6>
+      <a href="#">GitHub · recent commits <span>morex/dashboard</span></a>
+      <a href="#">RSS · article list <span>Le Monde</span></a>
+      <h6 data-t="resServices"></h6>
+      <a href="#">Market data · exchange rate <span data-t="add"></span></a>
+      <a href="#">Market data · price history <span data-t="add"></span></a>
+    </div>
+  </div>
+  <div class="pill-menu">
+    <button><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><span data-slot="langCode"></span></button>
+    <div class="menu glass">
+      <button data-lang="fr">🇫🇷 Français</button><button data-lang="en">🇬🇧 English</button><button data-lang="es">🇪🇸 Español</button>
+    </div>
+  </div>
+  <div class="pill-menu">
+    <button><span class="swatch" style="background:linear-gradient(135deg,var(--a1),var(--a2))"></span><span data-t="theme"></span></button>
+    <div class="menu glass theme-grid">
+      <button data-theme-set="galaxy"><span class="thumb" style="background-image:url(/accueil_photo.jpg);background-position:50% 28%"></span><span data-t="th_galaxy"></span></button>
+      <button data-theme-set="aurora"><span class="thumb" style="background-image:url(/aurore_boreale.jpeg);background-position:50% 30%"></span><span data-t="th_aurora"></span></button>
+      <button data-theme-set="moon"><span class="thumb" style="background-image:url(/cheval.jpeg);background-position:50% 28%"></span><span data-t="th_moon"></span></button>
+      <button data-theme-set="dolphins"><span class="thumb" style="background-image:url(/dauphins_theme.jpeg);background-position:50% 58%"></span><span data-t="th_dolphins"></span></button>
+      <button data-theme-set="forest"><span class="thumb" style="background-image:url(/foret_theme.jpeg);background-position:50% 42%"></span><span data-t="th_forest"></span></button>
+      <button data-theme-set="mystic"><span class="thumb" style="background-image:url(/mystical_theme.jpeg);background-position:50% 42%"></span><span data-t="th_mystic"></span></button>
+      <button data-theme-set="ocean"><span class="thumb" style="background-image:url(/ocean_theme.jpeg);background-position:50% 32%"></span><span data-t="th_ocean"></span></button>
+      <button data-theme-set="beach"><span class="thumb" style="background-image:url(/plage_theme.jpeg);background-position:50% 62%"></span><span data-t="th_beach"></span></button>
+      <button data-theme-set="desertNight"><span class="thumb" style="background-image:url(/sahara_night.jpeg);background-position:50% 68%"></span><span data-t="th_desertNight"></span></button>
+      <button data-theme-set="desertMoon"><span class="thumb" style="background-image:url(/sahara_theme.jpeg);background-position:50% 10%"></span><span data-t="th_desertMoon"></span></button>
+    </div>
+  </div>
+  <div class="pill-menu">
+    <button><svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span data-t="wStyle"></span></button>
+    <div class="menu glass">
+      <button data-wskin-set="glass"><span class="swatch" style="background:rgb(255 255 255 / .3);border:1px solid #fff"></span><span data-t="skGlass"></span></button>
+      <button data-wskin-set="neon"><span class="swatch" style="background:#0b1026;box-shadow:0 0 8px var(--a1);border:1px solid var(--a1)"></span><span data-t="skNeon"></span></button>
+      <button data-wskin-set="pastel"><span class="swatch" style="background:linear-gradient(135deg,#fbcfe8,#c7d2fe)"></span><span data-t="skPastel"></span></button>
+      <button data-wskin-set="minimal"><span class="swatch" style="background:#0a0c14;border:1px solid #333"></span><span data-t="skMinimal"></span></button>
+      <button data-wskin-set="holo"><span class="swatch" style="background:linear-gradient(135deg,#f0abfc,#93c5fd,#6ee7b7,#fde68a)"></span><span data-t="skHolo"></span></button>
+    </div>
+  </div>
+  <div class="pill-menu acct">
+    <button class="avatar" data-slot="avatar" style="padding:0;border:0" aria-label="Mon compte"></button>
+    <div class="menu glass">
+      <div class="acct-head"><div class="avatar" data-slot="avatar"></div><div><b>Morayo Elegbede</b><small>morayo@example.com</small></div></div>
+      <button data-open-profile>👤 <span data-t="myProfile"></span></button>
+      <button data-open-avatar>🎨 <span data-t="changeAvatar"></span></button>
+      <button data-open-journal>📖 <span data-t="journal"></span></button>
+      <button data-open-help>❔ <span data-t="help"></span></button>
+      <hr />
+      <button class="danger" data-open-logout>↩ <span data-t="logout"></span></button>
+    </div>
+  </div>
+</template>
+
+<!-- Widget cards, one per kind (cloned into each layout, and on "add") -->
+<template id="widgets">
+  <div class="glass w" data-kind="world">
+    <button class="badge del" aria-label="Supprimer">−</button><button class="badge edit" aria-label="Modifier">✎</button><button class="resize" aria-label="Redimensionner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 13v8h-8M21 21l-8-8M3 11V3h8M3 3l8 8"/></svg></button>
+    <div class="w-head"><div class="w-ico"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></div>
+      <div><div class="w-title" data-t="worldTitle"></div><div class="w-sub" data-t="worldSub"></div></div></div>
+    <div class="wl-line" data-world-line><div class="bar"></div><div class="hrs"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div></div>
+  </div>
+  <div class="glass w" data-kind="weather">
+    <button class="badge del" aria-label="Supprimer">−</button><button class="badge edit" aria-label="Modifier">✎</button><button class="resize" aria-label="Redimensionner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 13v8h-8M21 21l-8-8M3 11V3h8M3 3l8 8"/></svg></button>
+    <div class="wx-main"><span class="wx-ico">☀️</span><div><div class="wx-t">29°</div><div class="w-sub">Cotonou · <span data-t="wxSunny"></span></div></div></div>
+    <div class="wx-days" data-wx-days></div>
+  </div>
+  <div class="glass w" data-kind="rss">
+    <button class="badge del" aria-label="Supprimer">−</button><button class="badge edit" aria-label="Modifier">✎</button><button class="resize" aria-label="Redimensionner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 13v8h-8M21 21l-8-8M3 11V3h8M3 3l8 8"/></svg></button>
+    <div class="mag-hero"><span>Le Monde · 12 min</span></div>
+    <h4 class="mag-title">Une nouvelle mission vers Europe, la lune de Jupiter, annoncée</h4>
+    <ul class="mag-list"><li>James Webb capte une galaxie record</li><li>Les énergies renouvelables en hausse</li></ul>
+  </div>
+  <div class="glass w" data-kind="fx">
+    <button class="badge del" aria-label="Supprimer">−</button><button class="badge edit" aria-label="Modifier">✎</button><button class="resize" aria-label="Redimensionner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 13v8h-8M21 21l-8-8M3 11V3h8M3 3l8 8"/></svg></button>
+    <div class="w-sub">EUR → USD · 7 j</div>
+    <div class="fx-row"><span class="big-num">1,0842</span><span class="delta">▲ 0,34 %</span></div>
+    <svg class="fx-spark" viewBox="0 0 300 80" preserveAspectRatio="none" role="img" aria-label="EUR/USD sur 7 jours, en hausse"><path data-fx-line fill="none" stroke="var(--a2)" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+    <div class="fx-mm"><span>min 1,0768</span><span>max 1,0851</span></div>
+  </div>
+  <div class="glass w" data-kind="price">
+    <button class="badge del" aria-label="Supprimer">−</button><button class="badge edit" aria-label="Modifier">✎</button><button class="resize" aria-label="Redimensionner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 13v8h-8M21 21l-8-8M3 11V3h8M3 3l8 8"/></svg></button>
+    <div class="bt-row"><div class="coin">₿</div><div style="min-width:0"><div class="w-title">Bitcoin <span class="delta">▲ 8,1 %</span></div><div class="bt-price">61 240 $</div></div></div>
+    <svg class="bt-chart" viewBox="0 0 300 110" preserveAspectRatio="none" role="img" aria-label="Bitcoin sur 30 jours, +8,1 %"><path data-bt-area fill="url(#btFill)"/><path data-bt-line fill="none" stroke="#f59e0b" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+  </div>
+  <div class="glass w term-card" data-kind="gh">
+    <button class="badge del" aria-label="Supprimer">−</button><button class="badge edit" aria-label="Modifier">✎</button><button class="resize" aria-label="Redimensionner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 13v8h-8M21 21l-8-8M3 11V3h8M3 3l8 8"/></svg></button>
+    <div class="term-bar"><i style="background:#f87171"></i><i style="background:#fbbf24"></i><i style="background:#4ade80"></i><span>morex/dashboard</span></div>
+    <pre class="term" data-term></pre>
+  </div>
+  <div class="glass w add" data-open-add><div class="plus">+</div><div data-t="addWidget" style="font-weight:500"></div><div class="w-sub" data-t="addHint"></div></div>
+</template>
+
+
+<!-- Add widget -->
+<div class="modal-bg" id="addModal">
+  <div class="glass modal">
+    <h3 data-t="addWidget"></h3>
+    <p class="muted" style="margin:0" data-t="addSub"></p>
+    <div class="picker">
+      <button data-add-kind="rss"><b>RSS</b><span class="w-sub">article list</span></button>
+      <button data-add-kind="fx"><b>Market data</b><span class="w-sub">exchange rate</span></button>
+      <button data-add-kind="price"><b>Market data</b><span class="w-sub">price history</span></button>
+      <button data-add-kind="gh"><b>GitHub</b><span class="w-sub">recent commits</span></button>
+      <button data-add-kind="weather"><b>☀️ <span data-t="wxTitle"></span></b><span class="w-sub" data-t="wxAddSub"></span></button>
+      <button data-add-kind="world"><b>🌍 <span data-t="worldTitle"></span></b><span class="w-sub" data-t="worldSub"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit widget -->
+<div class="modal-bg" id="editModal">
+  <div class="glass modal">
+    <h3 data-t="editWidget"></h3>
+    <label class="field"><span data-t="fTitle"></span><input id="fTitle" /></label>
+    <label class="field"><span data-t="fRefresh"></span>
+      <select><option>1 min</option><option selected>5 min</option><option>15 min</option><option>1 h</option></select></label>
+    <div class="field"><span data-t="decoLabel"></span><div class="deco-pick" id="decoPick"></div></div>
+    <div style="margin-top:22px"><button class="primary" id="saveWidget" data-t="save"></button></div>
+  </div>
+</div>
+
+<!-- Journal -->
+<div class="modal-bg" id="journalModal">
+  <div class="modal journal-modal">
+    <button class="j-close" data-close aria-label="Fermer">×</button>
+    <div class="book">
+      <div class="page left">
+        <p class="j-title" data-t="journal"></p>
+        <p class="j-private" data-t="journalPrivate"></p>
+        <button class="j-new" id="jNew">＋ <span data-t="newPage"></span></button>
+        <ul class="j-list" id="jList"></ul>
+      </div>
+      <div class="page right" id="jPage">
+        <p class="j-date" id="jDate"></p>
+        <div class="j-moods" id="jMoods"></div>
+        <textarea class="j-text" id="jText"></textarea>
+        <span class="j-saved" id="jSaved"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Help -->
+<div class="modal-bg" id="helpModal">
+  <div class="glass modal" style="max-width:560px">
+    <h3 data-t="helpTitle"></h3>
+    <p class="muted" style="margin:0" data-t="helpSub"></p>
+    <div class="faq" data-slot="faq"></div>
+    <p class="muted" style="margin:18px 0 0;font-size:14px"><span data-t="helpMore"></span> <a href="#" style="color:var(--a2)">support@morex.app</a></p>
+  </div>
+</div>
+
+<!-- Logout -->
+<div class="modal-bg" id="logoutModal">
+  <div class="glass modal" style="max-width:420px;text-align:center">
+    <div style="font-size:46px">🪐</div>
+    <h3 data-t="logoutTitle"></h3>
+    <p class="muted" data-t="logoutSub"></p>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="soft" style="flex:1" data-close data-t="stay"></button>
+      <button class="primary" style="flex:1;background:#ef4444;color:#fff" id="doLogout" data-t="logout"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile -->
+<div class="modal-bg" id="profileModal">
+  <div class="glass modal profile-modal">
+    <div class="pf-cover"></div>
+    <div class="pf-top">
+      <div class="avatar" data-slot="avatar" data-open-avatar><span class="cam">📷</span></div>
+      <div style="margin-top:66px"><h3>Morayo Elegbede</h3><span class="muted" style="font-size:14px" data-t="memberSince"></span></div>
+    </div>
+    <div class="pf-body">
+      <section class="pf-section">
+        <h4 data-t="pfInfo"></h4>
+        <div class="pf-grid">
+          <label class="field"><span data-t="firstName"></span><input value="Morayo" /></label>
+          <label class="field"><span data-t="lastName"></span><input value="Elegbede" /></label>
+        </div>
+        <label class="field"><span>Email</span><input value="morayo@example.com" readonly /><small data-t="emailNote"></small></label>
+        <label class="field"><span data-t="bioLabel"></span><textarea maxlength="280" data-bio></textarea><small><span data-slot="bioCount">0</span>/280 · <span data-t="bioNote"></span></small></label>
+      </section>
+      <section class="pf-section">
+        <h4 data-t="pfPrefs"></h4>
+        <div class="pf-grid">
+          <label class="field"><span data-t="language"></span><select data-lang-select><option value="fr">🇫🇷 Français</option><option value="en">🇬🇧 English</option><option value="es">🇪🇸 Español</option></select></label>
+          <label class="field"><span data-t="theme"></span><select data-theme-select><option value="galaxy" data-t="th_galaxy"></option><option value="aurora" data-t="th_aurora"></option><option value="moon" data-t="th_moon"></option><option value="dolphins" data-t="th_dolphins"></option><option value="forest" data-t="th_forest"></option><option value="mystic" data-t="th_mystic"></option><option value="ocean" data-t="th_ocean"></option><option value="beach" data-t="th_beach"></option><option value="desertNight" data-t="th_desertNight"></option><option value="desertMoon" data-t="th_desertMoon"></option></select></label>
+        </div>
+      </section>
+      <section class="pf-section">
+        <h4 data-t="pfSecurity"></h4>
+        <p data-t="pwNote"></p>
+        <div class="pf-grid">
+          <label class="field"><span data-t="currentPw"></span><input type="password" placeholder="••••••••" /></label>
+          <label class="field"><span data-t="newPw"></span><input type="password" data-ph="pwPh" /></label>
+        </div>
+      </section>
+      <section class="pf-section danger-zone">
+        <h4 data-t="pfData"></h4>
+        <p data-t="pfDataSub"></p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+          <button class="soft">⬇ <span data-t="export"></span><span class="soon" data-t="soon"></span></button>
+          <button class="btn-danger">🗑 <span data-t="deleteAcc"></span><span class="soon" data-t="soon"></span></button>
+        </div>
+      </section>
+      <div class="pf-actions">
+        <button class="soft" data-close data-t="cancel"></button>
+        <button class="primary" data-close data-t="save"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Avatar editor -->
+<div class="modal-bg" id="avatarModal">
+  <div class="glass modal av-modal">
+    <h3 data-t="avatarTitle"></h3>
+    <p class="muted" style="margin:0" data-t="avatarSub"></p>
+    <div class="av-grid">
+      <div class="av-preview">
+        <div class="big" id="avBig"></div>
+        <div class="row">
+          <button class="soft" id="avRandom">🎲 <span data-t="random"></span></button>
+          <label class="soft">📷 <span data-t="photo"></span><input type="file" accept="image/*" hidden id="file" /></label>
+        </div>
+        <button class="primary" id="saveAvatar" data-t="save"></button>
+      </div>
+      <div style="min-width:0">
+        <div class="gender" id="avGender"></div>
+        <div class="tabs" id="avTabs"></div>
+        <div class="opts" id="avOpts"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+const T = {
+  fr: { th_galaxy: 'Galaxie', th_aurora: 'Aurore boréale', th_moon: 'Pleine lune', th_dolphins: 'Dauphins au couchant', th_forest: 'Forêt', th_mystic: 'Rivage mystique', th_ocean: 'Abysses', th_beach: 'Plage tropicale', th_desertNight: 'Nuit au Sahara', th_desertMoon: 'Désert violet', decoLabel: 'Décoration', deco: { none: 'Aucune', flowers: 'Fleurs', balloons: 'Ballons', stars: 'Étoiles', butterflies: 'Papillons', hearts: 'Cœurs', lights: 'Guirlande', clouds: 'Nuages', crown: 'Couronne', bow: 'Nœud', cat: 'Chat' }, wxTitle: 'Météo', wxAddSub: 'Température, pluie, vent, prochaines heures', wxNow: 'Maintenant', wxSunny: 'Ensoleillé', worldTitle: 'Heure du monde', worldSub: 'Qui dort, qui se lève, qui travaille', same: 'même heure', tomorrow: 'demain', yesterday: 'hier', here: 'Ici', lastPage: 'Dernière page : hier', writeToday: 'Écrire aujourd\u2019hui', journal: 'Mon journal', journalPrivate: 'Rien que pour toi', newPage: 'Nouvelle page', howFeel: 'Comment tu te sens ?',
+    writeHere: 'Écris ce que tu ressens, personne d\u2019autre ne le lira…', saved: 'Enregistré ✓',
+    untitled: 'Page vide',
+    help: 'Aide', logout: 'Déconnexion', myProfile: 'Mon profil', changeAvatar: 'Changer d\u2019avatar',
+    helpTitle: 'Besoin d\u2019aide ?', helpSub: 'Les réponses aux questions les plus fréquentes', helpMore: 'Toujours bloqué·e ? Écris-nous :',
+    faq: [['Comment ajouter un widget ?', 'Clique sur la carte « ＋ Ajouter un widget » en bas de ta grille, ou cherche un service dans la barre de recherche.'],
+      ['Comment déplacer ou agrandir un widget ?', 'Reste appuyé sur un widget : ils se mettent à trembler. Fais-le glisser pour le déplacer, ou tire la poignée ↘ pour changer sa taille. Clique à côté pour terminer.'],
+      ['Comment supprimer un widget ?', 'En mode édition, touche le − rouge en haut à gauche du widget.'],
+      ['Comment changer de thème ou de langue ?', 'Utilise les boutons Thème et FR / EN / ES en haut, ou va dans Mon profil.'],
+      ['Comment connecter GitHub ?', 'Ajoute un widget GitHub : Morex te demandera d\u2019autoriser l\u2019accès à ton compte.']],
+    logoutTitle: 'Tu quittes ton univers ?', logoutSub: 'Tes widgets t\u2019attendront bien sagement ici', stay: 'Rester',
+    memberSince: 'Membre depuis septembre 2026', pfInfo: 'Informations', firstName: 'Prénom', lastName: 'Nom',
+    emailNote: 'L\u2019email ne peut pas être modifié pour le moment', bioLabel: 'Ma bio', bioNote: 'Laisse vide pour garder le message Morex',
+    pfPrefs: 'Préférences', language: 'Langue', pfSecurity: 'Sécurité', pwNote: 'Pour changer ton mot de passe, entre d\u2019abord l\u2019actuel',
+    currentPw: 'Mot de passe actuel', newPw: 'Nouveau mot de passe', pwPh: 'Au moins 8 caractères',
+    pfData: 'Mes données', pfDataSub: 'Récupère une copie de tes données ou supprime définitivement ton compte',
+    export: 'Télécharger mes données', deleteAcc: 'Supprimer mon compte', soon: 'bientôt', cancel: 'Annuler',
+    morning: 'Bonjour', evening: 'Bonsoir', navDash: 'Dashboard', navProfile: 'Profil', navSettings: 'Paramètres',
+    search: 'Rechercher un widget ou un service…', resWidgets: 'Tes widgets', resServices: 'Services', add: 'Ajouter',
+    theme: 'Thème',
+    wStyle: 'Widgets', skGlass: 'Verre', skNeon: 'Néon', skPastel: 'Pastel', skMinimal: 'Minimal', skHolo: 'Holographique',
+    editBio: '✎ Modifier ma bio', editProfile: '✎ Modifier le profil', now: 'Il est', yourWidgets: 'Tes widgets',
+    statWidgets: 'widgets', statServices: 'services', widgetsActive: '4 widgets actifs', every5: 'Toutes les 5 min', addWidget: 'Ajouter un widget', addHint: 'RSS, GitHub, bourse…',
+    addSub: 'Choisis un service', holdHint: '✋ Reste appuyé sur un widget pour le déplacer, l\u2019agrandir, le modifier ou le supprimer',
+    editMode: 'Mode édition', done: 'Terminé', editWidget: 'Modifier le widget', fTitle: 'Titre', fRefresh: 'Rafraîchir toutes les',
+    avatarTitle: 'Crée ton avatar', avatarSub: 'Personnalise ton perso, ou envoie ta propre photo', random: 'Au hasard', photo: 'Photo', save: 'Enregistrer',
+    cats: { skinColor: 'Peau', top: 'Cheveux', hairColor: 'Couleur', eyes: 'Yeux', eyebrows: 'Sourcils', mouth: 'Bouche',
+      accessories: 'Lunettes', facialHair: 'Barbe', clothing: 'Tenue', clothesColor: 'Couleur tenue', backgroundColor: 'Fond' }, none: 'Aucun', genders: { girl: '👧 Fille', boy: '👦 Garçon', all: '✨ Tous' },
+    bio: 'Bienvenue dans ton univers. Ici, chaque étoile est une idée et chaque orbite un nouveau départ. Prends ton temps, respire : tout ce qui compte pour toi est là, à portée de regard' },
+  en: { th_galaxy: 'Galaxy', th_aurora: 'Northern lights', th_moon: 'Full moon', th_dolphins: 'Sunset dolphins', th_forest: 'Forest', th_mystic: 'Mystic shore', th_ocean: 'Deep sea', th_beach: 'Tropical beach', th_desertNight: 'Sahara night', th_desertMoon: 'Purple desert', decoLabel: 'Decoration', deco: { none: 'None', flowers: 'Flowers', balloons: 'Balloons', stars: 'Stars', butterflies: 'Butterflies', hearts: 'Hearts', lights: 'Fairy lights', clouds: 'Clouds', crown: 'Crown', bow: 'Bow', cat: 'Cat' }, wxTitle: 'Weather', wxAddSub: 'Temperature, rain, wind, next hours', wxNow: 'Now', wxSunny: 'Sunny', worldTitle: 'World clock', worldSub: 'Who\u2019s asleep, waking up, working', same: 'same time', tomorrow: 'tomorrow', yesterday: 'yesterday', here: 'Here', lastPage: 'Last page: yesterday', writeToday: 'Write today', journal: 'My journal', journalPrivate: 'Just for you', newPage: 'New page', howFeel: 'How do you feel?',
+    writeHere: 'Write what you feel, no one else will read it…', saved: 'Saved ✓',
+    untitled: 'Empty page',
+    help: 'Help', logout: 'Log out', myProfile: 'My profile', changeAvatar: 'Change avatar',
+    helpTitle: 'Need help?', helpSub: 'Answers to the most common questions', helpMore: 'Still stuck? Write to us:',
+    faq: [['How do I add a widget?', 'Click the “＋ Add a widget” card at the end of your grid, or search a service in the search bar.'],
+      ['How do I move or resize a widget?', 'Press and hold a widget: they start to jiggle. Drag it to move it, or pull the ↘ handle to resize it. Click outside to finish.'],
+      ['How do I delete a widget?', 'In edit mode, tap the red − at the top left of the widget.'],
+      ['How do I change theme or language?', 'Use the Theme and FR / EN / ES buttons at the top, or go to My profile.'],
+      ['How do I connect GitHub?', 'Add a GitHub widget: Morex will ask you to authorise access to your account.']],
+    logoutTitle: 'Leaving your universe?', logoutSub: 'Your widgets will be waiting right here', stay: 'Stay',
+    memberSince: 'Member since September 2026', pfInfo: 'Details', firstName: 'First name', lastName: 'Last name',
+    emailNote: 'Email can\u2019t be changed for now', bioLabel: 'My bio', bioNote: 'Leave empty to keep the Morex message',
+    pfPrefs: 'Preferences', language: 'Language', pfSecurity: 'Security', pwNote: 'To change your password, enter the current one first',
+    currentPw: 'Current password', newPw: 'New password', pwPh: 'At least 8 characters',
+    pfData: 'My data', pfDataSub: 'Get a copy of your data or permanently delete your account',
+    export: 'Download my data', deleteAcc: 'Delete my account', soon: 'soon', cancel: 'Cancel',
+    morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', navDash: 'Dashboard', navProfile: 'Profile', navSettings: 'Settings',
+    search: 'Search a widget or a service…', resWidgets: 'Your widgets', resServices: 'Services', add: 'Add',
+    theme: 'Theme',
+    wStyle: 'Widgets', skGlass: 'Glass', skNeon: 'Neon', skPastel: 'Pastel', skMinimal: 'Minimal', skHolo: 'Holographic',
+    editBio: '✎ Edit my bio', editProfile: '✎ Edit profile', now: 'It’s', yourWidgets: 'Your widgets',
+    statWidgets: 'widgets', statServices: 'services', widgetsActive: '4 active widgets', every5: 'Every 5 min', addWidget: 'Add a widget', addHint: 'RSS, GitHub, markets…',
+    addSub: 'Pick a service', holdHint: '✋ Press and hold a widget to move, resize, edit or delete it',
+    editMode: 'Edit mode', done: 'Done', editWidget: 'Edit widget', fTitle: 'Title', fRefresh: 'Refresh every',
+    avatarTitle: 'Create your avatar', avatarSub: 'Customise your character, or upload your own photo', random: 'Random', photo: 'Photo', save: 'Save',
+    cats: { skinColor: 'Skin', top: 'Hair', hairColor: 'Colour', eyes: 'Eyes', eyebrows: 'Brows', mouth: 'Mouth',
+      accessories: 'Glasses', facialHair: 'Beard', clothing: 'Outfit', clothesColor: 'Outfit colour', backgroundColor: 'Background' }, none: 'None', genders: { girl: '👧 Girl', boy: '👦 Boy', all: '✨ All' },
+    bio: 'Welcome to your universe. Here, every star is an idea and every orbit a fresh start. Take your time, breathe: everything that matters to you is right here, at a glance' },
+  es: { th_galaxy: 'Galaxia', th_aurora: 'Aurora boreal', th_moon: 'Luna llena', th_dolphins: 'Delfines al atardecer', th_forest: 'Bosque', th_mystic: 'Orilla mística', th_ocean: 'Abismo', th_beach: 'Playa tropical', th_desertNight: 'Noche en el Sahara', th_desertMoon: 'Desierto violeta', decoLabel: 'Decoración', deco: { none: 'Ninguna', flowers: 'Flores', balloons: 'Globos', stars: 'Estrellas', butterflies: 'Mariposas', hearts: 'Corazones', lights: 'Guirnalda', clouds: 'Nubes', crown: 'Corona', bow: 'Lazo', cat: 'Gato' }, wxTitle: 'Tiempo', wxAddSub: 'Temperatura, lluvia, viento, próximas horas', wxNow: 'Ahora', wxSunny: 'Soleado', worldTitle: 'Hora mundial', worldSub: 'Quién duerme, quién despierta, quién trabaja', same: 'misma hora', tomorrow: 'mañana', yesterday: 'ayer', here: 'Aquí', lastPage: 'Última página: ayer', writeToday: 'Escribir hoy', journal: 'Mi diario', journalPrivate: 'Solo para ti', newPage: 'Nueva página', howFeel: '¿Cómo te sientes?',
+    writeHere: 'Escribe lo que sientes, nadie más lo leerá…', saved: 'Guardado ✓',
+    untitled: 'Página vacía',
+    help: 'Ayuda', logout: 'Cerrar sesión', myProfile: 'Mi perfil', changeAvatar: 'Cambiar avatar',
+    helpTitle: '¿Necesitas ayuda?', helpSub: 'Respuestas a las preguntas más frecuentes', helpMore: '¿Sigues atascado? Escríbenos:',
+    faq: [['¿Cómo añado un widget?', 'Haz clic en la tarjeta «＋ Añadir un widget» al final de tu cuadrícula, o busca un servicio en la barra de búsqueda.'],
+      ['¿Cómo muevo o cambio el tamaño de un widget?', 'Mantén pulsado un widget: empezarán a temblar. Arrástralo para moverlo o tira del asa ↘ para cambiar su tamaño. Haz clic fuera para terminar.'],
+      ['¿Cómo borro un widget?', 'En modo edición, toca el − rojo arriba a la izquierda del widget.'],
+      ['¿Cómo cambio el tema o el idioma?', 'Usa los botones Tema y FR / EN / ES de arriba, o ve a Mi perfil.'],
+      ['¿Cómo conecto GitHub?', 'Añade un widget de GitHub: Morex te pedirá autorizar el acceso a tu cuenta.']],
+    logoutTitle: '¿Dejas tu universo?', logoutSub: 'Tus widgets te esperarán aquí', stay: 'Quedarme',
+    memberSince: 'Miembro desde septiembre de 2026', pfInfo: 'Información', firstName: 'Nombre', lastName: 'Apellido',
+    emailNote: 'El email no se puede cambiar por ahora', bioLabel: 'Mi bio', bioNote: 'Déjalo vacío para mantener el mensaje de Morex',
+    pfPrefs: 'Preferencias', language: 'Idioma', pfSecurity: 'Seguridad', pwNote: 'Para cambiar tu contraseña, introduce primero la actual',
+    currentPw: 'Contraseña actual', newPw: 'Nueva contraseña', pwPh: 'Al menos 8 caracteres',
+    pfData: 'Mis datos', pfDataSub: 'Descarga una copia de tus datos o elimina tu cuenta definitivamente',
+    export: 'Descargar mis datos', deleteAcc: 'Eliminar mi cuenta', soon: 'pronto', cancel: 'Cancelar',
+    morning: 'Buenos días', afternoon: 'Buenas tardes', evening: 'Buenas noches', navDash: 'Panel', navProfile: 'Perfil', navSettings: 'Ajustes',
+    search: 'Buscar un widget o un servicio…', resWidgets: 'Tus widgets', resServices: 'Servicios', add: 'Añadir',
+    theme: 'Tema',
+    wStyle: 'Widgets', skGlass: 'Cristal', skNeon: 'Neón', skPastel: 'Pastel', skMinimal: 'Minimal', skHolo: 'Holográfico',
+    editBio: '✎ Editar mi bio', editProfile: '✎ Editar perfil', now: 'Son las', yourWidgets: 'Tus widgets',
+    statWidgets: 'widgets', statServices: 'servicios', widgetsActive: '4 widgets activos', every5: 'Cada 5 min', addWidget: 'Añadir un widget', addHint: 'RSS, GitHub, bolsa…',
+    addSub: 'Elige un servicio', holdHint: '✋ Mantén pulsado un widget para moverlo, cambiar su tamaño, editarlo o borrarlo',
+    editMode: 'Modo edición', done: 'Listo', editWidget: 'Editar widget', fTitle: 'Título', fRefresh: 'Actualizar cada',
+    avatarTitle: 'Crea tu avatar', avatarSub: 'Personaliza tu personaje o sube tu propia foto', random: 'Al azar', photo: 'Foto', save: 'Guardar',
+    cats: { skinColor: 'Piel', top: 'Pelo', hairColor: 'Color', eyes: 'Ojos', eyebrows: 'Cejas', mouth: 'Boca',
+      accessories: 'Gafas', facialHair: 'Barba', clothing: 'Ropa', clothesColor: 'Color ropa', backgroundColor: 'Fondo' }, none: 'Ninguno', genders: { girl: '👧 Chica', boy: '👦 Chico', all: '✨ Todos' },
+    bio: 'Bienvenido a tu universo. Aquí, cada estrella es una idea y cada órbita un nuevo comienzo. Tómate tu tiempo, respira: todo lo que te importa está aquí, de un vistazo' },
+}
+const LOCALE = { fr: 'fr-FR', en: 'en-GB', es: 'es-ES' }
+let lang = 'fr', bio = ''
+const $$ = (s) => document.querySelectorAll(s)
+
+// ---------- Avatar (DiceBear avataaars) ----------
+const AV_URL = 'https://api.dicebear.com/9.x/avataaars/svg'
+const AV_OPTIONS = {
+  skinColor: { color: true, values: ['614335', 'ae5d29', 'd08b5b', 'edb98a', 'ffdbb4', 'f8d25c', 'fd9841'] },
+  top: { values: ['none', 'bigHair', 'bob', 'bun', 'curly', 'curvy', 'dreads', 'dreads01', 'dreads02', 'frida', 'frizzle', 'fro', 'froBand',
+    'longButNotTooLong', 'miaWallace', 'shaggy', 'shaggyMullet', 'shavedSides', 'shortCurly', 'shortFlat', 'shortRound', 'shortWaved', 'sides',
+    'straight01', 'straight02', 'straightAndStrand', 'theCaesar', 'theCaesarAndSidePart', 'hat', 'hijab', 'turban', 'winterHat1', 'winterHat02', 'winterHat03', 'winterHat04'] },
+  hairColor: { color: true, values: ['2c1b18', '4a312c', '724133', 'a55728', 'b58143', 'd6b370', 'ecdcbf', 'e8e1e1', 'c93305', 'f59797', '8b5cf6', '38bdf8'] },
+  eyes: { values: ['default', 'happy', 'wink', 'winkWacky', 'hearts', 'side', 'squint', 'surprised', 'eyeRoll', 'closed', 'cry', 'xDizzy'] },
+  eyebrows: { values: ['defaultNatural', 'default', 'raisedExcitedNatural', 'raisedExcited', 'flatNatural', 'frownNatural', 'angryNatural', 'sadConcernedNatural', 'upDownNatural', 'unibrowNatural'] },
+  mouth: { values: ['smile', 'default', 'twinkle', 'tongue', 'eating', 'serious', 'disbelief', 'concerned', 'grimace', 'sad', 'screamOpen'] },
+  accessories: { values: ['none', 'prescription01', 'prescription02', 'round', 'sunglasses', 'wayfarers', 'kurt', 'eyepatch'] },
+  facialHair: { values: ['none', 'beardLight', 'beardMedium', 'beardMajestic', 'moustacheFancy', 'moustacheMagnum'] },
+  clothing: { values: ['hoodie', 'graphicShirt', 'shirtCrewNeck', 'shirtScoopNeck', 'shirtVNeck', 'collarAndSweater', 'blazerAndShirt', 'blazerAndSweater', 'overall'] },
+  clothesColor: { color: true, values: ['262e33', '3c4f5c', '5199e4', '65c9ff', 'a7ffc4', 'b1e2ff', 'e6e6e6', 'ff488e', 'ff5c5c', 'ffafb9', 'ffdeb5', 'ffffb1', 'ffffff'] },
+  backgroundColor: { color: true, values: ['b6e3f4', 'c0aede', 'd1d4f9', 'ffd5dc', 'ffdfbf', 'a7f3d0', '1e1b4b'] },
+}
+let av = { skinColor: 'ae5d29', top: 'curly', hairColor: '2c1b18', eyes: 'happy', eyebrows: 'defaultNatural', mouth: 'smile',
+  accessories: 'none', facialHair: 'none', clothing: 'hoodie', clothesColor: '5199e4', backgroundColor: 'c0aede' }
+let draft = { ...av }, photo = null, draftPhoto = null, tab = 'top'
+let gender = 'girl', draftGender = gender
+
+// Which hairstyles each choice shows; "all" shows everything. Girls get no beard tab.
+const HAIR = {
+  girl: ['bigHair', 'bob', 'bun', 'curly', 'curvy', 'dreads01', 'frida', 'fro', 'froBand', 'longButNotTooLong', 'miaWallace',
+    'straight01', 'straight02', 'straightAndStrand', 'shavedSides', 'hijab', 'hat', 'winterHat1', 'winterHat02', 'winterHat03', 'winterHat04'],
+  boy: ['none', 'shortFlat', 'shortRound', 'shortWaved', 'shortCurly', 'theCaesar', 'theCaesarAndSidePart', 'sides', 'frizzle', 'fro',
+    'dreads', 'dreads01', 'dreads02', 'shaggy', 'shaggyMullet', 'turban', 'hat', 'winterHat1', 'winterHat02', 'winterHat03', 'winterHat04'],
+}
+// Random picks stay pleasant: no crying/dizzy eyes or grimaces, glasses and beards only sometimes
+const NICE = {
+  eyes: ['default', 'happy', 'wink', 'hearts', 'side', 'squint', 'surprised'],
+  eyebrows: ['defaultNatural', 'default', 'raisedExcitedNatural', 'flatNatural'],
+  mouth: ['smile', 'default', 'twinkle', 'tongue'],
+  accessories: ['none', 'none', 'none', 'prescription01', 'prescription02', 'round', 'sunglasses', 'wayfarers'],
+  facialHair: ['none', 'none', 'beardLight', 'beardMedium', 'moustacheFancy'],
+}
+const optionValues = (k) => {
+  if (k === 'top' && draftGender !== 'all') return HAIR[draftGender]
+  return AV_OPTIONS[k].values
+}
+const visibleTabs = () => Object.keys(AV_OPTIONS).filter((k) => !(k === 'facialHair' && draftGender === 'girl'))
+
+function avUrl(o) {
+  const q = new URLSearchParams({ seed: 'morex' })
+  for (const k of ['skinColor', 'hairColor', 'eyes', 'eyebrows', 'mouth', 'clothing', 'clothesColor', 'backgroundColor']) q.set(k, o[k])
+  if (o.top === 'none') q.set('topProbability', '0'); else { q.set('top', o.top); q.set('topProbability', '100') }
+  if (o.accessories === 'none') q.set('accessoriesProbability', '0'); else { q.set('accessories', o.accessories); q.set('accessoriesProbability', '100') }
+  if (o.facialHair === 'none') q.set('facialHairProbability', '0'); else { q.set('facialHair', o.facialHair); q.set('facialHairProbability', '100') }
+  return `${AV_URL}?${q}`
+}
+const avImg = (src) => `<img src="${src}" alt="" />`
+
+function renderAvatarEditor() {
+  document.getElementById('avBig').innerHTML = avImg(draftPhoto || avUrl(draft))
+  document.getElementById('avGender').innerHTML = ['girl', 'boy', 'all']
+    .map((g) => `<button data-gender="${g}" class="${g === draftGender ? 'on' : ''}">${T[lang].genders[g]}</button>`).join('')
+  document.getElementById('avTabs').innerHTML = visibleTabs()
+    .map((k) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${T[lang].cats[k]}</button>`).join('')
+  const def = AV_OPTIONS[tab]
+  document.getElementById('avOpts').innerHTML = optionValues(tab).map((v) => {
+    const on = !draftPhoto && draft[tab] === v ? 'on' : ''
+    if (def.color) return `<button class="color ${on}" data-opt="${v}" style="background:#${v}" aria-label="${v}"></button>`
+    if (v === 'none') return `<button class="none ${on}" data-opt="none">${T[lang].none}</button>`
+    return `<button class="${on}" data-opt="${v}">${avImg(avUrl({ ...draft, [tab]: v }))}</button>`
+  }).join('')
+}
+document.getElementById('avTabs').onclick = (e) => { const b = e.target.closest('[data-tab]'); if (b) { tab = b.dataset.tab; renderAvatarEditor() } }
+document.getElementById('avOpts').onclick = (e) => { const b = e.target.closest('[data-opt]'); if (b) { draft[tab] = b.dataset.opt; draftPhoto = null; renderAvatarEditor() } }
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
+document.getElementById('avRandom').onclick = () => {
+  for (const k of Object.keys(AV_OPTIONS)) draft[k] = pick(NICE[k] || optionValues(k))
+  if (draftGender === 'girl') draft.facialHair = 'none'
+  draftPhoto = null; renderAvatarEditor()
+}
+document.getElementById('avGender').onclick = (e) => {
+  const b = e.target.closest('[data-gender]'); if (!b) return
+  draftGender = b.dataset.gender
+  if (!optionValues('top').includes(draft.top)) draft.top = optionValues('top')[draftGender === 'boy' ? 1 : 0]
+  if (draftGender === 'girl') draft.facialHair = 'none'
+  if (!visibleTabs().includes(tab)) tab = 'top'
+  draftPhoto = null; renderAvatarEditor()
+}
+document.getElementById('file').onchange = (e) => { const f = e.target.files[0]; if (f) { draftPhoto = URL.createObjectURL(f); renderAvatarEditor() } }
+document.getElementById('saveAvatar').onclick = () => { av = { ...draft }; photo = draftPhoto; gender = draftGender; closeModals(); render() }
+
+// ---------- Journal ----------
+const MOODS = ['😊', '🥰', '😌', '😴', '😢', '😡']
+const today = new Date()
+const daysAgo = (n) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - n)
+let entries = [
+  { date: daysAgo(1), mood: '🥰', text: 'Aujourd\u2019hui j\u2019ai enfin fini la page de connexion de Morex. Je suis trop fière du résultat, le fond galaxie est magnifique…' },
+  { date: daysAgo(4), mood: '😌', text: 'Journée calme. J\u2019ai lu, j\u2019ai marché un peu. Parfois il faut juste respirer.' },
+]
+let current = 0
+const fmtDay = (d) => d.toLocaleDateString(LOCALE[lang], { weekday: 'long', day: 'numeric', month: 'long' })
+function flip(dir, { cover = false, delay = 0, dur = 0.75, z0, z1 } = {}) {
+  const book = document.querySelector('.book'), f = document.createElement('div')
+  f.className = `flip${dir < 0 ? ' rev' : ''}${cover ? ' cover-leaf' : ''}`
+  f.style.animationDelay = `${delay}s`; f.style.animationDuration = `${dur}s`
+  if (z0 != null) { f.style.setProperty('--z0', z0); f.style.setProperty('--z1', z1) }
+  f.innerHTML = `<div class="face front">${cover ? `<b>${T[lang].journal}</b>` : ''}</div><div class="face back"></div>`
+  book.append(f)
+  setTimeout(() => f.remove(), (delay + dur) * 1000 + 60)   // timed, so it also cleans up under reduced motion
+}
+// On opening, a few pages riffle past on their own before settling on today's page
+function openBook() {
+  const book = document.querySelector('.book')
+  book.classList.add('opening')
+  for (let i = 0; i < 6; i++) flip(1, { delay: 0.15 + i * 0.14, dur: 0.6, z0: 9 - i, z1: 2 + i })
+  setTimeout(() => book.classList.remove('opening'), 1500)
+}
+
+function renderJournal(turn) {
+  const e = entries[current]
+  document.getElementById('jList').innerHTML = entries.map((x, i) =>
+    `<li><button data-entry="${i}" class="${i === current ? 'on' : ''}"><span class="mood">${x.mood}</span><span><b>${fmtDay(x.date)}</b><span class="prev">${x.text || T[lang].untitled}</span></span></button></li>`).join('')
+  const d = fmtDay(e.date); document.getElementById('jDate').textContent = d.charAt(0).toUpperCase() + d.slice(1)
+  document.getElementById('jMoods').innerHTML = `<span>${T[lang].howFeel}</span>` + MOODS.map((m) => `<button data-mood="${m}" class="${m === e.mood ? 'on' : ''}">${m}</button>`).join('')
+  const ta = document.getElementById('jText'); ta.value = e.text; ta.placeholder = T[lang].writeHere
+  document.getElementById('jSaved').textContent = ''
+  if (turn) flip(turn)
+}
+document.getElementById('journalModal').addEventListener('click', (ev) => {
+  const en = ev.target.closest('[data-entry]'); if (en && +en.dataset.entry !== current) { const dir = +en.dataset.entry > current ? 1 : -1; current = +en.dataset.entry; renderJournal(dir) }
+  const md = ev.target.closest('[data-mood]'); if (md) { entries[current].mood = md.dataset.mood; renderJournal() }
+  if (ev.target.closest('#jNew')) { entries.unshift({ date: new Date(), mood: '😊', text: '' }); current = 0; renderJournal(-1); document.getElementById('jText').focus() }
+})
+let saveTimer
+document.getElementById('jText').addEventListener('input', (ev) => {
+  entries[current].text = ev.target.value
+  clearTimeout(saveTimer); document.getElementById('jSaved').textContent = '…'
+  saveTimer = setTimeout(() => {
+    document.getElementById('jSaved').textContent = T[lang].saved
+    const prev = document.querySelector(`[data-entry="${current}"] .prev`); if (prev) prev.textContent = entries[current].text || T[lang].untitled
+  }, 600)
+})
+
+// ---------- Weather widget (mock data until a weather service exists) ----------
+const WX_DAYS = [['☀️', 24, 32], ['⛅', 23, 30], ['🌧️', 22, 27], ['⛅', 23, 29], ['☀️', 24, 33]]
+function renderWeather() {
+  const html = WX_DAYS.map(([ico, lo, hi], i) => {
+    const d = new Date(); d.setDate(d.getDate() + i + 1)
+    const name = d.toLocaleDateString(LOCALE[lang], { weekday: 'short' }).replace('.', '')
+    return `<div class="wx-day"><span>${name.charAt(0).toUpperCase() + name.slice(1)}</span><span>${ico}</span><span class="lo">${lo}°</span>
+      <span class="wx-range"><i style="left:${(lo - 22) / 11 * 100}%;right:${(33 - hi) / 11 * 100}%"></i></span><span>${hi}°</span></div>`
+  }).join('')
+  $$('[data-wx-days]').forEach((el) => (el.innerHTML = html))
+}
+
+// ---------- Charts + terminal ----------
+const sparkPath = (vals, w, h, pd = 6) => {
+  const mn = Math.min(...vals), mx = Math.max(...vals)
+  return vals.map((v, i) => `${i ? 'L' : 'M'}${(i / (vals.length - 1)) * w} ${h - pd - ((v - mn) / (mx - mn)) * (h - 2 * pd)}`).join(' ')
+}
+function renderCharts() {
+  $$('[data-fx-line]').forEach((el) => el.setAttribute('d', sparkPath([1.0791, 1.0768, 1.0802, 1.0795, 1.0823, 1.0851, 1.0842], 300, 80)))
+  const btc = sparkPath([56600, 57100, 56400, 57800, 58200, 57600, 58900, 59400, 58700, 59900, 60300, 59600, 60800, 61240], 300, 110)
+  $$('[data-bt-line]').forEach((el) => el.setAttribute('d', btc))
+  $$('[data-bt-area]').forEach((el) => el.setAttribute('d', `${btc} L300 110 L0 110Z`))
+}
+const TERM = ['<span class="p">morayo@morex</span>:~$ git log --oneline -3', '<span class="h">a5f599a</span> feat: Morex glass login',
+  '<span class="h">bbec835</span> fix: register name fields', '<span class="h">b007957</span> docs: add PRIVACY.md', '<span class="p">morayo@morex</span>:~$ ']
+let termStep = 0
+setInterval(() => {
+  termStep = (termStep % (TERM.length + 3)) + 1
+  $$('[data-term]').forEach((el) => (el.innerHTML = TERM.slice(0, Math.min(termStep, TERM.length)).join('\n') + '<span class="cur"></span>'))
+}, 900)
+
+// ---------- World clock widget ----------
+const HERE_TZ = 'Africa/Porto-Novo'
+const WORLD = [['🇫🇷', 'Paris', 'Europe/Paris'], ['🇺🇸', 'New York', 'America/New_York'], ['🇯🇵', 'Tokyo', 'Asia/Tokyo'],
+  ['🇨🇦', 'Montréal', 'America/Toronto'], ['🇦🇪', 'Dubaï', 'Asia/Dubai']]
+const pad2 = (n) => String(n).padStart(2, '0')
+function zoned(now, tz) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', year: 'numeric', month: '2-digit', day: '2-digit', hourCycle: 'h23' })
+    .formatToParts(now).map((x) => [x.type, x.value]))
+  return { h: +p.hour, m: +p.minute, key: `${p.year}${p.month}${p.day}`, abs: Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) }
+}
+function renderWorld() {
+  const now = new Date(), me = zoned(now, HERE_TZ), t = T[lang]
+  const rows = [['📍', 'Cotonou', HERE_TZ, true], ...WORLD].map(([flag, name, tz, isMe]) => {
+    const c = zoned(now, tz), d = Math.round((c.abs - me.abs) / 36e5 * 2) / 2
+    return { flag, name, isMe, ...c, hm: `${pad2(c.h)}:${pad2(c.m)}`, isDay: c.h >= 6 && c.h < 18,
+      off: isMe ? t.here : d === 0 ? t.same : `${d > 0 ? '+' : '−'}${Math.abs(d)} h`,
+      day: c.key === me.key ? '' : c.key > me.key ? t.tomorrow : t.yesterday }
+  })
+  const sorted = [...rows].sort((a, b) => (a.h * 60 + a.m) - (b.h * 60 + b.m))
+  const pins = sorted.map((r, i) => `<div class="wl-pin ${i % 2 ? 'down' : 'up'}${r.isMe ? ' me' : ''}" style="left:${((r.h * 60 + r.m) / 1440) * 100}%">
+    <div class="lbl">${r.flag} ${r.name}<br /><b>${r.hm}</b> <small>${r.isDay ? '☀️' : '🌙'}${r.day ? ' ' + r.day : ''}</small></div><div class="stem"></div><div class="dot"></div></div>`).join('')
+  $$('[data-world-line]').forEach((el) => { el.querySelectorAll('.wl-pin').forEach((p) => p.remove()); el.insertAdjacentHTML('beforeend', pins) })
+}
+
+// ---------- Widget decorations ----------
+const balloon = (x, y, c) => `<path d="M${x} ${y + 26}q-3 22 4 48" stroke="rgb(255 255 255 / .6)" fill="none"/><ellipse cx="${x}" cy="${y}" rx="14" ry="17" fill="${c}"/><path d="M${x - 3} ${y + 16}l3 5 3-5z" fill="${c}"/><ellipse cx="${x - 5}" cy="${y - 7}" rx="3" ry="5" fill="#fff" fill-opacity=".45"/>`
+const DECOS = {
+  none: ['🚫', ''],
+  flowers: ['🌸', '<i>🌸</i><i>🌼</i><i>🌷</i>'],
+  balloons: ['🎈', `<svg viewBox="0 0 80 120">${balloon(22, 30, '#f472b6')}${balloon(50, 20, '#38bdf8')}${balloon(62, 44, '#fde047')}</svg>`],
+  stars: ['✨', '<i>✨</i><i>⭐</i><i>✨</i><i>⭐</i>'],
+  butterflies: ['🦋', '<i>🦋</i><i>🦋</i>'],
+  hearts: ['💖', '<i>💖</i><i>💕</i><i>💗</i>'],
+  lights: ['💡', '<b></b>'.repeat(12)],
+  clouds: ['☁️', '<i>☁️</i><i>☁️</i>'],
+  crown: ['👑', '<i>👑</i>'],
+  bow: ['🎀', '<i>🎀</i>'],
+  cat: ['🐱', '<i>🐱</i>'],
+}
+function setDeco(card, key) {
+  card.querySelector('.deco')?.remove()
+  card.dataset.deco = key
+  if (key && key !== 'none') card.insertAdjacentHTML('afterbegin', `<div class="deco dc-${key}" aria-hidden="true">${DECOS[key][1]}</div>`)
+}
+let decoChoice = 'none'
+function renderDecoPick() {
+  document.getElementById('decoPick').innerHTML = Object.entries(DECOS)
+    .map(([k, [icon]]) => `<button data-deco="${k}" class="${k === decoChoice ? 'on' : ''}"><span>${icon}</span>${T[lang].deco[k]}</button>`).join('')
+}
+document.getElementById('decoPick').onclick = (e) => { const b = e.target.closest('[data-deco]'); if (b) { decoChoice = b.dataset.deco; renderDecoPick() } }
+
+// ---------- Shared slots ----------
+$$('[data-slot="toolbar"]').forEach((el) => el.append(document.getElementById('toolbar').content.cloneNode(true)))
+$$('[data-slot="widgets"]').forEach((el) => el.append(document.getElementById('widgets').content.cloneNode(true)))
+$$('[data-slot="searchRow"]').forEach((row) => { const box = document.querySelector('.top .search'); if (box) row.append(box) })
+// The magnifier toggles the bar; Escape or a click elsewhere rolls it back up
+const closeSearch = (box) => { box.classList.remove('open'); box.querySelector('input').value = ''; box.querySelector('input').blur() }
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-search-toggle]')
+  $$('.search-row .search.open').forEach((box) => { if (!box.contains(e.target)) closeSearch(box) })
+  if (!t) return
+  const box = t.closest('.search')
+  if (box.classList.contains('open')) closeSearch(box)
+  else { box.classList.add('open'); setTimeout(() => box.querySelector('input').focus(), 200) }
+})
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $$('.search-row .search.open').forEach(closeSearch) })
+
+function greeting() {
+  const h = new Date().getHours(), t = T[lang]
+  if (h >= 18 || h < 5) return t.evening
+  if (h >= 12 && t.afternoon) return t.afternoon
+  return t.morning
+}
+const fadeTheme = () => { document.body.classList.remove('theme-in'); void document.body.offsetWidth; document.body.classList.add('theme-in') }
+const markTheme = () => $$('[data-theme-set]').forEach((b) => b.classList.toggle('on', b.dataset.themeSet === document.body.dataset.theme))
+function render() {
+  const t = T[lang]
+  document.documentElement.lang = lang
+  $$('[data-t]').forEach((el) => (el.textContent = t[el.dataset.t]))
+  $$('[data-ph]').forEach((el) => (el.placeholder = t[el.dataset.ph]))
+  $$('[data-slot="hello"]').forEach((el) => (el.textContent = greeting()))
+  $$('[data-slot="bio"]').forEach((el) => (el.textContent = bio || t.bio))
+  $$('[data-slot="faq"]').forEach((el) => (el.innerHTML = t.faq.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('')))
+  $$('[data-bio]').forEach((el) => { el.placeholder = t.bio; el.value = bio })
+  $$('[data-slot="bioCount"]').forEach((el) => (el.textContent = bio.length))
+  $$('[data-lang-select]').forEach((el) => (el.value = lang))
+  $$('[data-theme-select]').forEach((el) => (el.value = document.body.dataset.theme))
+  $$('.A aside nav a').forEach((a) => (a.title = a.textContent.trim()))
+  $$('[data-slot="langCode"]').forEach((el) => (el.textContent = lang.toUpperCase()))
+  $$('[data-slot="avatar"]').forEach((el) => (el.innerHTML = avImg(photo || avUrl(av))))
+  renderWorld()
+  renderWeather()
+  renderCharts()
+  markTheme()
+  tick()
+}
+function tick() {
+  const now = new Date()
+  const time = now.toLocaleTimeString(LOCALE[lang], { hour: '2-digit', minute: '2-digit' })
+  const date = now.toLocaleDateString(LOCALE[lang], { weekday: 'long', day: 'numeric', month: 'long' })
+  $$('[data-slot="clock"]').forEach((el) => (el.textContent = time))
+  $$('[data-slot="date"]').forEach((el) => (el.textContent = date))
+  $$('[data-slot="dayNum"]').forEach((el) => (el.textContent = now.getDate()))
+  $$('[data-slot="weekday"]').forEach((el) => (el.textContent = now.toLocaleDateString(LOCALE[lang], { weekday: 'long' })))
+  $$('[data-slot="month"]').forEach((el) => (el.textContent = now.toLocaleDateString(LOCALE[lang], { month: 'long' })))
+  if (now.getSeconds() === 0) renderWorld()
+  const sec = now.getSeconds()
+  $$('[data-slot="secs"]').forEach((el) => (el.textContent = String(sec).padStart(2, '0')))
+  $$('.dial').forEach((d) => d.classList.toggle('wrap', sec === 0))
+  $$('[data-slot="prog"]').forEach((el) => (el.style.strokeDashoffset = 565.49 * (1 - sec / 60)))
+  $$('[data-slot="sat"]').forEach((el) => (el.style.transform = `rotate(${sec * 6}deg)`))
+  $$('[data-slot="moon"]').forEach((el) => { el.style.transition = sec === 0 ? 'none' : ''; el.style.transform = `rotate(${sec * 6}deg)` })
+}
+setInterval(tick, 1000)
+
+// ---------- Edit mode: long press → jiggle; drag to reorder ----------
+let pressTimer = null, pressStart = null, dragged = null, editingCard = null
+const setEditing = (on) => {
+  document.body.classList.toggle('editing', on)
+  $$('.w:not(.add)').forEach((w) => (w.draggable = on))
+}
+document.addEventListener('pointerdown', (e) => {
+  const w = e.target.closest('.w:not(.add)')
+  if (!w || document.body.classList.contains('editing') || e.target.closest('.badge, .resize')) return
+  pressStart = { x: e.clientX, y: e.clientY }
+  w.classList.add('pressing')
+  pressTimer = setTimeout(() => { w.classList.remove('pressing'); setEditing(true); navigator.vibrate?.(30) }, 550)
+})
+const cancelPress = () => { clearTimeout(pressTimer); pressStart = null; $$('.pressing').forEach((w) => w.classList.remove('pressing')) }
+document.addEventListener('pointerup', cancelPress)
+document.addEventListener('pointercancel', cancelPress)
+document.addEventListener('pointermove', (e) => { if (pressStart && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > 8) cancelPress() })
+
+document.addEventListener('dragstart', (e) => { dragged = e.target.closest('.w'); dragged?.classList.add('dragging') })
+document.addEventListener('dragend', () => { dragged?.classList.remove('dragging'); dragged = null })
+document.addEventListener('dragover', (e) => {
+  const over = e.target.closest('.w')
+  if (!dragged || !over || over === dragged || over.parentNode !== dragged.parentNode) return
+  e.preventDefault()
+  if (over.classList.contains('add')) { over.before(dragged); return }
+  const items = [...over.parentNode.children]
+  items.indexOf(dragged) < items.indexOf(over) ? over.after(dragged) : over.before(dragged)
+})
+
+// Resize: drag the ↘ handle, the card snaps to whole grid cells
+let rs = null
+document.addEventListener('pointerdown', (e) => {
+  const h = e.target.closest('.resize'); if (!h) return
+  e.preventDefault(); e.stopPropagation()
+  const w = h.closest('.w'), cs = getComputedStyle(w.parentNode), cols = cs.gridTemplateColumns.split(' ')
+  rs = { w, x: e.clientX, y: e.clientY, rect: w.getBoundingClientRect(), cols: cols.length, colW: parseFloat(cols[0]),
+    gap: parseFloat(cs.columnGap), rowH: parseFloat(cs.gridAutoRows), rgap: parseFloat(cs.rowGap) }
+  w.draggable = false; w.classList.add('resizing'); h.setPointerCapture(e.pointerId)
+}, true)
+document.addEventListener('pointermove', (e) => {
+  if (!rs) return
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
+  const c = clamp(Math.round((rs.rect.width + e.clientX - rs.x + rs.gap) / (rs.colW + rs.gap)), rs.w.dataset.kind === 'world' ? 2 : 1, rs.cols)
+  const r = clamp(Math.round((rs.rect.height + e.clientY - rs.y + rs.rgap) / (rs.rowH + rs.rgap)), 2, 5)
+  rs.w.style.gridColumn = `span ${c}`; rs.w.style.gridRow = `span ${r}`
+})
+document.addEventListener('pointerup', () => { if (!rs) return; rs.w.classList.remove('resizing'); rs.w.draggable = true; rs = null })
+
+// ---------- Clicks ----------
+const closeModals = () => $$('.modal-bg').forEach((m) => m.classList.remove('open'))
+const visibleWidgets = () => document.querySelector('.widgets')
+document.addEventListener('click', (e) => {
+  const menu = e.target.closest('.pill-menu')
+  $$('.pill-menu').forEach((m) => m !== menu && m.classList.remove('open'))
+  if (menu && e.target.closest('.pill-menu > button')) menu.classList.toggle('open')
+
+  const l = e.target.closest('[data-lang]'); if (l) { lang = l.dataset.lang; render(); menu?.classList.remove('open') }
+  const th = e.target.closest('[data-theme-set]'); if (th) { document.body.dataset.theme = th.dataset.themeSet; fadeTheme(); markTheme(); menu?.classList.remove('open') }
+  const sk = e.target.closest('[data-wskin-set]'); if (sk) { document.body.dataset.wskin = sk.dataset.wskinSet; menu?.classList.remove('open') }
+
+
+  if (e.target.closest('[data-open-avatar]')) { $$('.pill-menu').forEach((m) => m.classList.remove('open')); closeModals(); draft = { ...av }; draftPhoto = photo; draftGender = gender; renderAvatarEditor(); document.getElementById('avatarModal').classList.add('open') }
+  if (e.target.closest('[data-open-add]')) document.getElementById('addModal').classList.add('open')
+  const open = (id) => { e.preventDefault(); $$('.pill-menu').forEach((m) => m.classList.remove('open')); closeModals(); document.getElementById(id).classList.add('open') }
+  if (e.target.closest('[data-open-help]')) open('helpModal')
+  if (e.target.closest('[data-open-logout]')) open('logoutModal')
+  if (e.target.closest('[data-open-profile]')) open('profileModal')
+  if (e.target.closest('[data-open-journal]')) {
+    open('journalModal'); renderJournal(); openBook()
+  }
+  if (e.target.closest('[data-close]')) closeModals()
+  if (e.target.id === 'doLogout') location.href = '/login'
+  if (e.target.classList.contains('modal-bg')) closeModals()
+  if (document.body.classList.contains('editing') && !e.target.closest('.w, .modal-bg')) setEditing(false)
+
+  const del = e.target.closest('.badge.del')
+  if (del) { const w = del.closest('.w'); w.classList.add('removing'); setTimeout(() => w.remove(), 250) }
+  const ed = e.target.closest('.badge.edit')
+  if (ed) {
+    editingCard = ed.closest('.w')
+    document.getElementById('fTitle').value = editingCard.querySelector('.w-title').textContent
+    decoChoice = editingCard.dataset.deco || 'none'; renderDecoPick()
+    document.getElementById('editModal').classList.add('open')
+  }
+  const kind = e.target.closest('[data-add-kind]')
+  if (kind) {
+    const card = document.getElementById('widgets').content.querySelector(`[data-kind="${kind.dataset.addKind}"]`).cloneNode(true)
+    card.querySelectorAll('[data-t]').forEach((el) => (el.textContent = T[lang][el.dataset.t]))
+    card.classList.add('appearing'); card.draggable = document.body.classList.contains('editing')
+    visibleWidgets().querySelector('.add').before(card)
+    renderWorld(); renderWeather(); renderCharts()
+    setTimeout(() => card.classList.remove('appearing'), 400)
+    closeModals()
+  }
+})
+document.getElementById('sideToggle').onclick = () => document.querySelector('.A').classList.toggle('collapsed')
+document.getElementById('saveWidget').onclick = () => {
+  if (editingCard) { editingCard.querySelector('.w-title').textContent = document.getElementById('fTitle').value; setDeco(editingCard, decoChoice) }
+  closeModals()
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeModals(); setEditing(false) }
+})
+document.addEventListener('input', (e) => {
+  if (e.target.matches('[data-bio]')) { bio = e.target.value.trim(); $$('[data-slot="bioCount"]').forEach((el) => (el.textContent = e.target.value.length));
+    $$('[data-slot="bio"]').forEach((el) => (el.textContent = bio || T[lang].bio)) }
+})
+document.addEventListener('change', (e) => {
+  if (e.target.matches('[data-lang-select]')) { lang = e.target.value; render() }
+  if (e.target.matches('[data-theme-select]')) { document.body.dataset.theme = e.target.value; fadeTheme(); markTheme() }
+})
+
+render()
+setDeco(document.querySelector('.widgets [data-kind="weather"]'), 'clouds')
+setDeco(document.querySelector('.widgets [data-kind="rss"]'), 'flowers')
+setDeco(document.querySelector('.widgets [data-kind="price"]'), 'balloons')
+setDeco(document.querySelector('.widgets [data-kind="gh"]'), 'lights')
+</script>
+</body>
+</html>
