@@ -114,7 +114,7 @@ export function DashboardPage() {
         <div className="flex items-center justify-between px-6 py-3.5">
           <div className="flex items-center gap-2.5">
             <Logo size={32} />
-            <span className="font-semibold text-gray-900">Dashboard</span>
+            <span className="font-semibold text-gray-900">Morex</span>
           </div>
 
           <div className="flex items-center gap-3">

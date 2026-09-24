@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { apiFetch, ApiError } from '../lib/api'
 import { PasswordInput } from '../components/PasswordInput'
-import { Logo } from '../components/Logo'
+import { AuthLayout, glassInputClass, glassLabelClass } from '../components/AuthLayout'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -23,9 +23,9 @@ export function LoginPage() {
       navigate('/dashboard')
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
-        setError('Please confirm your email before logging in — check your inbox.')
+        setError('Please confirm your email before logging in — check your inbox')
       } else if (err instanceof ApiError && err.status === 401) {
-        setError('Incorrect email or password.')
+        setError('Incorrect email or password')
       } else {
         setError(err instanceof ApiError ? err.message : 'Something went wrong')
       }
@@ -35,63 +35,50 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl ring-1 ring-black/5">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 w-fit">
-            <Logo />
-          </div>
-          <h1 className="text-xl font-semibold text-gray-900">Welcome back</h1>
-          <p className="mt-1 text-sm text-gray-500">Log in to your dashboard.</p>
+    <AuthLayout
+      title="Welcome"
+      subtitle="Log in to your universe"
+      switchPrompt="New to Morex?"
+      switchLabel="Create an account"
+      switchTo="/register"
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label htmlFor="email" className={glassLabelClass}>
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className={glassInputClass}
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none"
-            />
-          </div>
+        <div>
+          <label htmlFor="password" className={glassLabelClass}>
+            Password
+          </label>
+          <PasswordInput
+            id="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Your password"
+          />
+        </div>
 
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <PasswordInput
-              id="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Your password"
-            />
-          </div>
+        {error && <p className="rounded-2xl border border-red-300/30 bg-red-500/15 px-5 py-3 text-sm text-red-100">{error}</p>}
 
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+        <div className="pt-2">
+          <button type="submit" disabled={loading} className="w-full rounded-full bg-white py-4 text-base font-semibold text-indigo-950 shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:bg-indigo-50 hover:shadow-indigo-400/40 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0">
             {loading ? 'Logging in…' : 'Log in'}
           </button>
-
-          <p className="text-center text-sm text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/register" className="font-medium text-blue-600 hover:underline">
-              Sign up
-            </Link>
-          </p>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </AuthLayout>
   )
 }
