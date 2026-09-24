@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -13,7 +14,7 @@ function makePrismaMock() {
     user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     emailVerificationToken: { create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
     session: { create: jest.fn(), deleteMany: jest.fn(), findUnique: jest.fn() },
-    oAuthAccount: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+    oAuthAccount: { findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
   };
 }
@@ -235,6 +236,21 @@ describe('AuthService', () => {
     });
   });
 
+  describe('hasLinkedGithub', () => {
+    it('returns true when an OAuthAccount exists for this user', async () => {
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1' });
+      await expect(service.hasLinkedGithub('user-1')).resolves.toBe(true);
+      expect(prisma.oAuthAccount.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'user-1', provider: 'github' },
+      });
+    });
+
+    it('returns false when none exists', async () => {
+      prisma.oAuthAccount.findFirst.mockResolvedValue(null);
+      await expect(service.hasLinkedGithub('user-1')).resolves.toBe(false);
+    });
+  });
+
   describe('linkGithubAccount', () => {
     function mockGithubExchange(profileId = 197103084) {
       fetchMock.mockImplementation((url: string) => {
@@ -293,6 +309,162 @@ describe('AuthService', () => {
         ServiceUnavailableException,
       );
       expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('unlinkGithubAccount', () => {
+    it('rejects if the user has no linked GitHub account', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'salt:hash' });
+      prisma.oAuthAccount.findFirst.mockResolvedValue(null);
+
+      await expect(service.unlinkGithubAccount('user-1')).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.oAuthAccount.delete).not.toHaveBeenCalled();
+    });
+
+    it('refuses to unlink when the account has no password (would lock the user out)', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: null });
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1' });
+
+      await expect(service.unlinkGithubAccount('user-1')).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.oAuthAccount.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes the OAuthAccount when the user has a password to fall back on', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'salt:hash' });
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1' });
+
+      await service.unlinkGithubAccount('user-1');
+
+      expect(prisma.oAuthAccount.delete).toHaveBeenCalledWith({ where: { id: 'oauth-1' } });
+    });
+  });
+
+  describe('loginWithGithub', () => {
+    function mockGithubExchange(opts: {
+      profileId?: number;
+      name?: string | null;
+      emails?: { email: string; primary: boolean; verified: boolean }[];
+    } = {}) {
+      const { profileId = 197103084, name = 'Ada Lovelace', emails = [{ email: 'ada@example.com', primary: true, verified: true }] } = opts;
+      fetchMock.mockImplementation((url: string) => {
+        if (url.includes('/login/oauth/access_token')) {
+          return Promise.resolve({ json: () => Promise.resolve({ access_token: 'gho_token' }) });
+        }
+        if (url.includes('/user/emails')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(emails) });
+        }
+        if (url.includes('/api.github.com/user')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: profileId, login: 'octocat', name }) });
+        }
+        throw new Error(`Unexpected fetch to ${url}`);
+      });
+    }
+
+    it('logs in directly when the GitHub account is already linked', async () => {
+      mockGithubExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue({
+        id: 'oauth-1',
+        user: { id: 'user-1', email: 'ada@example.com', firstName: 'Ada', lastName: 'Lovelace', isAdmin: false, isBanned: false },
+      });
+      prisma.session.create.mockResolvedValue({ id: 'session-1', expiresAt: new Date() });
+
+      const result = await service.loginWithGithub('auth-code');
+
+      expect(prisma.oAuthAccount.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'oauth-1' } }));
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+      expect(prisma.user.create).not.toHaveBeenCalled();
+      expect(result.user.id).toBe('user-1');
+    });
+
+    it('links to an existing local account that matches the verified GitHub email, without creating a duplicate', async () => {
+      mockGithubExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-2',
+        email: 'ada@example.com',
+        firstName: 'Ada',
+        lastName: 'L.',
+        isAdmin: false,
+        isBanned: false,
+      });
+      prisma.session.create.mockResolvedValue({ id: 'session-2', expiresAt: new Date() });
+
+      const result = await service.loginWithGithub('auth-code');
+
+      expect(prisma.user.create).not.toHaveBeenCalled();
+      expect(prisma.oAuthAccount.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ userId: 'user-2', providerAccountId: '197103084' }) }),
+      );
+      expect(result.user.id).toBe('user-2');
+    });
+
+    it('registers a brand new, already-verified account when nothing matches', async () => {
+      mockGithubExchange({ name: 'Grace Hopper', emails: [{ email: 'grace@example.com', primary: true, verified: true }] });
+      prisma.oAuthAccount.findUnique.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({
+        id: 'user-3',
+        email: 'grace@example.com',
+        firstName: 'Grace',
+        lastName: 'Hopper',
+        isAdmin: false,
+        isBanned: false,
+      });
+      prisma.session.create.mockResolvedValue({ id: 'session-3', expiresAt: new Date() });
+
+      const result = await service.loginWithGithub('auth-code');
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: 'grace@example.com',
+            firstName: 'Grace',
+            lastName: 'Hopper',
+            emailVerified: true,
+          }),
+        }),
+      );
+      expect(result.user.id).toBe('user-3');
+    });
+
+    it('falls back to the GitHub login as both names when the profile has no display name', async () => {
+      mockGithubExchange({ name: null, emails: [{ email: 'octo@example.com', primary: true, verified: true }] });
+      prisma.oAuthAccount.findUnique.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({
+        id: 'user-4',
+        email: 'octo@example.com',
+        firstName: 'octocat',
+        lastName: 'octocat',
+        isAdmin: false,
+        isBanned: false,
+      });
+      prisma.session.create.mockResolvedValue({ id: 'session-4', expiresAt: new Date() });
+
+      await service.loginWithGithub('auth-code');
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ firstName: 'octocat', lastName: 'octocat' }) }),
+      );
+    });
+
+    it('rejects when GitHub has no verified email at all', async () => {
+      mockGithubExchange({ emails: [{ email: 'unverified@example.com', primary: true, verified: false }] });
+      prisma.oAuthAccount.findUnique.mockResolvedValue(null);
+
+      await expect(service.loginWithGithub('auth-code')).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a banned user even when their GitHub account is already linked', async () => {
+      mockGithubExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue({
+        id: 'oauth-1',
+        user: { id: 'user-1', email: 'ada@example.com', firstName: 'Ada', lastName: 'Lovelace', isAdmin: false, isBanned: true },
+      });
+
+      await expect(service.loginWithGithub('auth-code')).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.session.create).not.toHaveBeenCalled();
     });
   });
 

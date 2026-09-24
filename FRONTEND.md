@@ -9,6 +9,7 @@ the overall project (backend, Docker, architecture) see the [root README](./READ
 | Area | Status |
 |---|---|
 | Auth (register, login, logout, session check) | ✅ Done |
+| "Sign in with GitHub" (LoginPage) | ✅ Done |
 | Widget dashboard (add / reconfigure / move / resize / delete) | ✅ Done |
 | GitHub account linking (button) | ✅ Done |
 | Per-widget custom rendering (pretty RSS/GitHub/market-data views) | ⏳ Not started — widgets currently render as generic key/value or list dumps |
@@ -25,6 +26,14 @@ the overall project (backend, Docker, architecture) see the [root README](./READ
 > changes end-to-end without waiting on a frontend PR. Not a standing arrangement: frontend code stays
 > Morayo's, and anything below in "Planned, not yet built" is written up for Morayo to implement, not
 > something that got built the same way.
+>
+> **2026-09-23:** `LoginPage.tsx` got a third one-off exception, same reasoning: a "Continue with GitHub"
+> link (`<a href="/auth/github/login">`, a real top-level navigation, not a `fetch()` — same reasoning as
+> the existing GitHub-linking button) so the new `GET /auth/github/login` backend route (see
+> [API.md](./API.md#get-authgithublogin)) could actually be tested end-to-end. It also reads an `?error=`
+> query param (set by the backend's callback on a failed GitHub sign-in) into the same error banner the
+> form already had. Feel free to reshape/restyle this — the requirement is just that it keeps being a
+> real `<a href>` to that exact path.
 
 ## Tech stack
 
@@ -203,11 +212,42 @@ Backend and contract are done — this is purely a `WidgetFormModal.tsx` renderi
    the chosen `value` as the config value exactly like today.
 3. Handle the 400 case (`{"message":"No linked GitHub account for this user..."}`) — probably fall back
    to the current free-text input with that message shown, since the user may not have linked GitHub yet
-   (no UI currently shows link status either — see the gap below).
+   (see the "GitHub-linked-status indicator" spec below for how to know that ahead of time).
 
 This was worth building generically rather than as a GitHub-only special case: any future service
 (Steam's game list, Maps' cinema list) can reuse the exact same `optionsUrl` handling in
 `WidgetFormModal` with zero additional frontend work once its backend sets the field.
+
+### GitHub-linked-status indicator, and an Unlink button
+
+**2026-09-23, raised directly by Exauce:** right now nothing in the UI shows whether the current user has
+a GitHub account linked — the "Link GitHub account" button is always shown, even after linking
+succeeded, so there's no visual confirmation and no way to tell without trying a GitHub widget and seeing
+if it works.
+
+This is now fixable: `GET /auth/me` returns a `githubLinked: boolean` field (see
+[API.md](./API.md#get-authme)) added specifically for this. On `DashboardPage`, use it to:
+- Show a clear "Linked" state (e.g. a green badge/checkmark next to "Connected accounts") instead of
+  always showing the same "Link GitHub account" button regardless of state.
+- Once linked, swap that button for an "Unlink" one, calling `DELETE /auth/github` (see
+  [API.md](./API.md#delete-authgithub), `204` on success). Handle its `409` case (blocked because this
+  account has no password at all — see "Sign in with GitHub" below) by showing that error message as-is;
+  there's no "set a password" flow yet for a GitHub-only account to fall back on, so unlinking must stay
+  blocked in the UI too, not just the API.
+- Re-fetch `/auth/me` (or just flip local state) after a successful link or unlink so the badge/button
+  updates immediately instead of only after a page reload.
+
+### Two-step "Add widget" flow (Service, then Widget)
+
+**2026-09-23, raised directly by Exauce:** `WidgetFormModal.tsx` already picks the Widget dropdown's
+options based on the chosen Service (`handleServiceChange` resets `widgetName` correctly), but both
+`<select>`s are shown together from the start — visually it reads as "pick a widget" with the service as
+a secondary detail, rather than "first pick a service, then pick one of its widgets". Requested: make it
+a real two-step flow inside the same modal — show only the Service selector first (maybe with each
+service's widgets summarized, e.g. widget count or names), and only render the Widget selector (and then
+the widget's `params` fields) once a service has been chosen, with a way to go back and change the
+service. The underlying data flow (`about.widgets` filtered by `serviceName`) doesn't need to change —
+this is purely about the step-by-step presentation.
 
 ### Profile editing (settings page)
 
@@ -230,7 +270,8 @@ spot) with:
 - No "resend confirmation email" flow — if a signup's token expires (24h) or the email never arrives,
   there is currently no way to get a new one short of registering again with a different address (the
   backend also has no endpoint for this).
-- No indicator anywhere in the UI for whether the current user has a GitHub account linked.
+- No indicator anywhere in the UI for whether the current user has a GitHub account linked — now specced
+  in "Planned, not yet built" above, with the backend data it needs already available.
 - No password-reset flow.
 - No loading skeletons — pages that fetch data on mount just briefly show "Loading…" as plain text.
 - Weather, Steam, and Maps/Cinema services don't exist on the backend yet, so they simply don't appear

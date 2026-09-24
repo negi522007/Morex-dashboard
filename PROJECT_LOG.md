@@ -3,10 +3,16 @@
 Team organization, the timeline of what got built and decided, and what's left — kept as one readable
 narrative rather than scattered across commit messages.
 
-**A note on "dates" here:** these are the dates real work actually landed (derived from git history and
-the working sessions behind it), not scheduled meetings with an agenda and minutes. There's no formal
-meeting-minutes practice on this team; this is the honest substitute — a log of *when things actually
-changed and why*, which is arguably more useful than a record of when people talked about changing them.
+## Meetings
+
+Two team meetings anchor the timeline below:
+
+- **Meeting 1 — Sept 15**: decided the technology stack, agreed on the contract between frontend and
+  backend (the `ServiceProvider`/`WidgetDefinition` shape), and split the tasks between the two of us.
+- **Meeting 2 — Sept 20**: tested the merged result of frontend and backend together and noted the
+  inconsistencies and gaps that testing surfaced. That's where the ideas for the admin module, the
+  optional name field, a design review, and more came from — the entries below from Sept 21 onward are
+  that follow-up work.
 
 ## Team organization
 
@@ -25,12 +31,13 @@ integrations *and* all UI, the other doing comparatively little.
 
 ## Timeline
 
-**Sept 15** — Repo initialized. The team's original architecture proposal (NestJS/Prisma/Postgres +
-React, Redis/BullMQ for the timer, JWT auth) was reviewed and challenged point by point: quantity target
-raised well above the brief's minimum, Redis/BullMQ flagged as disproportionate for the project's scale,
-the OAuth "authorization vs authentication" distinction clarified, email-confirmation requirement
-initially missing from the plan. `ServiceProvider`/`WidgetDefinition` contract designed as the join point
-between backend services and the frontend.
+**Sept 15 (Meeting 1)** — Repo initialized. The team's original architecture proposal
+(NestJS/Prisma/Postgres + React, Redis/BullMQ for the timer, JWT auth) was reviewed and challenged point
+by point: quantity target raised well above the brief's minimum, Redis/BullMQ flagged as disproportionate
+for the project's scale, the OAuth "authorization vs authentication" distinction clarified,
+email-confirmation requirement initially missing from the plan. `ServiceProvider`/`WidgetDefinition`
+contract designed as the join point between backend services and the frontend, and tasks split between
+Exauce and Morayo.
 
 **Sept 16** — Auth strategy revisited from first principles: JWT (the original default, never actually
 evaluated against this project's constraints) vs server-side sessions. Sessions won — single-container
@@ -47,10 +54,12 @@ delete). Everything tested against the real running app at each step, not just u
 for the exact scope), `API.md`, `ARCHITECTURE.md` diagrams, `CONTRIBUTING.md`, `TROUBLESHOOTING.md`,
 and a generated Swagger UI at `/docs` alongside the hand-written `API.md`.
 
-**Sept 20** — Morayo built the entire frontend in one push: Vite/React/TypeScript/Tailwind v4 scaffold,
-the dev proxy to the backend, auth pages (register/login), the protected dashboard (session check,
-logout), the GitHub-linking card, the widget grid (add/reconfigure/move/resize/delete via
-`react-grid-layout`), and `FRONTEND.md`.
+**Sept 20 (Meeting 2)** — Morayo built the entire frontend in one push: Vite/React/TypeScript/Tailwind v4
+scaffold, the dev proxy to the backend, auth pages (register/login), the protected dashboard (session
+check, logout), the GitHub-linking card, the widget grid (add/reconfigure/move/resize/delete via
+`react-grid-layout`), and `FRONTEND.md`. The team then tested the merged frontend and backend together —
+that pass is what surfaced the gaps behind the entries below: no way to manage users, a registration form
+that only asked for email/password, and a design worth a second look.
 
 **Sept 21** — Both branches merged into `main`. Real email delivery configured (Brevo's signup pushed
 toward a paid plan on first try, so switched to a Gmail SMTP app password instead) — this also surfaced
@@ -68,7 +77,12 @@ built here). Full documentation pass across every doc file.
 **Sept 23** — `firstName`/`lastName` flipped from optional to **required** at registration (reversing
 the Sept 21 decision, per explicit instruction). Profile editing added both ways: `PATCH /auth/me`
 (self: name, password — a password change kills every other session) and `PATCH /admin/users/:id`
-(admin: name, a manual `emailVerified` override). `PRIVACY.md` and this log written.
+(admin: name, a manual `emailVerified` override). `PRIVACY.md` and this log written. Also: **"Sign in
+with GitHub"** (`GET /auth/github/login`) — a real second login path, not just account linking. Reuses
+the existing GitHub OAuth App/callback, told apart from the linking flow by which CSRF state cookie is
+present. Logs in directly if already linked, links onto a matching-verified-email local account without
+duplicating it, or auto-registers a brand-new already-verified account otherwise. `LoginPage.tsx` got a
+one-off "Continue with GitHub" link to test it end-to-end. 6 new unit tests (119 total).
 
 ## Key decisions (quick reference)
 
@@ -81,6 +95,7 @@ the Sept 21 decision, per explicit instruction). Profile editing added both ways
 | Build `AdminModule` despite "not mandatory" | Sept 22 | Team standard: cover everything the brief mentions, not just what's enforced |
 | `firstName`/`lastName` required | Sept 23 | Explicit decision reversal — was optional, now required at signup |
 | Real SMTP via Gmail app password, not Brevo | Sept 21 | Brevo's signup pushed toward a paid plan; Gmail needed no third-party account |
+| "Sign in with GitHub" as a real login path, not just linking | Sept 23 | Already the intended design (see `schema.prisma`'s `OAuthAccount` comment from Sept 15) — just not built until now |
 
 ## What's left
 

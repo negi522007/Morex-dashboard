@@ -17,6 +17,7 @@ import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { SessionGuard } from './session.guard';
 import { CurrentUser } from './current-user.decorator';
+import { setSessionCookie } from '../common/session-cookie.util';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -85,7 +86,7 @@ export class AuthController {
   ) {
     const { email, password } = this.validateCredentials(body);
     const { session, user } = await this.authService.login(email, password);
-    this.setSessionCookie(res, session.id, session.expiresAt);
+    setSessionCookie(res, this.config, session.id, session.expiresAt);
     return user;
   }
 
@@ -107,10 +108,11 @@ export class AuthController {
   @UseGuards(SessionGuard)
   @ApiCookieAuth('dashboard_session')
   @ApiOperation({ summary: 'Get the currently logged-in user — useful to check auth state on app load' })
-  @ApiResponse({ status: 200, description: 'The current user' })
+  @ApiResponse({ status: 200, description: 'The current user, plus whether GitHub is linked' })
   @ApiResponse({ status: 401, description: 'No valid session' })
-  me(@CurrentUser() user: { id: string; email: string; firstName: string | null; lastName: string | null }) {
-    return user;
+  async me(@CurrentUser() user: { id: string; email: string; firstName: string | null; lastName: string | null }) {
+    const githubLinked = await this.authService.hasLinkedGithub(user.id);
+    return { ...user, githubLinked };
   }
 
   @Patch('me')
@@ -152,20 +154,5 @@ export class AuthController {
       throw new BadRequestException('Password must be at least 8 characters');
     }
     return { email, password };
-  }
-
-  private setSessionCookie(res: Response, sessionId: string, expiresAt: Date) {
-    const cookieName = this.config.get<string>('SESSION_COOKIE_NAME') ?? 'dashboard_session';
-    // Tied to an explicit flag, not NODE_ENV: this deploys over plain HTTP
-    // (docker-compose has no TLS termination), and a real browser silently
-    // drops "Secure" cookies on non-HTTPS connections. Flip COOKIE_SECURE=true
-    // once the app is actually served over HTTPS.
-    res.cookie(cookieName, sessionId, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: this.config.get<string>('COOKIE_SECURE') === 'true',
-      expires: expiresAt,
-      path: '/',
-    });
   }
 }

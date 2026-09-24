@@ -12,11 +12,15 @@ want the technical detail behind any of this (hashing, encryption), see
   dashboard rather than an anonymous session.
 - **Password** — never stored as-is. It's run through a one-way hash (scrypt) before it ever touches the
   database; nobody, including an admin, can look up or recover your actual password.
-- **A GitHub access token, if you choose to link your GitHub account** — used only to call GitHub's API
-  on your behalf for the GitHub widgets you configure (e.g. showing your repos' recent commits). It's
-  encrypted at rest (AES-256-GCM) and only decrypted in memory, right when a widget needs to fetch data.
-  We never see or store your GitHub *password* — GitHub's OAuth flow means we never have it in the first
-  place.
+- **A GitHub access token, if you link your GitHub account (or sign up/sign in with GitHub)** — used only
+  to call GitHub's API on your behalf for the GitHub widgets you configure (e.g. showing your repos'
+  recent commits), and, if you use "Sign in with GitHub", to read your GitHub username, display name, and
+  verified email once, to create or match your account. It's encrypted at rest (AES-256-GCM) and only
+  decrypted in memory, right when it's needed. We never see or store your GitHub *password* — GitHub's
+  OAuth flow means we never have it in the first place.
+- **If you sign up via "Sign in with GitHub"** instead of email/password, your account has no password at
+  all until you set one — there's currently no way to add one after the fact (see "what we don't do
+  yet" below).
 - **What your widgets fetch** — e.g. if you add an RSS widget, the last few articles from the feed you
   configured are cached so the dashboard can show them without hitting that feed on every page load.
 
@@ -30,8 +34,11 @@ want the technical detail behind any of this (hashing, encryption), see
 ## Your control over it
 
 - You can change your name or password any time (in account settings).
-- You can disconnect your GitHub account from GitHub's own side (Settings → Applications) at any point —
-  doing so revokes the token we hold; the next widget refresh will simply fail until you reconnect.
+- You can disconnect your GitHub account yourself (`DELETE /auth/github`, no frontend button yet — see
+  `FRONTEND.md`), or from GitHub's own side (Settings → Applications). Either way, any GitHub widgets you
+  have will simply fail on their next refresh until you reconnect. If GitHub is your *only* way to log in
+  (you signed up via "Sign in with GitHub" and never set a password), unlinking is blocked — there's
+  currently no way to add a password after the fact, so removing GitHub would lock you out entirely.
 - There is currently no self-service "delete my account" button — if you want your account and its data
   removed, ask an admin. (Worth knowing plainly: this is a gap we haven't closed yet, not a hidden
   policy.)
