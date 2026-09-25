@@ -55,6 +55,31 @@ describe('WidgetsService', () => {
     service = new WidgetsService(prisma as any, fakeProviders, { get: () => 'a'.repeat(64) } as any);
   });
 
+  describe('history', () => {
+    const metricProviders: ServiceProvider[] = [
+      { name: 'weather', requiresAuth: false, widgets: [{ name: 'forecast', description: '', params: [], primaryMetric: () => 1, fetchData: async () => ({}) }] },
+      ...fakeProviders,
+    ];
+    it('is scoped to the owner, and reports unsupported widgets', async () => {
+      const svc = new WidgetsService({ ...prisma, widgetSnapshot: { findMany: jest.fn() } } as any, metricProviders, { get: () => 'k' } as any);
+      prisma.widgetInstance.findFirst.mockResolvedValue(null);
+      await expect(svc.history('u', 'w')).rejects.toBeInstanceOf(NotFoundException);
+      prisma.widgetInstance.findFirst.mockResolvedValue({ id: 'w', serviceName: 'rss', widgetName: 'article_list' });
+      expect(await svc.history('u', 'w')).toMatchObject({ supported: false, points: [] });
+    });
+
+    it('thins long series to the requested number of points, keeping the last one', async () => {
+      const rows = Array.from({ length: 1000 }, (_, i) => ({ id: String(i), at: new Date(i * 60000), value: i }));
+      const snap = { findMany: jest.fn().mockResolvedValue(rows) };
+      const svc = new WidgetsService({ ...prisma, widgetSnapshot: snap } as any, metricProviders, { get: () => 'k' } as any);
+      prisma.widgetInstance.findFirst.mockResolvedValue({ id: 'w', serviceName: 'weather', widgetName: 'forecast' });
+      const r: any = await svc.history('u', 'w', 500, 100);
+      expect(r.days).toBe(90);
+      expect(r.points.length).toBeLessThanOrEqual(102);
+      expect(r.points[r.points.length - 1].value).toBe(999);
+    });
+  });
+
   describe('secrets, AI and sharing', () => {
     const secretProviders: ServiceProvider[] = [
       {

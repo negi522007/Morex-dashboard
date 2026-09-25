@@ -203,6 +203,33 @@ export class WidgetsService {
     return this.present(await this.prisma.widgetInstance.update({ where: { id: existing.id }, data }));
   }
 
+  // Value history of the widget's primary metric (see WidgetDefinition.primaryMetric).
+  // Evenly thinned to at most `points` samples so a chart never gets thousands of them.
+  async history(userId: string, id: string, days = 7, points = 200) {
+    const existing = await this.prisma.widgetInstance.findFirst({ where: { id, userId } });
+    if (!existing) throw new NotFoundException('Widget instance not found');
+
+    const { widget } = this.findWidgetDefinition(existing.serviceName, existing.widgetName);
+    if (!widget.primaryMetric) return { widgetId: id, supported: false, days: 0, points: [] };
+
+    const d = Math.min(Math.max(Math.floor(Number(days)) || 7, 1), 90);
+    const cap = Math.min(Math.max(Math.floor(Number(points)) || 200, 2), 1000);
+    const rows = await this.prisma.widgetSnapshot.findMany({
+      where: { widgetId: id, at: { gte: new Date(Date.now() - d * 86_400_000) } },
+      orderBy: { at: 'asc' },
+    });
+    const step = rows.length > cap ? rows.length / cap : 1;
+    const picked: typeof rows = [];
+    for (let i = 0; i < rows.length; i += step) picked.push(rows[Math.floor(i)]);
+    if (rows.length && picked[picked.length - 1] !== rows[rows.length - 1]) picked.push(rows[rows.length - 1]);
+    return {
+      widgetId: id,
+      supported: true,
+      days: d,
+      points: picked.map((r) => ({ at: r.at.toISOString(), value: r.value })),
+    };
+  }
+
   async remove(userId: string, id: string): Promise<void> {
     const existing = await this.prisma.widgetInstance.findFirst({ where: { id, userId } });
     if (!existing) {
