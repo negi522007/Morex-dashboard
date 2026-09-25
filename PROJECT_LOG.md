@@ -84,6 +84,14 @@ present. Logs in directly if already linked, links onto a matching-verified-emai
 duplicating it, or auto-registers a brand-new already-verified account otherwise. `LoginPage.tsx` got a
 one-off "Continue with GitHub" link to test it end-to-end. 6 new unit tests (119 total).
 
+**Sept 25** — Backend prepared for Morayo's new frontend (the mockup, `frontend/public/mockups.html`), which
+she lays out herself. Added: Journal (text encrypted at rest), World clock, a **Weather** service
+(Open-Meteo, no key), profile fields (bio, theme, language, widget style, DiceBear avatar config) plus
+avatar photo upload, widget `title` / `decoration`, and `exchange_rate` now returns its history (ECB
+reference rates for fiat pairs, CoinGecko for crypto) so a graph can be drawn from real data. Every mockup
+element and the endpoint behind it is listed in API.md ("Backing the Morex mockup"). A frontend rebuild was
+started along the way and then set aside — the frontend stays Morayo's.
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |

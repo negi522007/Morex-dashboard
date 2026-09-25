@@ -23,6 +23,14 @@ want the technical detail behind any of this (hashing, encryption), see
   yet" below).
 - **What your widgets fetch** — e.g. if you add an RSS widget, the last few articles from the feed you
   configured are cached so the dashboard can show them without hitting that feed on every page load.
+- **Your journal entries, if you write any** — encrypted at rest (AES-256-GCM, same as GitHub tokens
+  above), decrypted only when *you* read them back. Not even an admin can read your journal text — the
+  admin view only ever shows account metadata (see "Who can see what" below), never journal content.
+- **Your bio, and your avatar** — a bio is just free text you write about yourself, shown on your own
+  dashboard. An avatar is either a generated character built from options you pick (no image is ever
+  stored for that — it's assembled by a third-party service, DiceBear, from a URL each time it's shown)
+  or, if you upload a real photo instead, that file is stored on the server (not sent to DiceBear or
+  anyone else) and served back only to render your own avatar.
 
 ## What we don't do
 

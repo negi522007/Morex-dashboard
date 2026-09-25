@@ -9,10 +9,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'node:crypto';
+import { unlink } from 'node:fs/promises';
+import { join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { hashPassword, verifyPassword } from './password.util';
 import { encryptToken } from '../common/token-encryption.util';
+import { UPLOADS_DIR } from '../common/uploads.util';
 
 interface GithubTokenResponse {
   access_token?: string;
@@ -35,12 +38,26 @@ interface GithubEmail {
 const EMAIL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+// The mockup's own option sets (mockups.html's [data-theme]/T dictionaries) —
+// validated server-side so a bad value can't get stored and silently break
+// the theme system client-side.
+export const THEMES = ['galaxy', 'aurora', 'moon', 'dolphins', 'forest', 'mystic', 'ocean', 'beach', 'desertNight', 'desertMoon'] as const;
+export const LANGUAGES = ['fr', 'en', 'es'] as const;
+export const WIDGET_SKINS = ['glass', 'neon', 'pastel', 'minimal', 'holo'] as const;
+
 export interface PublicUser {
   id: string;
   email: string;
   firstName: string | null;
   lastName: string | null;
   isAdmin: boolean;
+  createdAt: Date;
+  bio: string | null;
+  theme: string;
+  language: string;
+  widgetSkin: string;
+  avatarConfig: unknown;
+  avatarPhotoUrl: string | null;
 }
 
 function toPublicUser(user: {
@@ -49,8 +66,28 @@ function toPublicUser(user: {
   firstName: string | null;
   lastName: string | null;
   isAdmin: boolean;
+  createdAt: Date;
+  bio: string | null;
+  theme: string;
+  language: string;
+  widgetSkin: string;
+  avatarConfig: unknown;
+  avatarPhotoPath: string | null;
 }): PublicUser {
-  return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, isAdmin: user.isAdmin };
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    isAdmin: user.isAdmin,
+    createdAt: user.createdAt,
+    bio: user.bio,
+    theme: user.theme,
+    language: user.language,
+    widgetSkin: user.widgetSkin,
+    avatarConfig: user.avatarConfig,
+    avatarPhotoUrl: user.avatarPhotoPath,
+  };
 }
 
 @Injectable()
@@ -363,14 +400,33 @@ export class AuthService {
   async updateProfile(
     userId: string,
     currentSessionId: string,
-    updates: { firstName?: string; lastName?: string; currentPassword?: string; newPassword?: string },
+    updates: {
+      firstName?: string;
+      lastName?: string;
+      currentPassword?: string;
+      newPassword?: string;
+      bio?: string;
+      theme?: string;
+      language?: string;
+      widgetSkin?: string;
+      avatarConfig?: unknown;
+    },
   ): Promise<PublicUser> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
-    const data: { firstName?: string; lastName?: string; passwordHash?: string } = {};
+    const data: {
+      firstName?: string;
+      lastName?: string;
+      passwordHash?: string;
+      bio?: string;
+      theme?: string;
+      language?: string;
+      widgetSkin?: string;
+      avatarConfig?: any;
+    } = {};
 
     if (updates.firstName !== undefined) {
       const trimmed = updates.firstName.trim();
@@ -381,6 +437,31 @@ export class AuthService {
       const trimmed = updates.lastName.trim();
       if (!trimmed) throw new BadRequestException('Last name cannot be blank');
       data.lastName = trimmed;
+    }
+    if (updates.bio !== undefined) {
+      if (updates.bio.length > 280) throw new BadRequestException('Bio must be 280 characters or fewer');
+      data.bio = updates.bio;
+    }
+    if (updates.theme !== undefined) {
+      if (!THEMES.includes(updates.theme as (typeof THEMES)[number])) {
+        throw new BadRequestException(`theme must be one of: ${THEMES.join(', ')}`);
+      }
+      data.theme = updates.theme;
+    }
+    if (updates.language !== undefined) {
+      if (!LANGUAGES.includes(updates.language as (typeof LANGUAGES)[number])) {
+        throw new BadRequestException(`language must be one of: ${LANGUAGES.join(', ')}`);
+      }
+      data.language = updates.language;
+    }
+    if (updates.widgetSkin !== undefined) {
+      if (!WIDGET_SKINS.includes(updates.widgetSkin as (typeof WIDGET_SKINS)[number])) {
+        throw new BadRequestException(`widgetSkin must be one of: ${WIDGET_SKINS.join(', ')}`);
+      }
+      data.widgetSkin = updates.widgetSkin;
+    }
+    if (updates.avatarConfig !== undefined) {
+      data.avatarConfig = updates.avatarConfig;
     }
 
     let killOtherSessions = false;
@@ -396,7 +477,7 @@ export class AuthService {
     }
 
     if (Object.keys(data).length === 0) {
-      throw new BadRequestException('Nothing to update: provide firstName, lastName, and/or newPassword (with currentPassword)');
+      throw new BadRequestException('Nothing to update: provide at least one field to change');
     }
 
     const updated = await this.prisma.user.update({ where: { id: userId }, data });
@@ -405,6 +486,35 @@ export class AuthService {
       await this.prisma.session.deleteMany({ where: { userId, NOT: { id: currentSessionId } } });
     }
 
+    return toPublicUser(updated);
+  }
+
+  // Deletes the file behind a previous /uploads/... path, if any — best
+  // effort, so a missing/already-gone file never breaks the actual update.
+  private async deleteUploadedFile(publicPath: string | null): Promise<void> {
+    if (!publicPath) return;
+    try {
+      await unlink(join(UPLOADS_DIR, publicPath.replace(/^\/uploads\//, '')));
+    } catch {
+      // Already gone, or never existed — nothing to do.
+    }
+  }
+
+  // A newly uploaded photo replaces any previous one (old file removed).
+  // avatarConfig (the DiceBear option object) is intentionally left
+  // untouched — switching back from a photo just needs removeAvatarPhoto,
+  // not re-picking every option.
+  async setAvatarPhoto(userId: string, publicPath: string): Promise<PublicUser> {
+    const existing = await this.prisma.user.findUnique({ where: { id: userId } });
+    const updated = await this.prisma.user.update({ where: { id: userId }, data: { avatarPhotoPath: publicPath } });
+    await this.deleteUploadedFile(existing?.avatarPhotoPath ?? null);
+    return toPublicUser(updated);
+  }
+
+  async removeAvatarPhoto(userId: string): Promise<PublicUser> {
+    const existing = await this.prisma.user.findUnique({ where: { id: userId } });
+    const updated = await this.prisma.user.update({ where: { id: userId }, data: { avatarPhotoPath: null } });
+    await this.deleteUploadedFile(existing?.avatarPhotoPath ?? null);
     return toPublicUser(updated);
   }
 }

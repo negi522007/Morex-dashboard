@@ -133,6 +133,20 @@ describe('WidgetsService', () => {
       expect(result.id).toBe('new-id');
     });
 
+    it('stores title and decoration when provided at creation time', async () => {
+      await service.create('user-1', {
+        serviceName: 'rss',
+        widgetName: 'article_list',
+        config: { link: 'https://example.com/feed' },
+        refreshRateSeconds: 60,
+        title: 'My Feed',
+        decoration: 'stars',
+      });
+      expect(prisma.widgetInstance.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ title: 'My Feed', decoration: 'stars' }) }),
+      );
+    });
+
     it('does not require credentials for a service that does not need auth', async () => {
       await service.create('user-1', {
         serviceName: 'rss',

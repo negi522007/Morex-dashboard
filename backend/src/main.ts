@@ -1,11 +1,18 @@
+import { mkdirSync } from 'node:fs';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { AVATARS_DIR, UPLOADS_DIR } from './common/uploads.util';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // A fresh volume mount (see docker-compose.yml's uploads_data) starts empty.
+  mkdirSync(AVATARS_DIR, { recursive: true });
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.use(cookieParser());
+  app.useStaticAssets(UPLOADS_DIR, { prefix: '/uploads' });
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Dashboard API')

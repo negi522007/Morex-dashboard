@@ -8,6 +8,7 @@ import { ServicesModule } from './services/services.module';
 import { TimerModule } from './timer/timer.module';
 import { WidgetsModule } from './widgets/widgets.module';
 import { AdminModule } from './admin/admin.module';
+import { JournalModule } from './journal/journal.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AdminModule } from './admin/admin.module';
     TimerModule,
     WidgetsModule,
     AdminModule,
+    JournalModule,
   ],
 })
 export class AppModule {}

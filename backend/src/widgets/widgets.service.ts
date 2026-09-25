@@ -15,6 +15,8 @@ export interface WidgetBody {
   config?: Record<string, unknown>;
   refreshRateSeconds?: number;
   position?: Record<string, unknown>;
+  title?: string | null;
+  decoration?: string | null;
 }
 
 function validateConfig(widget: WidgetDefinition, rawConfig: unknown): Record<string, string | number> {
@@ -76,6 +78,8 @@ export class WidgetsService {
         config,
         refreshRateSeconds,
         position: (body.position ?? {}) as Prisma.InputJsonValue,
+        title: body.title ?? null,
+        decoration: body.decoration ?? null,
       },
     });
   }
@@ -98,9 +102,17 @@ export class WidgetsService {
     if (body.position !== undefined) {
       data.position = body.position as Prisma.InputJsonValue;
     }
+    if (body.title !== undefined) {
+      data.title = body.title;
+    }
+    if (body.decoration !== undefined) {
+      data.decoration = body.decoration;
+    }
 
     if (Object.keys(data).length === 0) {
-      throw new BadRequestException('Nothing to update: provide config, refreshRateSeconds, and/or position');
+      throw new BadRequestException(
+        'Nothing to update: provide config, refreshRateSeconds, position, title, and/or decoration',
+      );
     }
 
     return this.prisma.widgetInstance.update({ where: { id: existing.id }, data });

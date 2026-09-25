@@ -501,6 +501,34 @@ describe('AuthService', () => {
       );
     });
 
+    it('rejects a bio over 280 characters', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'irrelevant' });
+      await expect(service.updateProfile('user-1', 'session-1', { bio: 'x'.repeat(281) })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('rejects an unknown theme/language/widgetSkin', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'irrelevant' });
+      await expect(service.updateProfile('user-1', 'session-1', { theme: 'nope' })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.updateProfile('user-1', 'session-1', { language: 'de' })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.updateProfile('user-1', 'session-1', { widgetSkin: 'chrome' })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('accepts a valid theme/language/widgetSkin and bio', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'irrelevant' });
+      prisma.user.update.mockResolvedValue({ id: 'user-1', email: 'a@example.com', isAdmin: false, theme: 'desertMoon', language: 'fr', widgetSkin: 'neon', bio: 'hi' });
+
+      await service.updateProfile('user-1', 'session-1', { theme: 'desertMoon', language: 'fr', widgetSkin: 'neon', bio: 'hi' });
+
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { theme: 'desertMoon', language: 'fr', widgetSkin: 'neon', bio: 'hi' },
+      });
+    });
+
     it('rejects a password change with the wrong current password', async () => {
       const passwordHash = await hashPassword('the-real-password');
       prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash });
@@ -531,6 +559,28 @@ describe('AuthService', () => {
       expect(prisma.session.deleteMany).toHaveBeenCalledWith({
         where: { userId: 'user-1', NOT: { id: 'current-session' } },
       });
+    });
+  });
+
+  describe('setAvatarPhoto / removeAvatarPhoto', () => {
+    it('sets the new path and returns it as avatarPhotoUrl', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', avatarPhotoPath: null });
+      prisma.user.update.mockResolvedValue({ id: 'user-1', email: 'a@example.com', isAdmin: false, avatarPhotoPath: '/uploads/avatars/new.png' });
+
+      const result = await service.setAvatarPhoto('user-1', '/uploads/avatars/new.png');
+
+      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'user-1' }, data: { avatarPhotoPath: '/uploads/avatars/new.png' } });
+      expect(result.avatarPhotoUrl).toBe('/uploads/avatars/new.png');
+    });
+
+    it('clears the path on remove', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', avatarPhotoPath: '/uploads/avatars/old.png' });
+      prisma.user.update.mockResolvedValue({ id: 'user-1', email: 'a@example.com', isAdmin: false, avatarPhotoPath: null });
+
+      const result = await service.removeAvatarPhoto('user-1');
+
+      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'user-1' }, data: { avatarPhotoPath: null } });
+      expect(result.avatarPhotoUrl).toBeNull();
     });
   });
 });

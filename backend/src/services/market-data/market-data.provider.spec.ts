@@ -1,4 +1,4 @@
-import { MarketDataProvider } from './market-data.provider';
+import { MarketDataProvider, marketCache } from './market-data.provider';
 import { ServiceFetchError } from '../service-provider.interface';
 
 function mockFetchOnce(response: Partial<Response>) {
@@ -6,6 +6,8 @@ function mockFetchOnce(response: Partial<Response>) {
 }
 
 describe('MarketDataProvider', () => {
+  beforeEach(() => marketCache.clear());
+
   const provider = new MarketDataProvider();
   const exchangeRate = provider.widgets.find((w) => w.name === 'exchange_rate')!;
   const priceHistory = provider.widgets.find((w) => w.name === 'price_history')!;
@@ -20,6 +22,43 @@ describe('MarketDataProvider', () => {
     it('rejects when base or quote is missing', async () => {
       await expect(exchangeRate.fetchData({ base: 'bitcoin' })).rejects.toBeInstanceOf(ServiceFetchError);
       await expect(exchangeRate.fetchData({ quote: 'usd' })).rejects.toBeInstanceOf(ServiceFetchError);
+    });
+
+    it('uses ECB history for a fiat pair and derives min/max/change from it', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        json: () =>
+          Promise.resolve({ rates: { '2026-09-22': { USD: 1.1 }, '2026-09-23': { USD: 1.2 }, '2026-09-24': { USD: 1.15 } } }),
+      }) as any;
+      const result = (await exchangeRate.fetchData({ base: 'eur', quote: 'usd' })) as any;
+      expect(result.rate).toBe(1.15);
+      expect(result.history).toHaveLength(3);
+      expect(result.min).toBe(1.1);
+      expect(result.max).toBe(1.2);
+      expect(result.changePct).toBeCloseTo(4.545, 2);
+      expect((global.fetch as jest.Mock).mock.calls[0][0]).toContain('frankfurter');
+    });
+
+    it('falls back to CoinGecko when a 3-letter pair is not a fiat pair', async () => {
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce({ status: 404, ok: false })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ eos: { usd: 0.7 } }) })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ prices: [[1_700_000_000_000, 0.6], [1_700_086_400_000, 0.7]] }) }) as any;
+      const result = (await exchangeRate.fetchData({ base: 'eos', quote: 'usd' })) as any;
+      expect(result.rate).toBe(0.7);
+      expect(result.history).toHaveLength(2);
+    });
+
+    it('still returns the rate when only the history request fails', async () => {
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ bitcoin: { usd: 76340 } }) })
+        .mockResolvedValueOnce({ ok: false, status: 429 }) as any;
+      const result = (await exchangeRate.fetchData({ base: 'bitcoin', quote: 'usd' })) as any;
+      expect(result.rate).toBe(76340);
+      expect(result.history).toEqual([]);
     });
 
     it('returns the rate for a known pair', async () => {
@@ -72,6 +111,29 @@ describe('MarketDataProvider', () => {
       await expect(priceHistory.fetchData({ asset: 'not-a-coin' })).rejects.toThrow(
         /No price history found for "not-a-coin"/,
       );
+    });
+  });
+
+  describe('rate limiting (CoinGecko free tier answers 429)', () => {
+    it('does not call the API twice for the same request', async () => {
+      global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ prices: [[1, 10], [2, 11]] }) }) as any;
+      await priceHistory.fetchData({ asset: 'bitcoin', days: 30, currency: 'usd' });
+      await priceHistory.fetchData({ asset: 'bitcoin', days: 30, currency: 'usd' });
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('shares one history request between an exchange-rate and a price-history widget on the same coin', async () => {
+      global.fetch = jest.fn().mockImplementation((url: string) =>
+        Promise.resolve(
+          String(url).includes('simple/price')
+            ? { ok: true, json: () => Promise.resolve({ bitcoin: { usd: 5 } }) }
+            : { ok: true, json: () => Promise.resolve({ prices: [[1, 4], [2, 5]] }) },
+        ),
+      ) as any;
+      await exchangeRate.fetchData({ base: 'bitcoin', quote: 'usd', days: 30 });
+      await priceHistory.fetchData({ asset: 'bitcoin', days: 30, currency: 'usd' });
+      const historyCalls = (global.fetch as jest.Mock).mock.calls.filter((c) => String(c[0]).includes('market_chart'));
+      expect(historyCalls).toHaveLength(1);
     });
   });
 });

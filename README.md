@@ -26,9 +26,10 @@ automatically at a user-defined interval.
 | Service | Auth required | Status | Widgets |
 |---|---|---|---|
 | RSS | No | ✅ Done | `article_list` (link, number) |
-| Market data (crypto) | No | ✅ Done | `exchange_rate` (base, quote), `price_history` (asset, days, currency) |
+| Market data | No | ✅ Done | `exchange_rate` (base, quote, days — fiat pairs like EUR→USD via ECB, crypto via CoinGecko; returns its history), `price_history` (asset, days, currency) |
 | GitHub | OAuth 2.0 | ✅ Done | `recent_commits` (repo, number), `open_issues` (repo, number), `repo_stats` (repo) |
-| Weather | No | ⏳ Not started | — |
+| World clock | No | ✅ Done | `world_clock` (homeTimezone, cities) — pure timezone math, no external API |
+| Weather | No | ✅ Done | `forecast` (city) — Open-Meteo, no key |
 | Steam | API key | ⏳ Not started | — |
 | Maps / Cinema | API key | ⏳ Not started | — |
 
@@ -174,6 +175,7 @@ important, what isn't and why.
 - [x] Live API docs ([Swagger UI](http://localhost:8080/docs) once the server is running), generated from the code
 - [x] Privacy note ([PRIVACY.md](./PRIVACY.md)) — plain-language, not fabricated legal text
 - [x] Project log: team organization, a dated decision timeline, what's left ([PROJECT_LOG.md](./PROJECT_LOG.md))
-- [ ] Services: Weather, Steam, Maps/Cinema
-- [ ] Per-widget custom rendering (currently a generic key/value dump — see frontend README's "Known gaps")
-- [ ] Frontend: repo picker dropdown (backend/contract done, see [FRONTEND.md](./FRONTEND.md)), Terms of Service/Privacy Policy acceptance, in-app docs page
+- [x] Weather service (Open-Meteo)
+- [ ] Services: Steam, Maps/Cinema
+- [ ] Frontend: apply the Morex mockup (`frontend/public/mockups.html`) — Morayo; the backend side is done, see "Backing the Morex mockup" in [API.md](./API.md)
+- [ ] Frontend: Terms of Service/Privacy Policy acceptance, in-app docs page

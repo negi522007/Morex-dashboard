@@ -22,6 +22,21 @@ model User {
   // Blocks login and kills every existing Session row the moment it's set
   // (see AdminService.ban) — instant, unlike a JWT-based approach would be.
   isBanned      Boolean  @default(false)
+
+  // Profile/preferences (Morex dashboard UI) — all optional/defaulted so
+  // existing accounts don't need a backfill.
+  bio             String?
+  theme           String  @default("galaxy")
+  language        String  @default("en")
+  widgetSkin      String  @default("glass")
+  // DiceBear "avataaars" option object, rendered client-side into a URL —
+  // no image is ever generated or stored server-side for this path.
+  avatarConfig    Json?
+  // Set when a real photo was uploaded (see AuthController's avatar
+  // endpoints); takes priority over avatarConfig when present. Stored as a
+  // path relative to the uploads volume, never a full URL (host-independent).
+  avatarPhotoPath String?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -30,6 +45,7 @@ model User {
   serviceSubscriptions     ServiceSubscription[]
   widgetInstances          WidgetInstance[]
   emailVerificationTokens  EmailVerificationToken[]
+  journalEntries           JournalEntry[]
 }
 
 // Server-side session (not a JWT): the id is the unguessable value stored in
@@ -86,10 +102,30 @@ model WidgetInstance {
   config             Json
   refreshRateSeconds Int
   position           Json
+  // User-chosen display title, overriding the default widgetName label when
+  // set; and a purely cosmetic sticker overlay (see frontend deco.ts) — both
+  // optional, neither affects fetchData.
+  title              String?
+  decoration         String?
   lastRefreshedAt    DateTime?
   cachedData         Json?
   userId             String
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+}
+
+// A private journal entry. Text is encrypted at rest (AES-256-GCM, same
+// utility as OAuth tokens) — explicitly private content, same care level.
+model JournalEntry {
+  id            String   @id @default(uuid())
+  date          DateTime
+  mood          String
+  textEncrypted String
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
 }

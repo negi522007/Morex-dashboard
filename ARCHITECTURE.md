@@ -549,6 +549,8 @@ npm run test:cov  # with a coverage report
   never leak into the public response.
 - `GithubProvider.listRepos` — maps GitHub's response into `{ value, label }` options, and every widget's
   `repo` param actually points `optionsUrl` at the right endpoint.
+- `WeatherProvider` — geocoding + forecast shaping, the once-per-city geocode cache, unknown-city and non-2xx failures.
+- `MarketDataProvider.exchange_rate` — ECB history for fiat pairs, CoinGecko fallback, and the rate surviving a failed history request.
 - `AdminGuard`/`AdminService` — non-admin and missing-user rejections, the self-ban/self-delete and
   ban-another-admin/delete-another-admin guards, `ban` both flipping `isBanned` and clearing sessions,
   and `updateUser` never touching password/isAdmin/isBanned.
@@ -558,7 +560,7 @@ npm run test:cov  # with a coverage report
   rejected, a short `newPassword` rejected, and a successful password change clearing every session
   *except* the one making the request.
 
-124 tests across 12 suites, all passing, as of this writing.
+152 tests across 15 suites, all passing, as of this writing.
 
 **What's deliberately NOT covered by these unit tests, and why:** controllers are left untested directly
 — they're thin delegators to the services above, so testing them would mostly re-test NestJS's own

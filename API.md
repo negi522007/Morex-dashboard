@@ -117,19 +117,26 @@ Public. Body:
 
 | Status | When |
 |---|---|
-| `200` | `{ id, email, firstName, lastName, isAdmin, githubLinked }` for the current user. |
+| `200` | `{ id, email, firstName, lastName, isAdmin, createdAt, bio, theme, language, widgetSkin, avatarConfig, avatarPhotoUrl, githubLinked }` for the current user. |
 | `401` | No valid session. |
 
 `githubLinked` is the only way the frontend can know whether GitHub is connected — there's no other
-endpoint that exposes it. Use it to show "Link"/"Unlink" (and, once built, whether widget rate limits
-apply) instead of guessing from whether a widget happens to work.
+endpoint that exposes it. `theme`/`language`/`widgetSkin` default to `"galaxy"`/`"en"`/`"glass"` and
+persist across devices (not `localStorage`). `avatarConfig` is the DiceBear "avataaars" option object (or
+`null`); `avatarPhotoUrl` is a real uploaded photo's path (or `null`) and takes priority over
+`avatarConfig` when both are set — see `POST /auth/me/avatar` below.
 
 ### `PATCH /auth/me`
 
-🔒 Session required. Update your own name and/or change your password — **not** email (would need its
-own re-verification flow, out of scope for now). Body: any of
+🔒 Session required. Update your own profile — **not** email (would need its own re-verification flow,
+out of scope for now). Body: any of
 ```json
-{ "firstName": "Ada", "lastName": "Lovelace", "currentPassword": "the-old-one", "newPassword": "at-least-8-chars" }
+{
+  "firstName": "Ada", "lastName": "Lovelace",
+  "currentPassword": "the-old-one", "newPassword": "at-least-8-chars",
+  "bio": "Building things.", "theme": "desertMoon", "language": "en", "widgetSkin": "glass",
+  "avatarConfig": { "skinColor": "ae5d29", "top": "curly" }
+}
 ```
 `currentPassword` is required (and checked) only when `newPassword` is present. A successful password
 change deletes every **other** session for this user — the one making the request stays logged in, every
@@ -138,8 +145,31 @@ other one is logged out immediately.
 | Status | When |
 |---|---|
 | `200` | Updated user, same shape as `GET /auth/me`. |
-| `400` | Empty body, a blank name, or `newPassword` under 8 characters. |
+| `400` | Empty body, a blank name, `bio` over 280 chars, an invalid `theme`/`language`/`widgetSkin`, or `newPassword` under 8 characters. |
 | `401` | `currentPassword` is wrong (only checked when changing password), or no valid session. |
+
+Valid values: `theme` — `galaxy, aurora, moon, dolphins, forest, mystic, ocean, beach, desertNight,
+desertMoon`. `language` — `fr, en, es`. `widgetSkin` — `glass, neon, pastel, minimal, holo`.
+
+### `POST /auth/me/avatar`
+
+🔒 Session required. Multipart upload (`multipart/form-data`, field name `photo`) — a real photo,
+replacing any DiceBear-generated avatar in the UI (the old uploaded file, if any, is deleted). jpeg/png/
+webp/gif only, 5MB max, stored on a Docker volume and served back from `avatarPhotoUrl`.
+
+| Status | When |
+|---|---|
+| `200` | Updated user, `avatarPhotoUrl` now set. |
+| `400` | No file, wrong type, or over 5MB. |
+
+### `DELETE /auth/me/avatar`
+
+🔒 Session required. Removes the uploaded photo (and its file) — falls back to the DiceBear-generated
+avatar from `avatarConfig`.
+
+| Status | When |
+|---|---|
+| `200` | Updated user, `avatarPhotoUrl` now `null`. |
 
 ### `GET /auth/github`
 
@@ -222,7 +252,9 @@ List the current user's widget instances (for rendering the dashboard).
   "widgetName": "article_list",
   "config": { "link": "https://hnrss.org/frontpage", "number": 3 },
   "refreshRateSeconds": 60,
-  "position": { "x": 0, "y": 0, "w": 4, "h": 2 },
+  "position": { "order": 0, "cols": 1, "rows": 2 },
+  "title": null,
+  "decoration": null,
   "lastRefreshedAt": "2026-09-17T22:32:49.701Z",
   "cachedData": [{ "title": "...", "link": "...", "publishedAt": "..." }],
   "userId": "uuid",
@@ -230,6 +262,17 @@ List the current user's widget instances (for rendering the dashboard).
   "updatedAt": "..."
 }
 ```
+
+`cachedData` is whatever that widget's `fetchData` returns. The shapes the frontend draws:
+
+| Widget | `cachedData` |
+|---|---|
+| `rss/article_list` | `[{ title, link, publishedAt }]` |
+| `market_data/exchange_rate` | `{ base, quote, rate, asOf, days, history: [{ timestamp, price }], min, max, changePct }` — fiat pairs (both codes 3 letters and known to the ECB, e.g. `eur`/`usd`) use ECB reference rates via Frankfurter; anything else is a CoinGecko id (`bitcoin`/`usd`). If only the crypto history request fails, `history` is `[]` and the rate still comes back. `days` is an optional param (default 7, max 90). |
+| `market_data/price_history` | `[{ timestamp, price }]` |
+| `github/*` | commits `[{ sha, message, author, date }]`, issues `[{ number, title, author, createdAt }]`, stats `{ stars, forks, openIssues, description }` |
+| `weather/forecast` | `{ city, country, temperature, weatherCode, days: [{ date, weatherCode, min, max }] }` — `city` param, geocoded and forecast through Open-Meteo (no key); `days` is the next five days; `weatherCode` is a WMO code |
+| `worldclock/world_clock` | `{ home, cities: [...] }` — `homeTimezone` and comma-separated `cities` params, IANA names |
 `lastRefreshedAt`/`cachedData` are `null` until the scheduler's first tick after creation (up to 15s).
 
 ### `POST /widgets`
@@ -241,12 +284,17 @@ Body:
   "widgetName": "article_list",
   "config": { "link": "https://hnrss.org/frontpage", "number": 3 },
   "refreshRateSeconds": 60,
-  "position": { "x": 0, "y": 0, "w": 4, "h": 2 }
+  "position": { "x": 0, "y": 0, "w": 4, "h": 2 },
+  "title": "My feed",
+  "decoration": "flowers"
 }
 ```
 `config` keys/types must match that widget's `params` from `/about.json` (`required` params must be
 present; `integer`-typed params must actually be integers). `refreshRateSeconds` must be `>= 10`.
-`position` is optional (defaults to `{}`) — shape it however the grid layout library needs.
+`position` is optional (defaults to `{}`) and is opaque JSON to the server — store whatever the frontend's
+layout needs (e.g. an order plus columns/rows spanned). `title`
+(a display-name override) and `decoration` (a purely cosmetic sticker key — see `FRONTEND.md`'s `deco.ts`
+for the set) are both optional.
 
 | Status | When |
 |---|---|
@@ -259,8 +307,10 @@ Reconfigure *and* move share this one endpoint — send whichever of `config`, `
 `position` changed (at least one required). Omitted fields are left untouched.
 
 ```json
-{ "config": { "link": "https://hnrss.org/frontpage", "number": 1 }, "position": { "x": 2, "y": 3, "w": 4, "h": 2 } }
+{ "config": { "link": "https://hnrss.org/frontpage", "number": 1 }, "position": { "x": 2, "y": 3, "w": 4, "h": 2 }, "title": "Renamed", "decoration": "none" }
 ```
+Same optional `title`/`decoration` as `POST /widgets` above — sending `decoration: null` (or `"none"`)
+clears it.
 
 | Status | When |
 |---|---|
@@ -274,6 +324,47 @@ Reconfigure *and* move share this one endpoint — send whichever of `config`, `
 |---|---|
 | `204` | Deleted. |
 | `404` | No such instance for this user. |
+
+---
+
+## Journal
+
+🔒 Session required on every route below. Private per-user entries (`{ date, mood, text }`) — `text` is
+encrypted at rest (AES-256-GCM, same utility as OAuth tokens) and only ever decrypted for the owning
+user's own requests.
+
+### `GET /journal`
+
+| Status | When |
+|---|---|
+| `200` | Array of entries (newest `date` first), text decrypted. |
+
+### `POST /journal`
+
+Body: `{ "date": "2026-09-25", "mood": "😊", "text": "Dear journal..." }` — all fields optional (`date`
+defaults to now, `mood` to `"😊"`, `text` to `""`).
+
+| Status | When |
+|---|---|
+| `201` | Created entry. |
+| `400` | `date` present but not parseable. |
+
+### `PATCH /journal/:id`
+
+Body: any of `{ "mood": "😴", "text": "Updated text" }` (at least one required).
+
+| Status | When |
+|---|---|
+| `200` | Updated entry. |
+| `400` | Empty body. |
+| `404` | No such entry for this user. |
+
+### `DELETE /journal/:id`
+
+| Status | When |
+|---|---|
+| `204` | Deleted. |
+| `404` | No such entry for this user. |
 
 ---
 
@@ -355,7 +446,40 @@ Permanent — cascades to the user's sessions, widget instances, OAuth links, et
 
 ---
 
+## Backing the Morex mockup
+
+What `frontend/public/mockups.html` shows, and where each piece comes from. Everything here exists on the
+backend; only the wiring is left on the frontend side.
+
+| Mockup element | Backend |
+|---|---|
+| Greeting, bio, "member since" | `GET /auth/me` → `firstName`, `bio`, `createdAt` |
+| Theme / widget style / language pills (persist across devices) | `PATCH /auth/me` → `theme`, `widgetSkin`, `language` (validated lists, see above) |
+| Avatar editor (DiceBear options) and photo upload | `PATCH /auth/me` → `avatarConfig`; `POST` / `DELETE /auth/me/avatar`; the photo is served from `avatarPhotoUrl` (photo wins over `avatarConfig`) |
+| Profile: name, password | `PATCH /auth/me` |
+| Profile: GitHub link status, unlink | `githubLinked` on `GET /auth/me`; `DELETE /auth/github`; linking is a browser navigation to `GET /auth/github` |
+| Journal card and book | `GET/POST /journal`, `PATCH/DELETE /journal/:id` (`{ date, mood, text }`) |
+| Add-widget picker | `GET /about.json` (services and widgets, incl. `weather` and `worldclock`) |
+| Widget title and sticker | `title`, `decoration` on `POST` / `PATCH /widgets` |
+| Widget order and size | `position` (opaque JSON) |
+| Exchange-rate graph, min/max, change | `cachedData.history / min / max / changePct` |
+| Bitcoin coin card and chart | `market_data/price_history` (a series of `{ timestamp, price }`) |
+| Weather card (now + next 5 days) | `weather/forecast`, param `city` |
+| World clock timeline | `worldclock/world_clock`, params `homeTimezone`, `cities` (the shape only needs the zone names — pins can be computed in the browser) |
+| Terminal GitHub card | `github/recent_commits` → `[{ sha, message, author, date }]` |
+
+**Dev proxy:** the new route prefixes `/journal`, `/services` and `/uploads` must be added to
+`frontend/vite.config.ts`'s proxy list next to `/auth`, `/widgets` and `/about.json` — otherwise Vite
+answers with its own `index.html` (HTTP 200) and the page gets HTML where it expects JSON.
+
+**Uploads:** `apiFetch` forces `Content-Type: application/json`; the avatar upload needs a `FormData` body
+sent *without* that header (the browser sets the multipart boundary itself).
+
+**Not built (the mockup marks both "soon"):** account deletion and "download my data".
+
+---
+
 ## Not built yet
 
-- Weather, Steam, and Maps/Cinema services — once they exist, `/about.json` and the `serviceName` values
+- Steam and Maps/Cinema services — once they exist, `/about.json` and the `serviceName` values
   usable in `/widgets` will include them automatically, no doc update needed on this side.
