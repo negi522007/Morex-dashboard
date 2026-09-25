@@ -36,7 +36,7 @@ interface GithubEmail {
 }
 
 const EMAIL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 // The mockup's own option sets (mockups.html's [data-theme]/T dictionaries) —
 // validated server-side so a bad value can't get stored and silently break

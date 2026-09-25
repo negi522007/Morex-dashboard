@@ -22,6 +22,7 @@ import { extname } from 'node:path';
 import { diskStorage } from 'multer';
 import type { Request, Response } from 'express';
 import { AuthService, PublicUser } from './auth.service';
+import { EpitechOidcService } from './epitech-oidc.service';
 import { SessionGuard } from './session.guard';
 import { CurrentUser } from './current-user.decorator';
 import { setSessionCookie } from '../common/session-cookie.util';
@@ -38,6 +39,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly config: ConfigService,
+    private readonly epitechOidc: EpitechOidcService,
   ) {}
 
   @Post('register')
@@ -119,11 +121,12 @@ export class AuthController {
   @UseGuards(SessionGuard)
   @ApiCookieAuth('dashboard_session')
   @ApiOperation({ summary: 'Get the currently logged-in user — useful to check auth state on app load' })
-  @ApiResponse({ status: 200, description: 'The current user, plus whether GitHub is linked' })
+  @ApiResponse({ status: 200, description: 'The current user, plus githubLinked and `epitech` (linked My Epitech profile or null)' })
   @ApiResponse({ status: 401, description: 'No valid session' })
   async me(@CurrentUser() user: PublicUser) {
     const githubLinked = await this.authService.hasLinkedGithub(user.id);
-    return { ...user, githubLinked };
+    const epitech = await this.epitechOidc.profileOf(user.id);
+    return { ...user, githubLinked, epitech };
   }
 
   @Patch('me')
