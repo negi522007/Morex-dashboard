@@ -57,7 +57,7 @@ the server). Exactly what is sent:
 **Never sent, whatever you toggle: your journal, your email, your password, tokens, your bio.** Article
 recaps are cached and shared between users (public content only), so the same article is not re-sent.
 Each user is capped at a number of AI calls per day. Text coming back from a model is treated as untrusted
-(no links or HTML are ever produced by it). The AI provider's own retention policy applies to what it
+(no links or HTML are ever produced by it). Free tiers of hosted providers often use submitted data to improve their models — read the provider's terms, or run a local model (Ollama) so nothing leaves the machine. The AI provider's own retention policy applies to what it
 receives — check it before enabling AI on data you consider private. With no key configured, none of this
 exists.
 

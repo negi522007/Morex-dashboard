@@ -419,7 +419,9 @@ the client — once it exists, it is one more widget on the same `ServiceProvide
 ## AI
 
 Server-side only. The key lives in `.env` (`AI_PROVIDER`, `AI_API_KEY`, …) and never reaches the frontend.
-Everything is **optional and opt-in**; without a key the app behaves exactly as before.
+Everything is **optional and opt-in**; without a key the app behaves exactly as before. No paid provider is
+required: any OpenAI-compatible endpoint works, including free ones (Google Gemini, Groq, OpenRouter `:free`
+models, or a local Ollama) — ready-to-paste settings are in `.env.example`.
 
 ### `GET /ai/status`
 
