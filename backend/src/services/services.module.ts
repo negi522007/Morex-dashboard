@@ -11,6 +11,12 @@ import { WorldclockModule } from './worldclock/worldclock.module';
 import { WorldclockProvider } from './worldclock/worldclock.provider';
 import { WeatherModule } from './weather/weather.module';
 import { WeatherProvider } from './weather/weather.provider';
+import { CalendarModule } from './calendar/calendar.module';
+import { CalendarProvider } from './calendar/calendar.provider';
+import { EpitechModule } from './epitech/epitech.module';
+import { EpitechProvider } from './epitech/epitech.provider';
+import { CustomApiModule } from './custom-api/custom-api.module';
+import { CustomApiProvider } from './custom-api/custom-api.provider';
 
 // @Global so AboutModule (about.json) and TimerModule (the scheduler) can
 // both inject the same registry without re-declaring it. Adding a new
@@ -18,7 +24,7 @@ import { WeatherProvider } from './weather/weather.provider';
 // below, and add it to the returned array — nothing else changes.
 @Global()
 @Module({
-  imports: [RssModule, MarketDataModule, GithubModule, WorldclockModule, WeatherModule],
+  imports: [RssModule, MarketDataModule, GithubModule, WorldclockModule, WeatherModule, CalendarModule, EpitechModule, CustomApiModule],
   providers: [
     {
       provide: SERVICE_PROVIDERS,
@@ -28,8 +34,14 @@ import { WeatherProvider } from './weather/weather.provider';
         github: GithubProvider,
         worldclock: WorldclockProvider,
         weather: WeatherProvider,
-      ): ServiceProvider[] => [rss, marketData, github, worldclock, weather],
-      inject: [RssProvider, MarketDataProvider, GithubProvider, WorldclockProvider, WeatherProvider],
+        calendar: CalendarProvider,
+        epitech: EpitechProvider,
+        customApi: CustomApiProvider,
+      ): ServiceProvider[] => [rss, marketData, github, worldclock, weather, calendar, epitech, customApi],
+      inject: [
+        RssProvider, MarketDataProvider, GithubProvider, WorldclockProvider, WeatherProvider,
+        CalendarProvider, EpitechProvider, CustomApiProvider,
+      ],
     },
   ],
   exports: [SERVICE_PROVIDERS],

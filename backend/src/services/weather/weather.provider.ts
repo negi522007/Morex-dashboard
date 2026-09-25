@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { UNTRUSTED_RULES, clip, languageName } from '../../ai/ai.service';
 import { ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
 
 const FETCH_TIMEOUT_MS = 10_000;
@@ -51,6 +52,20 @@ const forecast: WidgetDefinition = {
   name: 'forecast',
   description: 'Current temperature and the next five days for a city',
   params: [{ name: 'city', type: 'string', required: true }],
+  primaryMetric: (d) => ((d as { temperature?: unknown })?.temperature as number) ?? null,
+  enrich: async (data, ctx) => {
+    const d = data as { city: string; temperature: number; weatherCode: number; days: { date: string; min: number; max: number; weatherCode: number }[] };
+    const out = await ctx.ai.completeJson<{ advice?: string; outfit?: string }>({
+      system:
+        `You give one practical piece of weather advice in ${languageName(ctx.language)}. ${UNTRUSTED_RULES} ` +
+        'Schema: {"advice": string (max 160 chars: what to expect and plan for), "outfit": string (max 80 chars: what to wear/bring)}. ' +
+        'WMO weather codes: 0 clear, 1-3 cloudy, 45-48 fog, 51-67 drizzle/rain, 71-77 snow, 80-82 showers, 95-99 thunderstorm. Use only the data given.',
+      user: `<data>${JSON.stringify(d)}</data>`,
+      maxTokens: 250,
+      mock: { advice: `${d.city}: ${d.temperature}°C now.`, outfit: '' },
+    });
+    return { kind: 'weather_advice', advice: clip(out.advice ?? '', 170), outfit: clip(out.outfit ?? '', 90), language: ctx.language };
+  },
   async fetchData(config) {
     const city = String(config.city ?? '').trim();
     if (!city) {

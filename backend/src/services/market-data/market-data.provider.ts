@@ -101,6 +101,7 @@ const exchangeRate: WidgetDefinition = {
     { name: 'quote', type: 'string', required: true },
     { name: 'days', type: 'integer' },
   ],
+  primaryMetric: (d) => ((d as { rate?: unknown })?.rate as number) ?? null,
   async fetchData(config) {
     const base = String(config.base ?? '').toLowerCase();
     const quote = String(config.quote ?? '').toLowerCase();
@@ -151,6 +152,10 @@ const priceHistory: WidgetDefinition = {
     { name: 'days', type: 'integer' },
     { name: 'currency', type: 'string' },
   ],
+  primaryMetric: (d) => {
+    const last = Array.isArray(d) ? d[d.length - 1] : null;
+    return typeof last?.price === 'number' ? last.price : null;
+  },
   async fetchData(config) {
     const asset = String(config.asset ?? '').toLowerCase();
     if (!asset) {
