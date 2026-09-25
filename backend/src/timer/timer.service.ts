@@ -1,9 +1,11 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { SERVICE_PROVIDERS } from '../services/service-providers.token';
-import type { ServiceAuthContext, ServiceProvider } from '../services/service-provider.interface';
+import { widgetNeedsAuth, type ServiceAuthContext, type ServiceProvider, type WidgetDefinition } from '../services/service-provider.interface';
+import { decryptSecrets } from '../common/secret-config.util';
+import { RefreshHooksService } from '../insights/refresh-hooks.service';
 import { decryptToken } from '../common/token-encryption.util';
 
 const TICK_MS = 15_000;
@@ -14,6 +16,10 @@ interface DueWidgetInstance {
   serviceName: string;
   widgetName: string;
   config: Record<string, string | number>;
+  aiEnabled?: boolean;
+  insightHash?: string | null;
+  insightAt?: Date | null;
+  title?: string | null;
 }
 
 @Injectable()
@@ -27,6 +33,7 @@ export class TimerService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     @Inject(SERVICE_PROVIDERS) private readonly providers: ServiceProvider[],
+    @Optional() private readonly hooks?: RefreshHooksService,
   ) {}
 
   @Interval(TICK_MS)
@@ -38,7 +45,7 @@ export class TimerService {
     this.ticking = true;
     try {
       const due = await this.prisma.$queryRaw<DueWidgetInstance[]>`
-        SELECT id, "userId", "serviceName", "widgetName", config
+        SELECT id, "userId", "serviceName", "widgetName", config, "aiEnabled", "insightHash", "insightAt", title
         FROM "WidgetInstance"
         WHERE "lastRefreshedAt" IS NULL
            OR "lastRefreshedAt" + ("refreshRateSeconds" * INTERVAL '1 second') <= NOW()
@@ -70,12 +77,14 @@ export class TimerService {
     }
 
     try {
-      const auth = provider.requiresAuth ? await this.resolveAuth(instance.userId, instance.serviceName) : undefined;
-      const data = await widget.fetchData(instance.config, auth);
+      const auth = widgetNeedsAuth(provider, widget) ? await this.resolveAuth(instance.userId, instance.serviceName) : undefined;
+      const config = this.decryptConfig(widget, instance.config);
+      const data = await widget.fetchData(config, auth);
       await this.prisma.widgetInstance.update({
         where: { id: instance.id },
         data: { cachedData: data as object, lastRefreshedAt: new Date() },
       });
+      await this.hooks?.afterRefresh({ ...instance, config }, widget, data);
     } catch (err) {
       this.logger.error(
         `Refresh failed for instance ${instance.id} (${instance.serviceName}/${instance.widgetName}): ${(err as Error).message}`,
@@ -91,6 +100,13 @@ export class TimerService {
     }
   }
 
+  private decryptConfig(widget: WidgetDefinition, config: Record<string, string | number>) {
+    if (!widget.params.some((p) => p.secret)) return config;
+    const key = this.config.get<string>('TOKEN_ENCRYPTION_KEY');
+    if (!key) throw new Error('TOKEN_ENCRYPTION_KEY is required to read secret widget parameters');
+    return decryptSecrets(widget.params, config, key) as Record<string, string | number>;
+  }
+
   private async resolveAuth(userId: string, serviceName: string): Promise<ServiceAuthContext | undefined> {
     const encryptionKey = this.config.get<string>('TOKEN_ENCRYPTION_KEY');
     if (!encryptionKey) return undefined;
@@ -99,7 +115,10 @@ export class TimerService {
       where: { userId, provider: serviceName },
     });
     if (oauthAccount) {
-      return { accessToken: decryptToken(oauthAccount.accessTokenEncrypted, encryptionKey) };
+      return {
+        accessToken: decryptToken(oauthAccount.accessTokenEncrypted, encryptionKey),
+        profile: (oauthAccount.profile as Record<string, unknown> | null) ?? undefined,
+      };
     }
 
     const subscription = await this.prisma.serviceSubscription.findUnique({

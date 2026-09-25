@@ -13,6 +13,10 @@ services:
       # comes from .env, so a real provider's credentials actually take
       # effect instead of always being forced back to Mailhog.
       DATABASE_URL: postgresql://dashboard:dashboard@db:5432/dashboard
+    volumes:
+      # Uploaded avatar photos — a named volume so they survive
+      # `docker compose down` (not `-v`) and container rebuilds.
+      - uploads_data:/app/uploads
     depends_on:
       - db
       - mailhog
@@ -41,3 +45,4 @@ services:
 
 volumes:
   db_data:
+  uploads_data:

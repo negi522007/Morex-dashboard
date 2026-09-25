@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SessionGuard } from '../auth/session.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -50,6 +50,19 @@ export class WidgetsController {
   @ApiResponse({ status: 404, description: 'No such instance for this user' })
   update(@CurrentUser() user: { id: string }, @Param('id') id: string, @Body() body: WidgetBody) {
     return this.widgetsService.update(user.id, id, body);
+  }
+
+  @Get(':id/history')
+  @ApiOperation({ summary: "History of the widget's main value (rate, temperature...), for charts and trends" })
+  @ApiResponse({ status: 200, description: '{ widgetId, supported, days, points: [{ at, value }] } — supported=false when the widget has no numeric value' })
+  @ApiResponse({ status: 404, description: 'No such instance for this user' })
+  history(
+    @CurrentUser() user: { id: string },
+    @Param('id') id: string,
+    @Query('days') days?: string,
+    @Query('points') points?: string,
+  ) {
+    return this.widgetsService.history(user.id, id, Number(days) || 7, Number(points) || 200);
   }
 
   @Delete(':id')

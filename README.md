@@ -26,11 +26,22 @@ automatically at a user-defined interval.
 | Service | Auth required | Status | Widgets |
 |---|---|---|---|
 | RSS | No | ✅ Done | `article_list` (link, number) |
-| Market data (crypto) | No | ✅ Done | `exchange_rate` (base, quote), `price_history` (asset, days, currency) |
-| GitHub | OAuth 2.0 | ✅ Done | `recent_commits` (repo, number), `open_issues` (repo, number), `repo_stats` (repo) |
-| Weather | No | ⏳ Not started | — |
+| Market data | No | ✅ Done | `exchange_rate` (base, quote, days — fiat pairs like EUR→USD via ECB, crypto via CoinGecko; returns its history), `price_history` (asset, days, currency) |
+| GitHub | OAuth 2.0 | ✅ Done | `recent_commits` (repo, number), `open_issues` (repo, number), `repo_stats` (repo), `daily_changes` (repo, hours — stand-up of the last hours) |
+| World clock | No | ✅ Done | `world_clock` (homeTimezone, cities) — pure timezone math, no external API |
+| Weather | No | ✅ Done | `forecast` (city) — Open-Meteo, no key |
+| Calendar | No (secret iCal URL) | ✅ Done | `upcoming_events` (url, days, number) — Google Calendar's secret iCal address or any `.ics` |
+| My Epitech | Optional ("Connect with My Epitech", OIDC) | ✅ Done* | `planning` (calendarToken), `profile` — *login needs Epitech staff to declare the app, see API.md |
+| Custom API | No | ✅ Done | `json_value`, `json_list` — any public JSON API, chosen with a URL + path |
 | Steam | API key | ⏳ Not started | — |
 | Maps / Cinema | API key | ⏳ Not started | — |
+
+**Beyond widgets** (all documented in [API.md](./API.md)): optional **AI** (article recaps with images,
+per-widget insights, a daily brief, a natural-language widget assistant — off unless `AI_PROVIDER`/`AI_API_KEY`
+are set, opt-in per widget, never touches the journal), **threshold alerts** (in-app + email), **value
+history** for charts, a **read-only public share link**, and **SSRF protection** on every user-supplied URL
+the server fetches. Not built, on purpose: Google Photos and Epitech student data (credits/XP) — reasons in
+API.md.
 
 The exact list currently live (names, descriptions, parameters) is always exposed dynamically by the
 server at `GET /about.json` — this table can drift, that endpoint can't.
@@ -174,6 +185,9 @@ important, what isn't and why.
 - [x] Live API docs ([Swagger UI](http://localhost:8080/docs) once the server is running), generated from the code
 - [x] Privacy note ([PRIVACY.md](./PRIVACY.md)) — plain-language, not fabricated legal text
 - [x] Project log: team organization, a dated decision timeline, what's left ([PROJECT_LOG.md](./PROJECT_LOG.md))
-- [ ] Services: Weather, Steam, Maps/Cinema
-- [ ] Per-widget custom rendering (currently a generic key/value dump — see frontend README's "Known gaps")
-- [ ] Frontend: repo picker dropdown (backend/contract done, see [FRONTEND.md](./FRONTEND.md)), Terms of Service/Privacy Policy acceptance, in-app docs page
+- [x] Weather service (Open-Meteo)
+- [x] Backend: AI enrichment, calendar/Epitech/custom-API services, alerts, history, share link, My Epitech OIDC, SSRF guard (see API.md; frontend adaptation checklist at the end of it)
+- [ ] Get the app declared by Epitech staff (OIDC client id/secret) — needed before "Connect with My Epitech" works
+- [ ] Services: Steam, Maps/Cinema
+- [ ] Frontend: apply the Morex mockup (`frontend/public/mockups.html`) — Morayo; the backend side is done, see "Backing the Morex mockup" in [API.md](./API.md)
+- [ ] Frontend: Terms of Service/Privacy Policy acceptance, in-app docs page

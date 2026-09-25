@@ -14,7 +14,7 @@ describe('GithubProvider', () => {
   it('exposes the contract expected by /about.json, and requires auth', () => {
     expect(provider.name).toBe('github');
     expect(provider.requiresAuth).toBe(true);
-    expect(provider.widgets.map((w) => w.name).sort()).toEqual(['open_issues', 'recent_commits', 'repo_stats']);
+    expect(provider.widgets.map((w) => w.name).sort()).toEqual(['daily_changes', 'open_issues', 'recent_commits', 'repo_stats']);
   });
 
   it('points every "repo" param at the repo-picker options endpoint', () => {
@@ -129,5 +129,40 @@ describe('GithubProvider', () => {
       mockFetchOnce({ ok: false, status: 401 });
       await expect(provider.listRepos({ accessToken: 'bad_token' })).rejects.toBeInstanceOf(ServiceFetchError);
     });
+  });
+});
+
+describe('GithubProvider daily_changes + metrics', () => {
+  const daily = new GithubProvider().widgets.find((w) => w.name === 'daily_changes')!;
+
+  it('summarises recent commits and uses the count as metric', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { sha: 'abcdef123', commit: { message: 'feat: a\n\nbody', author: { name: 'Ann', date: '2026-09-25T10:00:00Z' } } },
+        { sha: '1234567aa', commit: { message: 'fix: b', author: { name: 'Ann', date: '2026-09-25T09:00:00Z' } } },
+        { sha: '9999999aa', commit: { message: 'docs: c', author: { name: 'Bob', date: '2026-09-25T08:00:00Z' } } },
+      ],
+    }) as any;
+    const d: any = await daily.fetchData({ repo: 'o/r', hours: 12 });
+    expect(d).toMatchObject({ repo: 'o/r', hours: 12, commitCount: 3, authors: [{ name: 'Ann', count: 2 }, { name: 'Bob', count: 1 }] });
+    expect(d.commits[0]).toMatchObject({ sha: 'abcdef1', message: 'feat: a' });
+    expect(daily.primaryMetric!(d)).toBe(3);
+    expect((global.fetch as jest.Mock).mock.calls[0][0]).toMatch(/\/repos\/o\/r\/commits\?since=/);
+  });
+
+  it('enrich builds a stand-up from commit messages only', async () => {
+    const data = { repo: 'o/r', hours: 24, commitCount: 1, authors: [], commits: [{ sha: 'a', message: 'feat: x', author: 'Ann', date: '' }] };
+    const completeJson = jest.fn().mockResolvedValue({ summary: 'Did x', highlights: ['x'] });
+    const out: any = await daily.enrich!(data, { userId: 'u', language: 'en', config: {}, ai: { available: true, completeJson }, cache: {} as any });
+    expect(out).toMatchObject({ kind: 'standup', summary: 'Did x', highlights: ['x'] });
+    expect(completeJson.mock.calls[0][0].user).not.toContain('date');
+  });
+
+  it('enrich makes no model call when nothing changed', async () => {
+    const completeJson = jest.fn();
+    const out: any = await daily.enrich!({ repo: 'o/r', hours: 24, commitCount: 0, authors: [], commits: [] }, { userId: 'u', language: 'en', config: {}, ai: { available: true, completeJson }, cache: {} as any });
+    expect(out.highlights).toEqual([]);
+    expect(completeJson).not.toHaveBeenCalled();
   });
 });

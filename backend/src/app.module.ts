@@ -8,6 +8,13 @@ import { ServicesModule } from './services/services.module';
 import { TimerModule } from './timer/timer.module';
 import { WidgetsModule } from './widgets/widgets.module';
 import { AdminModule } from './admin/admin.module';
+import { JournalModule } from './journal/journal.module';
+import { AlertsModule } from './alerts/alerts.module';
+import { ShareModule } from './share/share.module';
+import { BriefModule } from './brief/brief.module';
+import { AssistantModule } from './assistant/assistant.module';
+import { AiModule } from './ai/ai.module';
+import { InsightsModule } from './insights/insights.module';
 
 @Module({
   imports: [
@@ -20,6 +27,13 @@ import { AdminModule } from './admin/admin.module';
     TimerModule,
     WidgetsModule,
     AdminModule,
+    JournalModule,
+    AiModule,
+    InsightsModule,
+    AlertsModule,
+    ShareModule,
+    BriefModule,
+    AssistantModule,
   ],
 })
 export class AppModule {}

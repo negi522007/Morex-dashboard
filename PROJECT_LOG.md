@@ -84,6 +84,27 @@ present. Logs in directly if already linked, links onto a matching-verified-emai
 duplicating it, or auto-registers a brand-new already-verified account otherwise. `LoginPage.tsx` got a
 one-off "Continue with GitHub" link to test it end-to-end. 6 new unit tests (119 total).
 
+**Sept 25** — Backend prepared for Morayo's new frontend (the mockup, `frontend/public/mockups.html`), which
+she lays out herself. Added: Journal (text encrypted at rest), World clock, a **Weather** service
+(Open-Meteo, no key), profile fields (bio, theme, language, widget style, DiceBear avatar config) plus
+avatar photo upload, widget `title` / `decoration`, and `exchange_rate` now returns its history (ECB
+reference rates for fiat pairs, CoinGecko for crypto) so a graph can be drawn from real data. Every mockup
+element and the endpoint behind it is listed in API.md ("Backing the Morex mockup"). A frontend rebuild was
+started along the way and then set aside — the frontend stays Morayo's.
+
+**Sept 25 (later)** — Second backend pass, on `feat/morex-backend`. **Security first:** an audit found that
+the RSS fetch would follow any URL a user typed (including internal addresses), so every user-supplied URL
+now goes through an SSRF-safe fetcher. **Then features:** provider-agnostic AI (Anthropic / OpenAI-compatible
+/ offline mock) with per-widget opt-in, per-user daily cap and a shared cache — RSS gets real images and
+recaps, any widget can get an insight, plus a daily brief and a natural-language widget assistant that only
+*proposes* validated widgets. New services: generic calendar (`.ics`, covers Google Calendar), custom JSON
+API, GitHub daily changes/stand-up, My Epitech (planning via the calendar token; identity via OIDC — the
+student signs in with Microsoft on Epitech's side). Also threshold alerts (deterministic, in-app + email),
+value history, and a read-only share link. Credential-like widget params are encrypted and masked.
+**Decided not to build:** Google Photos (restricted API, needs verified Google Cloud credentials) and
+Epitech credits/XP (not exposed by the OIDC scopes; the only workaround is users pasting their session
+token, refused for security). The frontend was not touched.
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |
@@ -95,6 +116,10 @@ one-off "Continue with GitHub" link to test it end-to-end. 6 new unit tests (119
 | Build `AdminModule` despite "not mandatory" | Sept 22 | Team standard: cover everything the brief mentions, not just what's enforced |
 | `firstName`/`lastName` required | Sept 23 | Explicit decision reversal — was optional, now required at signup |
 | Real SMTP via Gmail app password, not Brevo | Sept 21 | Brevo's signup pushed toward a paid plan; Gmail needed no third-party account |
+| Every user-supplied URL fetched through an SSRF guard | Sept 25 | Audit finding: RSS `fetch(link)` could reach internal services |
+| AI is server-side, opt-in per widget, provider-agnostic; never sees the journal | Sept 25 | Key must not reach the browser; PRIVACY.md promises privacy; daily cap protects the key |
+| Insight stored beside `cachedData`, not inside | Sept 25 | Keeps every existing widget shape stable for the frontend |
+| No Epitech JWT pasting / scraping | Sept 25 | It is the student's full access, would live in our DB and expires; ask Epitech for an official scope instead |
 | "Sign in with GitHub" as a real login path, not just linking | Sept 23 | Already the intended design (see `schema.prisma`'s `OAuthAccount` comment from Sept 15) — just not built until now |
 
 ## What's left

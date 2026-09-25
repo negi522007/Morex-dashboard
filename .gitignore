@@ -14,6 +14,9 @@ dist/
 build/
 coverage/
 
+# uploaded files (local/host dev runs — the Docker volume is separate and not on disk here)
+backend/uploads/
+
 # misc
 *.log
 .DS_Store

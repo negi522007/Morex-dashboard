@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Patch,
@@ -9,15 +10,26 @@ import {
   Query,
   Req,
   Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiBody, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { randomUUID } from 'node:crypto';
+import { extname } from 'node:path';
+import { diskStorage } from 'multer';
 import type { Request, Response } from 'express';
-import { AuthService } from './auth.service';
+import { AuthService, PublicUser } from './auth.service';
+import { EpitechOidcService } from './epitech-oidc.service';
 import { SessionGuard } from './session.guard';
 import { CurrentUser } from './current-user.decorator';
 import { setSessionCookie } from '../common/session-cookie.util';
+import { AVATARS_DIR } from '../common/uploads.util';
+
+const ALLOWED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -27,6 +39,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly config: ConfigService,
+    private readonly epitechOidc: EpitechOidcService,
   ) {}
 
   @Post('register')
@@ -108,18 +121,20 @@ export class AuthController {
   @UseGuards(SessionGuard)
   @ApiCookieAuth('dashboard_session')
   @ApiOperation({ summary: 'Get the currently logged-in user — useful to check auth state on app load' })
-  @ApiResponse({ status: 200, description: 'The current user, plus whether GitHub is linked' })
+  @ApiResponse({ status: 200, description: 'The current user, plus githubLinked and `epitech` (linked My Epitech profile or null)' })
   @ApiResponse({ status: 401, description: 'No valid session' })
-  async me(@CurrentUser() user: { id: string; email: string; firstName: string | null; lastName: string | null }) {
+  async me(@CurrentUser() user: PublicUser) {
     const githubLinked = await this.authService.hasLinkedGithub(user.id);
-    return { ...user, githubLinked };
+    const epitech = await this.epitechOidc.profileOf(user.id);
+    return { ...user, githubLinked, epitech };
   }
 
   @Patch('me')
   @UseGuards(SessionGuard)
   @ApiCookieAuth('dashboard_session')
   @ApiOperation({
-    summary: 'Update your own name and/or change your password. Email change is not supported here.',
+    summary:
+      'Update your own profile: name, password, bio, theme, language, widget skin, and/or DiceBear avatar config. Email change is not supported here.',
   })
   @ApiBody({
     schema: {
@@ -128,20 +143,73 @@ export class AuthController {
         lastName: 'Lovelace',
         currentPassword: 'the-old-password',
         newPassword: 'at-least-8-characters',
+        bio: 'Building things.',
+        theme: 'desertMoon',
+        language: 'en',
+        widgetSkin: 'glass',
+        avatarConfig: { skinColor: 'ae5d29', top: 'curly' },
       },
     },
   })
   @ApiResponse({ status: 200, description: 'Updated user. A password change kills every OTHER session.' })
-  @ApiResponse({ status: 400, description: 'Empty body, a blank name, or new password under 8 characters' })
+  @ApiResponse({
+    status: 400,
+    description: 'Empty body, a blank name, bio over 280 chars, an invalid theme/language/widgetSkin, or new password under 8 characters',
+  })
   @ApiResponse({ status: 401, description: 'currentPassword is wrong (only checked when changing password)' })
   updateMe(
     @CurrentUser() user: { id: string },
     @Req() req: Request,
-    @Body() body: { firstName?: string; lastName?: string; currentPassword?: string; newPassword?: string },
+    @Body()
+    body: {
+      firstName?: string;
+      lastName?: string;
+      currentPassword?: string;
+      newPassword?: string;
+      bio?: string;
+      theme?: string;
+      language?: string;
+      widgetSkin?: string;
+      avatarConfig?: unknown;
+    },
   ) {
     const cookieName = this.config.get<string>('SESSION_COOKIE_NAME') ?? 'dashboard_session';
     const sessionId = req.cookies?.[cookieName];
     return this.authService.updateProfile(user.id, sessionId, body);
+  }
+
+  @Post('me/avatar')
+  @UseGuards(SessionGuard)
+  @ApiCookieAuth('dashboard_session')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload a real photo as your avatar (replaces any DiceBear-generated one in the UI)' })
+  @ApiBody({ schema: { type: 'object', properties: { photo: { type: 'string', format: 'binary' } } } })
+  @ApiResponse({ status: 200, description: 'Updated user, avatarPhotoUrl now set' })
+  @ApiResponse({ status: 400, description: 'Missing file, wrong type (jpeg/png/webp/gif only), or over 5MB' })
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: diskStorage({
+        destination: AVATARS_DIR,
+        filename: (_req, file, cb) => cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`),
+      }),
+      limits: { fileSize: MAX_PHOTO_BYTES },
+      fileFilter: (_req, file, cb) => cb(null, ALLOWED_PHOTO_TYPES.has(file.mimetype)),
+    }),
+  )
+  uploadAvatarPhoto(@CurrentUser() user: { id: string }, @UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No photo uploaded, or it was not a jpeg/png/webp/gif under 5MB');
+    }
+    return this.authService.setAvatarPhoto(user.id, `/uploads/avatars/${file.filename}`);
+  }
+
+  @Delete('me/avatar')
+  @UseGuards(SessionGuard)
+  @ApiCookieAuth('dashboard_session')
+  @ApiOperation({ summary: 'Remove your uploaded photo (falls back to the DiceBear-generated avatar)' })
+  @ApiResponse({ status: 200, description: 'Updated user, avatarPhotoUrl now null' })
+  removeAvatarPhoto(@CurrentUser() user: { id: string }) {
+    return this.authService.removeAvatarPhoto(user.id);
   }
 
   private validateCredentials(body: { email?: string; password?: string }) {
