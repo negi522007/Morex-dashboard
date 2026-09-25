@@ -29,4 +29,15 @@ export class MailService {
       html: `<p>Click the link below to confirm your account and sign in:</p><p><a href="${confirmUrl}">${confirmUrl}</a></p>`,
     });
   }
+
+  async sendAlertEmail(to: string, subject: string, message: string): Promise<void> {
+    const escaped = message.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string);
+    await this.transporter.sendMail({
+      from: this.from,
+      to,
+      subject,
+      text: message,
+      html: `<p>${escaped}</p>`,
+    });
+  }
 }

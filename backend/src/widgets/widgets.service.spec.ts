@@ -52,7 +52,79 @@ describe('WidgetsService', () => {
 
   beforeEach(() => {
     prisma = makePrismaMock();
-    service = new WidgetsService(prisma as any, fakeProviders);
+    service = new WidgetsService(prisma as any, fakeProviders, { get: () => 'a'.repeat(64) } as any);
+  });
+
+  describe('secrets, AI and sharing', () => {
+    const secretProviders: ServiceProvider[] = [
+      {
+        name: 'calendar',
+        requiresAuth: false,
+        widgets: [
+          {
+            name: 'upcoming_events',
+            description: 't',
+            shareable: false,
+            params: [{ name: 'url', type: 'string', required: true, secret: true }],
+            fetchData: async () => ({}),
+          },
+        ],
+      },
+      ...fakeProviders,
+    ];
+    let svc: WidgetsService;
+    beforeEach(() => {
+      svc = new WidgetsService(prisma as any, secretProviders, { get: () => 'a'.repeat(64) } as any);
+    });
+
+    it('stores secret params encrypted and returns them masked', async () => {
+      const out: any = await svc.create('u', {
+        serviceName: 'calendar', widgetName: 'upcoming_events', config: { url: 'https://x.test/secret.ics' }, refreshRateSeconds: 60,
+      });
+      const stored = prisma.widgetInstance.create.mock.calls[0][0].data.config;
+      expect(stored.url).toMatch(/^enc:v1:/);
+      expect(JSON.stringify(stored)).not.toContain('secret.ics');
+      expect(out.config.url).toBe('********');
+    });
+
+    it('refuses to share a private widget', async () => {
+      await expect(
+        svc.create('u', { serviceName: 'calendar', widgetName: 'upcoming_events', config: { url: 'https://x.test/a.ics' }, refreshRateSeconds: 60, shared: true }),
+      ).rejects.toThrow(/cannot be shared/);
+    });
+
+    it('keeps the stored secret when an update sends the mask', async () => {
+      prisma.widgetInstance.findFirst.mockResolvedValue({
+        id: 'w', userId: 'u', serviceName: 'calendar', widgetName: 'upcoming_events', config: { url: 'enc:v1:stored' },
+      });
+      await svc.update('u', 'w', { config: { url: '********' } });
+      expect(prisma.widgetInstance.update.mock.calls[0][0].data.config.url).toBe('enc:v1:stored');
+    });
+
+    it('resets the insight bookkeeping when AI is turned on', async () => {
+      prisma.widgetInstance.findFirst.mockResolvedValue({
+        id: 'w', userId: 'u', serviceName: 'rss', widgetName: 'article_list', config: { link: 'https://a.test/f' },
+      });
+      await svc.update('u', 'w', { aiEnabled: true });
+      const data = prisma.widgetInstance.update.mock.calls[0][0].data;
+      expect(data).toMatchObject({ aiEnabled: true, insightHash: null, lastRefreshedAt: null });
+    });
+
+    it('never exposes insightHash', async () => {
+      prisma.widgetInstance.findMany.mockResolvedValue([
+        { id: 'w', serviceName: 'rss', widgetName: 'article_list', config: { link: 'x' }, insightHash: 'h' },
+      ]);
+      const [row]: any[] = await svc.list('u');
+      expect(row.insightHash).toBeUndefined();
+    });
+
+    it('validateDraft reports errors instead of throwing, and flags missing accounts', async () => {
+      expect(await svc.validateDraft('u', { serviceName: 'rss', widgetName: 'article_list', config: {} })).toMatchObject({ ok: false });
+      prisma.oAuthAccount.findFirst.mockResolvedValue(null);
+      prisma.serviceSubscription.findUnique.mockResolvedValue(null);
+      const r: any = await svc.validateDraft('u', { serviceName: 'github', widgetName: 'repo_stats', config: { repo: 'a/b' } });
+      expect(r).toMatchObject({ ok: true, needsAccount: 'github' });
+    });
   });
 
   describe('create', () => {
@@ -226,8 +298,9 @@ describe('WidgetsService', () => {
   });
 
   describe('list', () => {
-    it('scopes the query to the given user', () => {
-      service.list('user-1');
+    it('scopes the query to the given user', async () => {
+      prisma.widgetInstance.findMany.mockResolvedValue([]);
+      await service.list('user-1');
       expect(prisma.widgetInstance.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { userId: 'user-1' } }),
       );

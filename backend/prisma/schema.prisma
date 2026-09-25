@@ -46,6 +46,10 @@ model User {
   widgetInstances          WidgetInstance[]
   emailVerificationTokens  EmailVerificationToken[]
   journalEntries           JournalEntry[]
+  alerts                   Alert[]
+  shareLink                ShareLink?
+  aiUsage                  AiUsage[]
+  briefs                   Brief[]
 }
 
 // Server-side session (not a JWT): the id is the unguessable value stored in
@@ -77,6 +81,9 @@ model OAuthAccount {
   providerAccountId      String
   accessTokenEncrypted   String
   refreshTokenEncrypted  String?
+  // Non-secret, provider-specific facts (e.g. My Epitech: login, campus,
+  // promotion, cursus, group) — shown to the user, never a credential.
+  profile                Json?
   userId                 String
   user                   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -109,10 +116,23 @@ model WidgetInstance {
   decoration         String?
   lastRefreshedAt    DateTime?
   cachedData         Json?
+  // Opt-in (per widget) AI enrichment: `insight` holds the model's output next
+  // to — never inside — cachedData, so cachedData's shape stays stable.
+  // insightHash is a hash of the data the insight was made from: no new AI call
+  // until the data actually changes.
+  aiEnabled          Boolean   @default(false)
+  insight            Json?
+  insightAt          DateTime?
+  insightHash        String?
+  // Opt-in: appears on the user's public read-only link (see ShareLink).
+  shared             Boolean   @default(false)
   userId             String
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+
+  snapshots          WidgetSnapshot[]
+  alerts             Alert[]
 }
 
 // A private journal entry. Text is encrypted at rest (AES-256-GCM, same
@@ -128,4 +148,89 @@ model JournalEntry {
   updatedAt     DateTime @updatedAt
 
   @@index([userId])
+}
+
+// The value a widget is "about" (a rate, a temperature...), sampled on refresh
+// so trends don't depend on what an upstream API keeps.
+model WidgetSnapshot {
+  id       String         @id @default(uuid())
+  widgetId String
+  widget   WidgetInstance @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+  at       DateTime       @default(now())
+  value    Float
+
+  @@index([widgetId, at])
+}
+
+// "Tell me when this widget's value goes above/below X". Detection is plain
+// arithmetic on the widget's primary metric — no AI involved.
+model Alert {
+  id               String         @id @default(uuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  widgetId         String
+  widget           WidgetInstance @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+  label            String?
+  operator         String // "above" | "below"
+  threshold        Float
+  cooldownMinutes  Int            @default(60)
+  active           Boolean        @default(true)
+  lastTriggeredAt  DateTime?
+  createdAt        DateTime       @default(now())
+
+  events           AlertEvent[]
+
+  @@index([widgetId])
+  @@index([userId])
+}
+
+model AlertEvent {
+  id      String   @id @default(uuid())
+  alertId String
+  alert   Alert    @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  at      DateTime @default(now())
+  value   Float
+  message String
+
+  @@index([alertId, at])
+}
+
+// One public read-only link per user. Rotating it (POST /share again) kills the old URL.
+model ShareLink {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+// Per-user, per-day count of AI calls — the daily cap that keeps a key from being drained.
+model AiUsage {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day    String // YYYY-MM-DD (UTC)
+  calls  Int    @default(0)
+
+  @@unique([userId, day])
+}
+
+// Summaries of PUBLIC content (an article), shared by every user who reads it:
+// one model call per article+language, not one per user per refresh.
+model ContentDigest {
+  key       String   @id
+  payload   Json
+  createdAt DateTime @default(now())
+}
+
+model Brief {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day         String
+  language    String
+  content     Json
+  generatedAt DateTime @default(now())
+
+  @@unique([userId, day, language])
 }

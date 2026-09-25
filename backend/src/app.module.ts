@@ -9,6 +9,8 @@ import { TimerModule } from './timer/timer.module';
 import { WidgetsModule } from './widgets/widgets.module';
 import { AdminModule } from './admin/admin.module';
 import { JournalModule } from './journal/journal.module';
+import { AiModule } from './ai/ai.module';
+import { InsightsModule } from './insights/insights.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { JournalModule } from './journal/journal.module';
     WidgetsModule,
     AdminModule,
     JournalModule,
+    AiModule,
+    InsightsModule,
   ],
 })
 export class AppModule {}
