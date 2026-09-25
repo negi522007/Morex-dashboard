@@ -19,13 +19,24 @@ list), see [README.md](./README.md).
       /rss           # done
       /market-data   # done
       /github        # done (+ a repos endpoint feeding the frontend's repo picker)
-      /weather       # not started (Morayo)
+      /weather       # done
+      /worldclock    # done
+      /calendar      # done: any .ics feed (Google Calendar secret iCal address)
+      /epitech       # done: planning (calendar token) + identity card (OIDC profile)
+      /custom-api    # done: json_value / json_list on any public JSON API
       /steam         # not started (Morayo)
       /maps          # not started (Morayo)
-    /widgets     # widget instance CRUD (add/reconfigure/move/delete)
+    /widgets     # widget instance CRUD (add/reconfigure/move/delete) + history
     /timer       # refresh scheduler
+    /insights    # after-refresh hooks: value snapshots, alert evaluation, opt-in AI insight
+    /ai          # AiService (anthropic / openai-compatible / mock), daily cap, GET /ai/status
+    /alerts      # threshold alerts + events
+    /share       # public read-only dashboard link
+    /brief       # daily cross-widget AI brief
+    /assistant   # natural-language widget suggestions (never creates anything)
+    /journal     # encrypted private journal
     /about       # generates GET /about.json from the registered ServiceProviders
-    /common      # cross-cutting utils (token encryption)
+    /common      # cross-cutting utils: token encryption, secret widget params, SSRF-safe fetch, ICS parser, JSON path, TTL cache
   prisma/
     schema.prisma
     migrations/
@@ -83,6 +94,15 @@ requires authentication, and its list of `WidgetDefinition`s (name, description,
 `ServiceFetchError` (typed, carrying `serviceName`/`widgetName`), caught by the scheduler so it marks the
 instance as errored without crashing the global tick or the other widgets.
 
+### Contract extensions (all optional, so older providers are untouched)
+
+`WidgetParam.secret` (credential-like param: encrypted at rest, masked as `********` in every response —
+`common/secret-config.util.ts`), `WidgetDefinition.requiresAuth` (per-widget override of the service-level
+flag, e.g. `epitech/profile` needs a linked account while `epitech/planning` doesn't), `shareable`,
+`primaryMetric(data)` (the one number history and alerts use) and `enrich(data, ctx)` (builds the AI
+insight, given an AI client already bound to the user's quota). `ServiceAuthContext.profile` carries the
+non-secret facts stored with a linked account (My Epitech identity).
+
 ## Data model (Prisma)
 
 File: `backend/prisma/schema.prisma`.
@@ -94,6 +114,13 @@ erDiagram
     User ||--o{ OAuthAccount : has
     User ||--o{ ServiceSubscription : has
     User ||--o{ WidgetInstance : has
+    User ||--o{ Alert : has
+    User ||--o| ShareLink : has
+    User ||--o{ AiUsage : has
+    User ||--o{ Brief : has
+    WidgetInstance ||--o{ WidgetSnapshot : has
+    WidgetInstance ||--o{ Alert : watched_by
+    Alert ||--o{ AlertEvent : fired
 
     User {
         string id PK
@@ -138,7 +165,35 @@ erDiagram
         json position
         datetime lastRefreshedAt "nullable"
         json cachedData "nullable"
+        boolean aiEnabled "opt-in AI insight"
+        json insight "nullable, beside cachedData"
+        string insightHash "nullable, skip AI if data unchanged"
+        boolean shared "on the public link"
         string userId FK
+    }
+    WidgetSnapshot {
+        string widgetId FK
+        datetime at
+        float value "the widget's primary metric"
+    }
+    Alert {
+        string widgetId FK
+        string operator "above|below"
+        float threshold
+        int cooldownMinutes
+    }
+    ShareLink {
+        string token UK "24 random bytes, rotates"
+        string userId UK
+    }
+    AiUsage {
+        string userId FK
+        string day "YYYY-MM-DD, unique with userId"
+        int calls
+    }
+    ContentDigest {
+        string key PK "hash(article link, language)"
+        json payload "public-content recap"
     }
 ```
 
@@ -155,6 +210,12 @@ erDiagram
   provider's verified email against an existing `User`, never by auto-creating a duplicate. Tokens are
   stored encrypted (`accessTokenEncrypted`/`refreshTokenEncrypted`), never in plaintext.
 - **ServiceSubscription** — a non-OAuth service subscription (plain credentials), also encrypted at rest.
+- **WidgetSnapshot / Alert / AlertEvent** — value history (≥5 min apart, pruned after 90 days) and threshold
+  alerts, both driven by `WidgetDefinition.primaryMetric`; detection is plain arithmetic, no AI.
+- **ShareLink** — one public read-only link per user; a widget appears on it only if `shared` is true and
+  its definition is not `shareable: false`.
+- **AiUsage / ContentDigest / Brief** — per-user daily AI call counter (the cap), shared cache of recaps of
+  *public* articles, and the day's brief.
 - **WidgetInstance** — one widget instance placed on a user's dashboard: `config` (validated against the
   `WidgetDefinition`'s `params`), `refreshRateSeconds`, `position` (for react-grid-layout), `cachedData` +
   `lastRefreshedAt` (last result cached by the scheduler).
@@ -306,6 +367,25 @@ sequenceDiagram
         end
     end
 ```
+
+### After a refresh (`RefreshHooksService`)
+
+Once `cachedData` is stored, `TimerService` calls `RefreshHooksService.afterRefresh`, kept separate so the
+scheduler stays a plain fetch-and-store loop: (1) record a snapshot of `primaryMetric` (throttled), (2)
+evaluate the widget's alerts (cooldown, in-app event + localized email), (3) if the widget has
+`aiEnabled` and AI is available, build the `insight` **fire-and-forget** (max 2 in parallel, skipped when
+the data hash is unchanged or the last insight is < 10 min old). Any AI failure — no key, quota, timeout,
+malformed output — leaves the previous insight and the raw data untouched. Secret params are decrypted only
+in memory right before `fetchData`.
+
+### AI design
+
+`AiService` speaks Anthropic's Messages API or any OpenAI-compatible `/chat/completions` (`AI_BASE_URL`),
+plus an offline `mock` provider for development. Rules that apply to every prompt: text from the internet
+is fenced in `<data>` and declared untrusted (prompt-injection defence), the model must answer one JSON
+object, output is length-capped and re-validated, **the model never produces URLs** (images come from
+parsing `og:image` / feed media tags), and the journal is not reachable from any AI path. Cost control:
+opt-in per widget, data-hash skip, a shared cache of public-article recaps, and `AI_DAILY_CALLS_PER_USER`.
 
 ## Authentication & authorization
 
@@ -511,6 +591,20 @@ this project's actual constraints. On reconsideration, sessions fit better here:
 - No secrets committed: `.env` is gitignored, `.env.example` documents the expected variables.
 - OAuth tokens and service credentials are encrypted at rest, never in plaintext.
 - External fetcher errors are never exposed as-is to the end user (no stack traces).
+- **SSRF**: every server-side fetch of a user-supplied URL uses `common/safe-fetch.util.ts` — scheme
+  allow-list, no URL credentials, private/loopback/link-local/metadata/mapped-IPv6 addresses refused
+  both before connecting and at connect time (a guarded DNS `lookup`, so DNS rebinding can't swap the
+  address in between), redirects followed manually with the same check per hop, size and time limits.
+  `ALLOW_PRIVATE_FETCH=true` is a dev-only escape hatch. Fixed-host integrations (GitHub, Open-Meteo…)
+  use plain `fetch`.
+- **Secret widget params** (calendar URLs, tokens): AES-256-GCM at rest with the same key as OAuth tokens,
+  masked in all responses, never echoed in error messages.
+- **OIDC (My Epitech)**: PKCE S256 + `state` + `nonce`, `id_token` RS256 signature checked against the
+  provider's JWKS with `iss`/`aud`/`exp`/`nonce` validation (node `crypto`, no extra dependency); account
+  matching by email only when the provider marks it verified.
+- **Public share link**: unguessable 48-hex token, per-widget opt-in, `config` never included, private
+  widgets refused, `no-store` + `noindex`.
+- Docker image runs Node 20, so `undici` is pinned to the 6.x line (8.x needs Node ≥ 22.19).
 
 ## Testing
 

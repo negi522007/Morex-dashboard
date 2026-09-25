@@ -32,9 +32,48 @@ want the technical detail behind any of this (hashing, encryption), see
   or, if you upload a real photo instead, that file is stored on the server (not sent to DiceBear or
   anyone else) and served back only to render your own avatar.
 
+- **A My Epitech link, if you connect it** — we read your identity card once (login, name, email, campus,
+  promotion, cursus, groups) and keep it with your account to show it back to you; the access token is
+  encrypted like the GitHub one. You log in with your Microsoft account on Epitech's own page — we never
+  see that password. Your **planning link/token** and any **calendar URL** you paste are credentials: they
+  are encrypted at rest and never shown again (the API only returns `********`).
+- **Widget history and alerts** — for numeric widgets we keep a value sample at most every 5 minutes for
+  90 days (to draw trends), and the alerts you create plus a log of when they fired. Alert emails go to
+  your account email through the server's SMTP.
+
+## AI features (optional, opt-in)
+
+If — and only if — the server has an AI key configured **and you turn AI on for a widget**, some data
+leaves the server to the AI provider (Anthropic, or an OpenAI-compatible provider, chosen by whoever runs
+the server). Exactly what is sent:
+
+| Feature | Sent to the AI provider | Never sent |
+|---|---|---|
+| RSS recap | Article titles and the article text (public web content) | Your account, your feed URL |
+| Widget insight (`aiEnabled`) | That widget's cached data (e.g. a rate, a forecast, commit messages of a public repo, **or calendar event titles if you enable it on a calendar widget**) | Widget config, secret URLs/tokens |
+| Daily brief | The cached data of the widgets that have AI turned on | Widgets with AI off |
+| Widget assistant | The sentence you typed and the *catalogue* of available widgets | Your existing widgets |
+
+**Never sent, whatever you toggle: your journal, your email, your password, tokens, your bio.** Article
+recaps are cached and shared between users (public content only), so the same article is not re-sent.
+Each user is capped at a number of AI calls per day. Text coming back from a model is treated as untrusted
+(no links or HTML are ever produced by it). The AI provider's own retention policy applies to what it
+receives — check it before enabling AI on data you consider private. With no key configured, none of this
+exists.
+
+## Public share link
+
+Off by default. If you create one, anyone holding the URL can see — read-only, no login — only the widgets
+you individually ticked as shared (their data and title, plus your first name). Never the widget settings,
+your email, secrets, or private widgets (calendar, Epitech), which cannot be shared. Rotating or deleting
+the link kills the old URL immediately.
+
 ## What we don't do
 
-- We don't sell or share your data with anyone.
+- We don't sell or share your data with anyone (the opt-in AI features above are the only thing that sends
+  data to a third party, and only what the table lists).
+- We don't ask for, store, or scrape your Epitech session tokens or password. Epitech student data
+  (credits, XP…) is not read at all — see API.md, "My Epitech".
 - We don't post, comment, or take any action on GitHub (or anywhere else) on your behalf beyond reading
   what a widget you explicitly added is configured to read.
 - We don't track you across other sites, and there's no analytics/advertising pixel anywhere in this app.
