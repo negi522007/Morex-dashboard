@@ -23,7 +23,7 @@ function mockDrafts(prompt: string): { suggestions: Draft[] } {
     return { suggestions: [{ serviceName: 'market_data', widgetName: 'price_history', title: 'Bitcoin', config: { asset: 'bitcoin', days: 7 }, reason: 'Bitcoin price over the last week' }] };
   }
   if (/m[ée]t[ée]o|weather|temps/.test(p)) {
-    return { suggestions: [{ serviceName: 'weather', widgetName: 'forecast', title: 'Weather', config: { city: 'Paris' }, reason: 'Current weather and forecast' }] };
+    return { suggestions: [{ serviceName: 'weather', widgetName: 'daily_forecast', title: 'Weather', config: { city: 'Paris', days: 5 }, reason: 'Current weather and the next days' }] };
   }
   return { suggestions: [{ serviceName: 'rss', widgetName: 'article_list', title: 'Hacker News', config: { link: 'https://hnrss.org/frontpage', number: 5 }, reason: 'Top tech stories' }] };
 }
