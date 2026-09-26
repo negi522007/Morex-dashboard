@@ -25,6 +25,7 @@ import { AuthService, PublicUser } from './auth.service';
 import { parseBirthDate } from '../common/birth-date.util';
 import { asPageLang, langFromHeader, renderConfirmPage } from './confirm-page';
 import { EpitechOidcService } from './epitech-oidc.service';
+import { MicrosoftOidcService } from './microsoft-oidc.service';
 import { SessionGuard } from './session.guard';
 import { CurrentUser } from './current-user.decorator';
 import { setSessionCookie } from '../common/session-cookie.util';
@@ -42,6 +43,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly config: ConfigService,
     private readonly epitechOidc: EpitechOidcService,
+    private readonly microsoftOidc: MicrosoftOidcService,
   ) {}
 
   @Post('register')
@@ -171,12 +173,12 @@ export class AuthController {
   @UseGuards(SessionGuard)
   @ApiCookieAuth('dashboard_session')
   @ApiOperation({ summary: 'Get the currently logged-in user — useful to check auth state on app load' })
-  @ApiResponse({ status: 200, description: 'The current user, plus githubLinked and `epitech` (linked My Epitech profile or null)' })
+  @ApiResponse({ status: 200, description: 'The current user, plus githubLinked and `epitech` and `microsoft` (linked-account profiles or null)' })
   @ApiResponse({ status: 401, description: 'No valid session' })
   async me(@CurrentUser() user: PublicUser) {
     const githubLinked = await this.authService.hasLinkedGithub(user.id);
-    const epitech = await this.epitechOidc.profileOf(user.id);
-    return { ...user, githubLinked, epitech };
+    const [epitech, microsoft] = await Promise.all([this.epitechOidc.profileOf(user.id), this.microsoftOidc.profileOf(user.id)]);
+    return { ...user, githubLinked, epitech, microsoft };
   }
 
   @Patch('me')

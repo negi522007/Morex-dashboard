@@ -1,6 +1,7 @@
 import { generateKeyPairSync, createSign } from 'node:crypto';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { EpitechOidcService, toEpitechProfile } from './epitech-oidc.service';
+import { OidcAccountsService } from './oidc-accounts.service';
 
 const KEY = 'a'.repeat(64);
 const ISS = 'https://my.epitech.eu/oidc';
@@ -35,7 +36,8 @@ function make(idToken: string) {
     if (u.endsWith('/token')) return new Response(JSON.stringify({ id_token: idToken, access_token: 'at', refresh_token: 'rt' }));
     throw new Error('unexpected ' + u);
   }) as any;
-  return { prisma, svc: new EpitechOidcService({ get: (k: string) => env[k] } as any, prisma) };
+  const config: any = { get: (k: string) => env[k] };
+  return { prisma, svc: new EpitechOidcService(config, new OidcAccountsService(prisma, config)) };
 }
 
 describe('EpitechOidcService', () => {
