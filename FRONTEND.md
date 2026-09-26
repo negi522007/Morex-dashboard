@@ -162,11 +162,61 @@ mode and the open drawer are also classes / data attributes on `<body>`, exactly
 (`/auth/confirm`, `/auth/github/callback`, `/auth/epitech/callback`), which are under the proxied `/auth`
 prefix anyway.
 
+## Admin console (spec — backend is done, no screen yet)
+
+An admin manages accounts. The API exists and is tested (see [API.md → Admin](./API.md#admin)); this section
+is what to build. It is optional in the school brief, but the checklist rewards covering everything the
+brief mentions.
+
+**Who sees it.** Only when `GET /auth/me` returns `isAdmin: true`. Show an "Admin" entry in the sidebar
+for them (nobody else). The route `/admin` must also guard itself: if the user is not an admin, redirect to
+`/dashboard`. The API enforces it anyway (`403`), so this is UX, not security.
+
+**How an account becomes admin** (for the demo): the email listed in `ADMIN_EMAILS` (`.env`) gets
+`isAdmin` when it *registers*. There is no button or endpoint that promotes anyone, on purpose.
+
+**Routing and proxy.** Add the page at `/admin` (exact). Only the API prefix `/admin/users` is proxied —
+add `'/admin/users': 'http://localhost:8080'` to `vite.config.ts` (nginx already has it). Don't proxy the
+bare `/admin`, or Vite would send your page to the backend.
+
+**Screen: one table, "Users".** Data from `GET /admin/users`, newest first (sort by `createdAt`):
+
+| Column | From | Notes |
+|---|---|---|
+| Name | `firstName` `lastName` | |
+| Email | `email` | |
+| Status | `emailVerified`, `isBanned`, `isAdmin` | Badges: "Unconfirmed" (`emailVerified:false`), "Banned", "Admin". Unconfirmed accounts are deleted by the server after 24 h — say so in a tooltip. |
+| Joined | `createdAt` | Relative date |
+| Widgets / Linked accounts / Sessions | `widgetCount`, `linkedAccountsCount`, `sessionCount` | Small numbers; `sessionCount` is "sessions stored", not "online now" |
+| Actions | — | See below |
+
+Add a search box (client-side filter on name/email) and a filter "All / Unconfirmed / Banned".
+
+**Row actions** (all `credentials: 'include'`, JSON where a body is sent):
+
+| Action | Call | Notes |
+|---|---|---|
+| Edit name | `PATCH /admin/users/:id` `{ firstName, lastName }` | Blank name → `400`, show the message |
+| Mark email as confirmed | `PATCH /admin/users/:id` `{ emailVerified: true }` | For someone whose confirmation mail never arrived |
+| Ban | `PATCH /admin/users/:id/ban` → `204` | Ends all their sessions immediately. Confirm dialog first. |
+| Unban | `PATCH /admin/users/:id/unban` → `204` | |
+| Delete | `DELETE /admin/users/:id` → `204` | **Permanent** (their widgets, journal, links go too). Confirm dialog that makes the admin type the email, or at least a clear warning. |
+
+Rules to reflect in the UI so the admin doesn't hit avoidable errors: you cannot ban or delete **yourself**
+or **another admin** (the API answers `400` with a message — hide or disable those buttons for rows where
+`isAdmin` is true or `id` equals the current user's id, and still display the API message if it happens).
+After any action, refresh the list (or update the row locally). Error states: a `403` (should not happen if
+the guard is right) → redirect to `/dashboard`; other errors → a visible message, never a silent failure.
+Also show the empty and loading states (the same standard as the dashboard, see the findings below).
+
+**Not in scope:** promoting/demoting admins, changing a user's password or email (no endpoints, by design),
+and viewing anyone's widgets or journal (the admin API never exposes private content; keep it that way).
+
 ## Not built yet
 
 - **Privacy note acceptance at registration**: a required checkbox linking to a `/privacy` page rendering
   [PRIVACY.md](./PRIVACY.md). No backend field records the consent yet.
-- **In-app documentation page** (`/docs`).
+- **In-app documentation page**: not at `/docs` — in production nginx forwards `/docs` to the backend's Swagger UI, so pick another path (e.g. `/help/docs`).
 - **GitHub repo picker**: params may carry an `optionsUrl` (GitHub's `repo` → `/services/github/repos`,
   answering `{ value, label }[]`); the drawer still uses a free-text field.
 - **Export my data / delete my account**: shown as "soon" in the profile, no backend endpoint yet.
