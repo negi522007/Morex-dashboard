@@ -8,6 +8,7 @@ import { MarketDataProvider } from '../services/market-data/market-data.provider
 import { RssProvider } from '../services/rss/rss.provider';
 import { WeatherProvider } from '../services/weather/weather.provider';
 import { WorldclockProvider } from '../services/worldclock/worldclock.provider';
+import { SteamProvider } from '../services/steam/steam.provider';
 import { YoutubeProvider } from '../services/youtube/youtube.provider';
 import { KNOWLEDGE, LANGS } from './kb';
 import { HelpdeskService } from './helpdesk.service';
@@ -26,6 +27,7 @@ describe('knowledge base', () => {
   const providers: any[] = [
     new RssProvider(), new MarketDataProvider(), new GithubProvider(), new WorldclockProvider(), new WeatherProvider(),
     new YoutubeProvider({ get: () => undefined } as any), new CalendarProvider(), new EpitechProvider(), new CustomApiProvider(),
+    new SteamProvider({ get: () => undefined } as any),
   ];
   const ids = new Set(KNOWLEDGE.map((e) => e.id));
 
@@ -71,6 +73,9 @@ describe('search', () => {
     expect(svc.search('meteo', 'fr')[0].id).toMatch(/^weather/);
     expect(svc.search('calendrier google', 'fr').map((e) => e.id)).toEqual(expect.arrayContaining(['calendar', 'term-ics']));
     expect(svc.search('oauth', 'en')[0].id).toBe('term-oauth');
+    expect(svc.search('how do I find my steamid', 'en').map((e) => e.id)).toContain('term-steam-id');
+    expect(svc.search('horoscope', 'fr')[0].id).toBe('guide-wellbeing');
+    expect(svc.search('pourquoi la date de naissance', 'fr')[0].id).toBe('guide-birthdate');
   });
 
   it('returns titles and bodies in the requested language', () => {
