@@ -212,6 +212,107 @@ Also show the empty and loading states (the same standard as the dashboard, see 
 **Not in scope:** promoting/demoting admins, changing a user's password or email (no endpoints, by design),
 and viewing anyone's widgets or journal (the admin API never exposes private content; keep it that way).
 
+## Screens still to build (the backend for each is done — API.md has the exact shapes)
+
+Each block: what the user sees, which calls, and the states to handle (loading, empty, error — the same
+standard as the rest of the app). Order = suggested priority for the defense demo.
+
+### 1. World clock: dropdown of cities and countries (fixes "Unknown city: Égypte")
+
+**Why the error happens.** The form converts what is typed into a time-zone with `lib/timezones.ts`, which only
+knows a short alias list and the *city* part of IANA zone names (`Africa/Cairo` → "Cairo"). Countries
+("Égypte", "Bangladesh") are not zones, so they are rejected. The backend can now resolve them itself.
+
+**Build.** For the `homeTimezone` and `cities` params (both carry `optionsUrl:
+"/services/worldclock/places"`, `cities` also `multiple: true` in `/about.json`) render a **type-ahead
+dropdown** instead of a free-text field:
+- On focus with nothing typed: `GET /services/worldclock/places?lang=<ui language>` → the biggest cities.
+- While typing (debounce ~200 ms): `GET …/places?q=<text>&lang=<ui language>` → list of
+  `{ value, label, kind, country, offset }`. Show `label`, the country, and `offset` (e.g. "UTC+1") on the
+  right; a small icon for `kind` (city / country / zone).
+- `homeTimezone`: single choice. `cities`: multi-select rendered as removable chips; submit the chosen
+  `value`s joined by commas. Keep each chip's `label` for display in the form only — the stored value is the
+  IANA zone.
+- Empty result → "No place found"; request failure → keep the typed text and show the error.
+- Delete the client-side `toTimeZones()` validation in `catalog.ts` (or only use it as an offline fallback):
+  the server now accepts plain names too, so typing "Cotonou, Égypte" and submitting still works.
+
+### 2. Help assistant ("helpdesk") — explain the app, the services and the technical words
+
+The audience is not technical. Three entry points, all backed by `/helpdesk/*` (see API.md → Help center):
+
+1. **A floating "?" launcher** on every page (bottom-right; the sidebar's "Help" item opens the same panel),
+   opening a **chat panel**:
+   - Input + send; suggested questions on first open (from `related` of `guide-getting-started`, or fixed
+     chips: "How do I add a widget?", "What is an API key?", "Why is my widget empty?").
+   - Each user message → `POST /helpdesk/ask?lang=<ui language>` with `{ question, history, context }`
+     (`history` = the last messages of this conversation; `context` = `{ service, widget }` when the user is
+     in the add/edit form of a widget, else omitted).
+   - Show `answer`, then **source chips** (`sources[]`: title, click → opens that entry), then **follow-up
+     chips** (`followUps[]`, click = ask it) and `related[]` as "See also".
+   - `mode: "search"` is a normal answer (AI off/over quota): render identically. Optional tiny "AI" badge for
+     `mode: "ai"`. The answer is plain text: do not render it as HTML.
+   - States: typing indicator while waiting (AI can take a few seconds), a friendly inline error on failure
+     with a retry, `400` = "please write a shorter question". Keep the conversation in component state (no
+     storage needed). Logged out (login/register pages): use `GET /helpdesk/search?q=` only and show the
+     entries' `body` directly.
+2. **Contextual help inside the add/edit widget form** — a "?" next to the widget title and next to each
+   setting label. Fetch `GET /helpdesk/knowledge?lang=…` once (cached 1 h; keep it in memory) and open the
+   entry with id `"<service>/<widget>"` (e.g. `youtube/trending`) in a popover; for a setting with `secret`,
+   `optionsUrl`… link to the matching term (`term-secret-param`, `term-timezone`, `term-json-path`,
+   `term-ics`, `term-api-key`, `term-youtube-ids`, `term-exchange-rate`, `term-rss`). Each entry has
+   `related[]` to link onward. **This works with zero AI and zero extra requests.**
+3. **A Help center page** (route `/help`, not `/docs`): the same `knowledge` data as a searchable list grouped
+   by `kind` (Guides · Services & widgets · Glossary), with a search box (client-side filter on
+   title/body, or `GET /helpdesk/search`), each entry expandable, `related` as links. This is also the
+   right place for the existing FAQ block of the Help modal.
+
+Also: in the **empty dashboard** and on any card that stays empty, add a link "Why is my widget empty?" that
+opens entry `guide-empty-widget`.
+
+### 3. Daily brief card
+
+Small card at the top of the dashboard (only when `GET /ai/status` says `available`). `GET /brief`:
+`brief === null` → "Generate my brief" button (`POST /brief/refresh`; `400` messages such as "Turn AI on for
+at least one widget" are shown as is); otherwise `headline`, the `items[]` (each has a `widgetId`: clicking it
+scrolls to / highlights that card) and `tip`, plus "Updated <time>" and a refresh button.
+
+### 4. Alerts and notifications
+
+- A **bell** in the toolbar with a badge = number of events newer than the last one the user saw (keep the last
+  seen `at` in `localStorage`). Poll `GET /alerts/events` every 30–60 s and on window focus. The dropdown lists
+  `message`, time and the widget (`widgetId` → its title).
+- In the widget's edit modal, for widgets with a numeric value (the API answers `400 "no numeric value"`
+  otherwise — or hide the section using the list in API.md → History), an **Alerts** section: list its alerts
+  (`GET /alerts`, filter by `widgetId`) with a toggle (`PATCH active`) and delete; a small form "Notify me when
+  the value is [above|below] [number], at most every [60] min" → `POST /alerts`.
+
+### 5. Value history chart
+
+For any widget with a numeric value, a "History" view (7 d / 30 d / 90 d buttons) drawing
+`GET /widgets/:id/history?days=` (`points: [{ at, value }]`). Handle `supported: false` (hide the view) and few
+points ("collecting data — come back later").
+
+### 6. Sharing
+
+Profile/Settings → **Share my dashboard**: state from `GET /share` (`enabled`, `token`). Buttons: create
+(`POST /share`), copy link, regenerate (`POST /share` again — warn that the old link stops working), turn off
+(`DELETE /share`). Build the public URL yourself (`${location.origin}/s/${token}`; not under `/public`, which
+is proxied to the API). In each widget's edit modal a **"Show on my public page"** switch (`PATCH shared`;
+disabled with an explanation for private widgets — calendar/Epitech — the API answers `400`). New route
+`/s/:token`: no login, read-only, calls `GET /public/dashboard/:token` **without credentials**, renders the
+cards from `widgets[]` with the same components (no edit controls), shows `owner.firstName`, applies `theme`
+and `widgetSkin`, and a "This link is not available" page on `404`.
+
+### 7. Add widgets by describing them (assistant)
+
+In the add-widget drawer, above the catalog: "Describe what you want to follow" + button (only when AI is
+`available`). `POST /assistant/widgets { prompt }` → `suggestions[]`: show each as a card (title, `reason`,
+preview with the existing widget preview) with an **Add** button that posts the draft to `POST /widgets`
+(`serviceName, widgetName, config, refreshRateSeconds, title`). If `needsAccount` is set, show "connect
+<service> first" instead; if `missingSecrets` is non-empty, open the normal form pre-filled so the user types
+those. Nothing is created without the click.
+
 ## Login / Register: "Continue with My Epitech" (spec — backend is done)
 
 Creating an account with My Epitech already works on the backend (`GET /auth/epitech/login`: first use

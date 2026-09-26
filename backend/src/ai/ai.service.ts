@@ -144,6 +144,9 @@ export class AiService {
       body: JSON.stringify({
         model: this.config.get<string>('AI_MODEL') || DEFAULT_OPENAI_MODEL,
         max_tokens: maxTokens,
+        // Reasoning models (Gemini 3.x, gpt-oss…) spend part of max_tokens "thinking"; a low effort
+        // keeps room for the JSON answer. Only sent when configured: plain models reject the field.
+        ...(this.config.get<string>('AI_REASONING_EFFORT') ? { reasoning_effort: this.config.get<string>('AI_REASONING_EFFORT') } : {}),
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user },

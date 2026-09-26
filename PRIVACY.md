@@ -53,6 +53,7 @@ the server). Exactly what is sent:
 | Widget insight (`aiEnabled`) | That widget's cached data (e.g. a rate, a forecast, commit messages of a public repo, **or calendar event titles if you enable it on a calendar widget**) | Widget config, secret URLs/tokens |
 | Daily brief | The cached data of the widgets that have AI turned on | Widgets with AI off |
 | Widget assistant | The sentence you typed and the *catalogue* of available widgets | Your existing widgets |
+| Help assistant | The question you type (and the last few messages of that chat) plus the few help-page texts it needs | Your data, widgets and account — do not type secrets into it |
 
 **Never sent, whatever you toggle: your journal, your email, your password, tokens, your bio.** Article
 recaps are cached and shared between users (public content only), so the same article is not re-sent.

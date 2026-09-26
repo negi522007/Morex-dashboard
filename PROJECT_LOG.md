@@ -120,6 +120,16 @@ mail to Mailhog, an encryption key generated once into a dedicated volume that i
 and waits for the database (a fresh clone used to crash on its first migration). Verified from a copy of the
 repo without `.env`. The UI findings for Morayo are listed at the end of FRONTEND.md.
 
+**Sept 26 (later)** — Reported by a user: the world clock rejected "Égypte" and "Bangladesh" ("Unknown city").
+Cause: the form only knew city names (IANA zones are named after cities). Fix: the backend now resolves
+cities *and countries* in three languages (`city-timezones` + `countries-and-timezones` datasets), serves a
+type-ahead `GET /services/worldclock/places` for a dropdown, and the widget accepts plain names. Also added
+a **help assistant** (`/helpdesk/*`): a trilingual knowledge base of guides, every service/widget/parameter
+and the technical vocabulary, searchable without AI and answered by the AI model from those pages only when
+available (never an error: it degrades to the best page). A test fails if a widget or parameter has no help
+entry. Free AI model guidance re-checked against the providers' current docs; `AI_REASONING_EFFORT` added for
+reasoning models. Specs for every screen not yet built are in FRONTEND.md.
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |

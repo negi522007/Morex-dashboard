@@ -56,6 +56,14 @@ describe('AiService', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('http://llm.local/v1/chat/completions');
   });
 
+  it('sends reasoning_effort only when configured', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"y":1}' } }] })));
+    await make({ AI_PROVIDER: 'openai-compatible', AI_API_KEY: 'k' }).svc.forUser('u').completeJson({ system: 's', user: 'u' });
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).not.toHaveProperty('reasoning_effort');
+    await make({ AI_PROVIDER: 'openai-compatible', AI_API_KEY: 'k', AI_REASONING_EFFORT: 'low' }).svc.forUser('u').completeJson({ system: 's', user: 'u' });
+    expect(JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string).reasoning_effort).toBe('low');
+  });
+
   it('stops at the daily cap without calling the provider', async () => {
     const fetchMock = jest.spyOn(global, 'fetch');
     const { svc } = make({ AI_PROVIDER: 'anthropic', AI_API_KEY: 'k', AI_DAILY_CALLS_PER_USER: '5' }, 6);

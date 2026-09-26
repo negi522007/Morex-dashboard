@@ -37,7 +37,7 @@ automatically at a user-defined interval.
 | Steam | API key | ⏳ Not started | — |
 | Maps / Cinema | API key | ⏳ Not started | — |
 
-**Beyond widgets** (all documented in [API.md](./API.md)): optional **AI** (article recaps with images,
+**Beyond widgets** (all documented in [API.md](./API.md)): a **help assistant** that explains the app, each service and the technical vocabulary in plain words (English/French/Spanish, works with or without AI), optional **AI** (article recaps with images,
 per-widget insights, a daily brief, a natural-language widget assistant — off unless `AI_PROVIDER`/`AI_API_KEY`
 are set, opt-in per widget, never touches the journal), **threshold alerts** (in-app + email), **value
 history** for charts, a **read-only public share link**, and **SSRF protection** on every user-supplied URL
