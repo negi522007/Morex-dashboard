@@ -67,9 +67,12 @@ Public. Body:
   "email": "user@example.com",
   "password": "at least 8 characters",
   "firstName": "Ada",
-  "lastName": "Lovelace"
+  "lastName": "Lovelace",
+  "birthDate": "2001-02-28"
 }
 ```
+`birthDate` (`YYYY-MM-DD`, at least 13 years old) is used only to compute the zodiac sign for the well-being page (see *Well-being*). It is accepted and validated now, and made mandatory by setting `REQUIRE_BIRTH_DATE=true` on the server once the register form asks for it (`400` otherwise). Accounts created with GitHub / My Epitech / Microsoft have none until the user adds it via `PATCH /auth/me { birthDate }` (`null` removes it).
+
 `firstName`/`lastName` are **required**. Editable later via `PATCH /auth/me` (see below).
 
 **Unconfirmed signups don't lock the address.** If the same email registers again while its previous signup was never confirmed (older than 2 minutes), the old unconfirmed account is replaced by the new one and a fresh confirmation mail is sent (the old link stops working). Unconfirmed accounts are also deleted automatically 24 h after creation, when their link expires. Confirmed accounts are never replaced. So the register form can simply be retried; no special "resend" flow is needed.
@@ -81,7 +84,20 @@ Public. Body:
 | `409` | A confirmed account with this email already exists — **or** an unconfirmed signup for it was created less than 2 minutes ago (message: "A confirmation email was just sent…"; show it as-is, and suggest checking spam). |
 | `503` | The confirmation email failed to send — the account was **not** created (safe to retry). |
 
-### `GET /auth/confirm?token=...`
+### The confirmation email — "Is this you?"
+
+The email contains a link to `GET /auth/confirm?token=…`. It **never confirms by itself** (mail scanners and link previews open links automatically): it shows a styled page that asks *"Is this you?"* with two buttons.
+
+| Route | What |
+|---|---|
+| `GET /auth/confirm?token=&lang=` | The page (HTML, in the browser's language or `?lang=fr|en|es`): question, **"Yes, it's me"** and **"No, it wasn't me"**. Invalid/expired links show a "this link doesn't work" page with a way forward. If `CONFIRM_PAGE_URL` is set, it redirects there instead (`?token=` appended) so a React page can replace it. |
+| `GET /auth/confirm/preview?token=` | JSON `{ email: "a***@gmail.com", firstName, expiresAt }` for a custom page. Changes nothing. `401` if invalid/used/expired. |
+| `POST /auth/confirm` `{ token }` | **Yes, it's me.** → `{ status: "confirmed" }`; the user can log in. `401` if invalid. |
+| `POST /auth/confirm/reject` `{ token }` | **No, it wasn't me.** Deletes the pending account and blocks that address from password sign-ups for 24 h (so nobody can keep mailing it). Never touches an already-confirmed account. → `{ status: "removed" }`. |
+
+After *yes* the page offers "Sign in" (→ `FRONTEND_URL/login`) and first-step tips; after *no* it explains nothing was activated, that no more sign-up mail will be sent for 24 h, and what to do next. `POST /auth/register` answers `409` with a clear message while an address is blocked.
+
+### `GET /auth/confirm?token=...` (legacy note)
 
 Public — the link emailed on register. Plain-text response, not JSON.
 
@@ -119,7 +135,7 @@ Public. Body:
 
 | Status | When |
 |---|---|
-| `200` | `{ id, email, firstName, lastName, isAdmin, createdAt, bio, theme, language, widgetSkin, avatarConfig, avatarPhotoUrl, githubLinked, epitech }` for the current user. `epitech` is `null` or `{ login, name, email, campus, promotion, cursus, groups[] }` (see *My Epitech* below). |
+| `200` | `{ id, email, firstName, lastName, isAdmin, createdAt, bio, theme, language, widgetSkin, avatarConfig, avatarPhotoUrl, githubLinked, epitech }` for the current user. `epitech` is `null` or `{ login, name, email, campus, promotion, cursus, groups[] }` (see *My Epitech* below); `microsoft` is `null` or `{ name, email, tenant }`; `birthDate` is `"YYYY-MM-DD"` or `null` and `zodiac` (`aries`…`pisces`) is derived from it. |
 | `401` | No valid session. |
 
 `githubLinked` is the only way the frontend can know whether GitHub is connected — there's no other
@@ -280,6 +296,9 @@ List the current user's widget instances (for rendering the dashboard).
 | **new** `calendar/upcoming_events` | `{ events: [{ title, start, end, allDay, location }], generatedAt }` — params `url` (**secret**: a Google Calendar "secret address in iCal format", or any `.ics`/`webcal://` link), `days` (default 14, max 60), `number` (default 8, max 30). `start`/`end` are ISO instants; all-day events start at 00:00 UTC of their date. Recurring events are expanded. **Private widget: cannot be shared.** |
 | **new** `epitech/planning` | same shape as the calendar — param `calendarToken` (**secret**, the token from My Epitech → calendar link), `days`, `number`. **Private, cannot be shared.** |
 | **new** `epitech/profile` | `{ login, name, email, campus, promotion, cursus, groups[] }` — no params; needs a linked My Epitech account (`needsAccount`, see below). Private. |
+| `steam/profile` | `{ steamId, name, avatar, url, status: "offline"\|"online"\|"busy"\|"away"\|"snooze"\|"looking_to_trade"\|"looking_to_play", currentGame, level, memberSince, country, isPublic }` — param `steamId` (SteamID64, profile link or custom name). Server needs `STEAM_API_KEY`; the player's profile must be public. Level drives history/alerts. |
+| `steam/recent_games` | `[{ appId, name, minutesLast2Weeks, minutesTotal, icon, header, url }]` — params `steamId`, `number` (default 5, max 10). Needs "Game details" public; otherwise the log explains how to fix it. |
+| `steam/library_stats` | `{ steamId, gameCount, playedCount, neverPlayedCount, totalMinutes, totalHours, topGames: [game] }` — param `steamId`. `totalHours` drives history/alerts. |
 | **new** `custom_api/json_value` | `{ label, unit, value, fetchedAt }` — params `url` (**secret**), `path` (e.g. `data.items[0].price`), `label`, `unit`. Public JSON APIs only (no auth headers are ever sent). Numeric values feed history and alerts. |
 | **new** `custom_api/json_list` | `{ items: [{ title, subtitle }], fetchedAt }` — params `url` (**secret**), `path` (to an array), `titleField`, `subtitleField`, `number`. |
 | `weather/current_weather` | `{ city, country, unit, temperature, feelsLike, humidity, windKmh, condition, isDay, high, low }` — params `city` (required), `unit` (`celsius` default \| `fahrenheit`). Open-Meteo, no key. |
@@ -489,6 +508,63 @@ otherwise a "Generate my brief" button calling `POST`.
 was already validated with those exact rules. `needsAccount` = a service name the user must link first;
 `missingSecrets` = params (e.g. a calendar URL) the user must type, never guessed by the model.
 `{ available: false, suggestions: [] }` when AI is off.
+
+## Microsoft sign-in (school account)
+
+"Sign in with your school Microsoft account" — for Epitech students this is the same Microsoft login they
+already use for My Epitech, **and it needs nobody at Epitech**: you register the app yourself, like the
+GitHub OAuth App. It gives identity only (name, `@epitech.eu` address); it is not My Epitech's student data.
+
+| Route | What |
+|---|---|
+| `GET /auth/microsoft/status` | Public. `{ configured }` — hide the button when `false`. |
+| `GET /auth/microsoft/login` | **Browser navigation**: sign in / create the account (first use) / attach to the account with the same address. |
+| `GET /auth/microsoft` 🔒 | **Browser navigation**: link Microsoft to the logged-in account. |
+| `DELETE /auth/microsoft` 🔒 | Unlink (`409` if it is the only way in). |
+| `GET /auth/microsoft/callback` | Microsoft's redirect target; the browser lands on `FRONTEND_URL`: `/dashboard`, `/dashboard?microsoft=linked`, or `/login?error=…` / `/dashboard?microsoft_error=…`. |
+
+**Security rule (why it is restricted to one organisation).** In a multi-tenant Microsoft app, the `email`
+of an account from *any* organisation is whatever that organisation's admin typed — an attacker could run
+their own tenant with an `@epitech.eu` address. So the server only accepts accounts whose signed `tid`
+(tenant id) is the tenant that owns `MICROSOFT_ALLOWED_DOMAIN` (default `epitech.eu`, looked up from
+Microsoft's public metadata) *and* whose address ends with that domain. PKCE, `state`, `nonce` and the
+RS256 signature/issuer/audience of the `id_token` are verified as for My Epitech.
+
+**Register the app (free, ~10 minutes)** at <https://entra.microsoft.com> → *App registrations* → *New registration*:
+1. **Name** `Morex Dashboard`. **Redirect URI**: type *Web*, `http://localhost:8080/auth/microsoft/callback` (add your public URL's callback too for a deployment).
+2. **Supported account types** — two ways, try the first:
+   - **A. Register it with your own `@epitech.eu` account** (sign in to the portal with it). If "users can register applications" is enabled in Epitech's directory (it is by default), the app then lives *inside* Epitech's tenant: choose *"Accounts in this organizational directory only"*. No consent problem at all, since it is Epitech's own directory. If the portal says you lack permission, use B.
+   - **B. Register it in your own free directory** (any Microsoft account) with *"Accounts in any organizational directory (Multitenant)"*. Then Epitech's tenant must allow its users to consent to the app; if Epitech restricts user consent, students see *"Need admin approval"* and only Epitech's IT can approve it (they can, by opening the consent URL as admin). Publisher verification is not possible for a personal project.
+3. **Certificates & secrets** → *New client secret* → copy the **Value** (shown once).
+4. **Overview** → copy **Application (client) ID**.
+5. `.env`: `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_CALLBACK_URL` (must match the redirect URI exactly), then `docker compose up -d --force-recreate server`.
+
+This flow is tested here against a simulated Microsoft (signatures, tenant and domain checks, account
+creation/linking); it has **not** been run against the real Microsoft login, which needs your app
+registration — so do the first real sign-in yourself before the defense.
+
+## Well-being
+
+🔒 `GET /wellbeing/today?lang=&offset=` — everything for a calm daily page, in the user's language
+(`lang` overrides). `offset` (0–1000) moves the quote on ("another quote").
+
+```json
+{ "date": "2026-09-26", "language": "fr",
+  "quote": { "text": "…", "author": "Lao Tzu", "original": "…English…" },
+  "tip": { "category": "hydration|movement|eyes|sleep|focus|mind|social", "text": "…" },
+  "breathing": [ { "id": "box", "name": "Respiration carrée", "rounds": 4, "why": "…",
+                   "steps": [ { "type": "inhale|hold|exhale", "seconds": 4 } ] } ],
+  "horoscope": { "sign": "gemini", "forDate": "2026-09-26", "text": "…", "source": "ai|library", "disclaimer": "…" },
+  "needsBirthDate": false,
+  "mood": { "days": [ { "date": "2026-09-25", "mood": "🙂" } ], "counts": { "🙂": 3 }, "streak": 2 } }
+```
+- **Quotes** are real, attributed sayings (a few are proverbs) in three languages; one per day, stable all day.
+- **Horoscope** is `null` with `needsBirthDate: true` until the user has a birth date (profile). It is for fun and
+  says so (`disclaimer`): `source: "ai"` = written by the model for the *sign only* (the birth date is never
+  sent), shared between all users of that sign for the day; `source: "library"` = built from a fixed set of
+  sentences when AI is off — always show which one.
+- **Breathing**: run the timer client-side from `steps` × `rounds` (animate a circle; label steps from the `type`).
+- **Mood** reads only the mood and date of the user's journal entries (never the text).
 
 ## Alerts
 
@@ -713,7 +789,7 @@ backend; only the wiring is left on the frontend side.
 
 **Dev proxy:** every backend route prefix must be in `frontend/vite.config.ts`'s proxy list. Beyond `/auth`,
 `/widgets` and `/about.json`, add: **`/journal`, `/services`, `/uploads`, `/ai`, `/brief`, `/assistant`,
-`/alerts`, `/share`, `/public`, `/helpdesk`** — otherwise Vite answers with its own `index.html` (HTTP 200) and the page
+`/alerts`, `/share`, `/public`, `/helpdesk`, `/wellbeing`** — otherwise Vite answers with its own `index.html` (HTTP 200) and the page
 gets HTML where it expects JSON (this caused a white page once already). Note `/public/…` here is the
 *API*; pick a different name for the frontend's own share page route (e.g. `/s/:token`) so the proxy
 doesn't swallow it.
@@ -764,5 +840,5 @@ keeps working unchanged. Do these in order of value:
 
 ## Not built yet
 
-- Steam and Maps/Cinema services — once they exist, `/about.json` and the `serviceName` values
+- Maps/Cinema services — once they exist, `/about.json` and the `serviceName` values
   usable in `/widgets` will include them automatically, no doc update needed on this side.

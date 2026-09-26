@@ -130,6 +130,18 @@ available (never an error: it degrades to the best page). A test fails if a widg
 entry. Free AI model guidance re-checked against the providers' current docs; `AI_REASONING_EFFORT` added for
 reasoning models. Specs for every screen not yet built are in FRONTEND.md.
 
+**Sept 26 (evening)** — Feedback from a real user test, acted on: (1) the confirmation link opened a bare
+white page and confirmed on click. It now opens a styled "Is this you?" page with *Yes* and *No, it wasn't
+me* (which deletes the pending account and closes that address to sign-ups for a day), and a plain GET never
+confirms anything (mail scanners open links). The email itself is styled and trilingual. (2) The offline
+"mock" AI was refused in production so a demo can never show fake AI text; a real Gemini key is used instead.
+(3) Date of birth is collected at sign-up (validated, ≥ 13, optional on the API until the form asks for it)
+for a new **well-being** page (quote, horoscope, breathing, tips, mood streak). (4) **Steam** service added.
+(5) A **Microsoft sign-in** restricted to one organisation (tenant-checked against email spoofing) as the
+self-service alternative to My Epitech's staff-only client registration — untested against the real
+Microsoft until the app is registered. The Epitech/Microsoft/GitHub-style sign-ins now share one accounts
+service and one controller factory instead of copies.
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |

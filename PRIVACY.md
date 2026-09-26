@@ -37,6 +37,13 @@ want the technical detail behind any of this (hashing, encryption), see
   encrypted like the GitHub one. You log in with your Microsoft account on Epitech's own page — we never
   see that password. Your **planning link/token** and any **calendar URL** you paste are credentials: they
   are encrypted at rest and never shown again (the API only returns `********`).
+- **Your date of birth, if you give it** — used only to work out your zodiac sign for the well-being page, and to
+  check you are at least 13 when you sign up. It is never shown to anyone else and never sent to the AI (only the
+  sign is). You can change or remove it in your profile. Accounts created with GitHub, My Epitech or Microsoft
+  start without one.
+- **A Microsoft account link, if you use it** — we read your name and school address once (the organisation
+  vouches for it), keep the link and an encrypted access key, and never see your Microsoft password. Only accounts
+  of the allowed organisation (`epitech.eu`) are accepted.
 - **Widget history and alerts** — for numeric widgets we keep a value sample at most every 5 minutes for
   90 days (to draw trends), and the alerts you create plus a log of when they fired. Alert emails go to
   your account email through the server's SMTP.
@@ -53,6 +60,7 @@ the server). Exactly what is sent:
 | Widget insight (`aiEnabled`) | That widget's cached data (e.g. a rate, a forecast, commit messages of a public repo, **or calendar event titles if you enable it on a calendar widget**) | Widget config, secret URLs/tokens |
 | Daily brief | The cached data of the widgets that have AI turned on | Widgets with AI off |
 | Widget assistant | The sentence you typed and the *catalogue* of available widgets | Your existing widgets |
+| Horoscope (well-being) | Only your zodiac sign and today's date | Your date of birth, name, email |
 | Help assistant | The question you type (and the last few messages of that chat) plus the few help-page texts it needs | Your data, widgets and account — do not type secrets into it |
 
 **Never sent, whatever you toggle: your journal, your email, your password, tokens, your bio.** Article

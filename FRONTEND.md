@@ -313,6 +313,72 @@ preview with the existing widget preview) with an **Add** button that posts the 
 <service> first" instead; if `missingSecrets` is non-empty, open the normal form pre-filled so the user types
 those. Nothing is created without the click.
 
+## Confirmation page, birth date, well-being page, Steam, Microsoft (specs — backend done)
+
+### A. The confirmation email page ("Is this you?")
+
+**Already works without the frontend**: the email link opens a backend-rendered page with the two choices (see API.md → *The
+confirmation email*). It matches the app's look loosely; if you want it pixel-identical to the Morex design,
+build it in React and switch over:
+1. Route `/confirm` (public). Set `CONFIRM_PAGE_URL=http://localhost:5173/confirm` in `.env`: the email link
+   then redirects to it with `?token=…`.
+2. On load `GET /auth/confirm/preview?token=` → show the **masked** address and first name ("Someone used
+   a***@gmail.com to create a Morex account"). `401` → a "This link doesn't work" card with a "Sign up again" button.
+3. Two buttons: **"Yes, it's me"** → `POST /auth/confirm { token }` then a success card ("Your account is
+   confirmed", **Sign in** button → `/login`, and 2–3 first steps: add widgets, add your birth date, connect
+   GitHub/Epitech); **"No, it wasn't me"** → `POST /auth/confirm/reject { token }` then a reassurance card
+   (nothing was activated, the pending account is deleted, no more sign-up mails to that address for 24 h, safe to
+   ignore, it can sign up again tomorrow or use GitHub/Microsoft).
+4. States: loading, error with retry, disabled buttons while a request runs, `?lang=` support (use the UI language).
+   Never call the confirm/reject endpoints from a `GET` or on page load — only from the buttons.
+
+Also on `/login`: show a friendly banner when the user arrives after confirming (e.g. `?confirmed=1`).
+
+### B. Register form and profile: date of birth
+
+- Register: add a **date field** "Date of birth" (native `<input type="date">`, `max` = today minus 13 years),
+  required in the UI, sent as `birthDate: "YYYY-MM-DD"` in `POST /auth/register` (the API validates: real date, ≥ 13
+  years old; `400` messages are shown as is). One line under it: "Used only for your zodiac sign on the well-being
+  page. Never shown to anyone." (entry `guide-birthdate` in the help). When this ships, set `REQUIRE_BIRTH_DATE=true`.
+- Profile: the same field, prefilled from `GET /auth/me` → `birthDate` (`null` = empty), saved with `PATCH /auth/me
+  { birthDate }` (`null` clears it). Show `zodiac` next to it as a small badge. Users who signed up with
+  GitHub/Epitech/Microsoft have none: the well-being page invites them to add it (`needsBirthDate`).
+
+### C. Well-being page ("Bien-être") — new route `/wellbeing` (sidebar item)
+
+One call: `GET /wellbeing/today?lang=<ui language>` (see API.md → *Well-being*). Layout suggestion — a calm page using
+the current theme, cards:
+1. **Quote of the day**: `quote.text`, `quote.author`; a "Another quote" button (`?offset=n+1`, n in local state).
+2. **Horoscope**: sign name + glyph (♈♉♊♋♌♍♎♏♐♑♒♓ from `horoscope.sign`), `text`, and always the small
+   `disclaimer`; a badge "AI" or "Library" from `source`. If `needsBirthDate`: a friendly card "Add your birth date to
+   unlock your horoscope" → opens the profile.
+3. **Breathing**: choose one of `breathing[]`; a big circle that grows on `inhale`, holds on `hold`, shrinks on
+   `exhale`, with the countdown and round counter; timing purely client-side from `steps[].seconds` and `rounds`; Start/Stop;
+   respect `prefers-reduced-motion` (show numbers instead of animation). Add "Not medical advice; stop if dizzy".
+4. **Tip of the day**: `tip.text` with an icon per `tip.category`.
+5. **Mood**: the last 14 days from `mood.days` (emoji per day, gaps for no entry), `mood.streak` ("3 days in a row"),
+   a link to the journal. Empty state: "Write your first journal entry".
+States: loading skeleton, error + retry. The page needs no AI; the horoscope simply says `library` without it.
+
+### D. Steam widgets (`steam/*`)
+
+Three new catalog entries, drawn from `cachedData` (shapes in API.md):
+- `steam/profile`: avatar, name, a status dot (`online` green, `busy` red, `away`/`snooze` yellow, `offline` grey,
+  `looking_*` blue), the `currentGame` line when playing, level badge, "member since".
+- `steam/recent_games`: rows with `header`/`icon`, name, "12 h in the last 2 weeks · 340 h total" (minutes ÷ 60).
+- `steam/library_stats`: big numbers (`gameCount`, `totalHours`, "N never played"), and the `topGames` list.
+Form: one field `steamId`, with a "?" opening help entry `term-steam-id`. If the card stays empty, the reason is in
+the server log — common ones: no `STEAM_API_KEY` on the server, private profile ("Game details" must be Public).
+
+### E. Login / register: "Continue with Microsoft" (school account)
+
+Same pattern as GitHub: `<a href="/auth/microsoft/login">`, shown only when `GET /auth/microsoft/status` is
+`{ configured: true }`, on **both** login and register pages, with a one-line hint: "Use your school Microsoft
+account (@epitech.eu)". Failures come back as `/login?error=<message>`. In Profile → Connected accounts add a
+Microsoft row like the GitHub one (`/auth/microsoft` to link, `DELETE /auth/microsoft` to unlink, `microsoft` in
+`GET /auth/me`, and `?microsoft=linked` / `?microsoft_error=` after the round trip). The setup steps (registering
+the app in Microsoft Entra) are in API.md → *Microsoft sign-in*.
+
 ## Login / Register: "Continue with My Epitech" (spec — backend is done)
 
 Creating an account with My Epitech already works on the backend (`GET /auth/epitech/login`: first use
