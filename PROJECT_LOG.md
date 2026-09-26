@@ -136,7 +136,7 @@ me* (which deletes the pending account and closes that address to sign-ups for a
 confirms anything (mail scanners open links). The email itself is styled and trilingual. (2) The offline
 "mock" AI was refused in production so a demo can never show fake AI text; a real Gemini key is used instead.
 (3) Date of birth is collected at sign-up (validated, ≥ 13, optional on the API until the form asks for it)
-for a new **well-being** page (quote, horoscope, breathing, tips, mood streak). (4) **Steam** service added.
+for a **Well-being widget group** (quote of the day, did you know, horoscope — Morayo's idea was a group of widgets, not a page, so it is three ordinary widgets). (4) **Steam** service added.
 (5) A **Microsoft sign-in** restricted to one organisation (tenant-checked against email spoofing) as the
 self-service alternative to My Epitech's staff-only client registration — untested against the real
 Microsoft until the app is registered. The Epitech/Microsoft/GitHub-style sign-ins now share one accounts

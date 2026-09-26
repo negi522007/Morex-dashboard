@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SessionGuard } from '../auth/session.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -32,6 +32,7 @@ export class HelpdeskController {
   }
 
   @Post('ask')
+  @HttpCode(200)
   @UseGuards(SessionGuard)
   @ApiCookieAuth('dashboard_session')
   @ApiOperation({ summary: 'Ask the help assistant a question in plain words. Answers from the documentation only (AI when available, otherwise the best matching entry).' })

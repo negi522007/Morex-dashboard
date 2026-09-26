@@ -24,6 +24,11 @@ export class MailService {
       port,
       secure: port === 465,
       auth: user && pass ? { user, pass } : undefined,
+      // Fail fast instead of hanging a sign-up request for minutes when the mail server is slow or
+      // unreachable: the register call then answers 503 and can simply be retried.
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
     });
     this.from = this.config.get<string>('SMTP_FROM') ?? 'dashboard@localhost';
   }

@@ -313,7 +313,7 @@ preview with the existing widget preview) with an **Add** button that posts the 
 <service> first" instead; if `missingSecrets` is non-empty, open the normal form pre-filled so the user types
 those. Nothing is created without the click.
 
-## Confirmation page, birth date, well-being page, Steam, Microsoft (specs — backend done)
+## Confirmation page, birth date, well-being widgets, Steam, Microsoft (specs — backend done)
 
 ### A. The confirmation email page ("Is this you?")
 
@@ -338,27 +338,31 @@ Also on `/login`: show a friendly banner when the user arrives after confirming 
 
 - Register: add a **date field** "Date of birth" (native `<input type="date">`, `max` = today minus 13 years),
   required in the UI, sent as `birthDate: "YYYY-MM-DD"` in `POST /auth/register` (the API validates: real date, ≥ 13
-  years old; `400` messages are shown as is). One line under it: "Used only for your zodiac sign on the well-being
-  page. Never shown to anyone." (entry `guide-birthdate` in the help). When this ships, set `REQUIRE_BIRTH_DATE=true`.
+  years old; `400` messages are shown as is). One line under it: "Used only to work out your zodiac sign (to pre-select the
+  horoscope widget). Never shown to anyone." (entry `guide-birthdate` in the help). When this ships, set `REQUIRE_BIRTH_DATE=true`.
 - Profile: the same field, prefilled from `GET /auth/me` → `birthDate` (`null` = empty), saved with `PATCH /auth/me
   { birthDate }` (`null` clears it). Show `zodiac` next to it as a small badge. Users who signed up with
-  GitHub/Epitech/Microsoft have none: the well-being page invites them to add it (`needsBirthDate`).
+  GitHub/Epitech/Microsoft have none: the horoscope form simply has no pre-selected sign (see section C).
 
-### C. Well-being page ("Bien-être") — new route `/wellbeing` (sidebar item)
+### C. The "Well-being" group — three widgets (not a page)
 
-One call: `GET /wellbeing/today?lang=<ui language>` (see API.md → *Well-being*). Layout suggestion — a calm page using
-the current theme, cards:
-1. **Quote of the day**: `quote.text`, `quote.author`; a "Another quote" button (`?offset=n+1`, n in local state).
-2. **Horoscope**: sign name + glyph (♈♉♊♋♌♍♎♏♐♑♒♓ from `horoscope.sign`), `text`, and always the small
-   `disclaimer`; a badge "AI" or "Library" from `source`. If `needsBirthDate`: a friendly card "Add your birth date to
-   unlock your horoscope" → opens the profile.
-3. **Breathing**: choose one of `breathing[]`; a big circle that grows on `inhale`, holds on `hold`, shrinks on
-   `exhale`, with the countdown and round counter; timing purely client-side from `steps[].seconds` and `rounds`; Start/Stop;
-   respect `prefers-reduced-motion` (show numbers instead of animation). Add "Not medical advice; stop if dizzy".
-4. **Tip of the day**: `tip.text` with an icon per `tip.category`.
-5. **Mood**: the last 14 days from `mood.days` (emoji per day, gaps for no entry), `mood.streak` ("3 days in a row"),
-   a link to the journal. Empty state: "Write your first journal entry".
-States: loading skeleton, error + retry. The page needs no AI; the horoscope simply says `library` without it.
+New service group **Well-being / Bien-être** in the add-widget drawer (icon e.g. 🌿), with three cards. All free, no
+account (data shapes in API.md → *Well-being*): each `cachedData.text` holds `{ en, fr, es }` — **display the one for the
+interface language**.
+1. **Quote of the day / Citation du jour** (`wellbeing/daily_quote`): big serif quote, author underneath (a
+   subtle quotation-mark decoration; proverbs have author "Proverb" — translate that label).
+2. **Did you know? / Le saviez-vous ?** (`wellbeing/did_you_know`): a light-bulb icon, the fact, a small topic chip from `topic`
+   (nature, space, science, history, tech, body — translate the labels).
+3. **Horoscope** (`wellbeing/horoscope`): the sign glyph and name, the text, and **always** the `disclaimer`. A small badge
+   "Library" from `source`. When the widget's AI switch is on and `insight` exists (`kind: "horoscope"`), show
+   `insight.text` instead with an "AI" badge.
+   - **Form:** one required field `sign`, rendered as a dropdown fed by its `optionsUrl`
+     (`GET /services/wellbeing/signs?lang=<ui language>` → `[{ value, label, glyph, range }]`, show glyph + label + range).
+     **Pre-select `user.zodiac`** from `GET /auth/me` when it is not `null`; if it is `null` (no birth date yet), show a hint
+     "Add your birth date in your profile to pre-select your sign" with a link to the profile.
+Suggested default refresh rate for the three: 3600 s (they change once a day). The drawer preview can use sample data; the
+card itself always shows the widget's own `cachedData`. Help entries: `wellbeing`, `wellbeing/daily_quote`,
+`wellbeing/did_you_know`, `wellbeing/horoscope` (see the help assistant spec).
 
 ### D. Steam widgets (`steam/*`)
 

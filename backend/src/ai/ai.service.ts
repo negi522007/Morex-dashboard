@@ -145,7 +145,9 @@ export class AiService {
       },
       body: JSON.stringify({
         model: this.config.get<string>('AI_MODEL') || DEFAULT_OPENAI_MODEL,
-        max_tokens: maxTokens,
+        // A reasoning model spends part of the budget thinking before it writes the answer: without headroom
+        // the JSON gets cut off ("unterminated JSON"). Only when reasoning is configured.
+        max_tokens: this.config.get<string>('AI_REASONING_EFFORT') ? Math.min(maxTokens * 4 + 1024, 8192) : maxTokens,
         // Reasoning models (Gemini 3.x, gpt-oss…) spend part of max_tokens "thinking"; a low effort
         // keeps room for the JSON answer. Only sent when configured: plain models reject the field.
         ...(this.config.get<string>('AI_REASONING_EFFORT') ? { reasoning_effort: this.config.get<string>('AI_REASONING_EFFORT') } : {}),

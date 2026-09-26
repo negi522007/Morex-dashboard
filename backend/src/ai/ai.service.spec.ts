@@ -67,7 +67,10 @@ describe('AiService', () => {
     await make({ AI_PROVIDER: 'openai-compatible', AI_API_KEY: 'k' }).svc.forUser('u').completeJson({ system: 's', user: 'u' });
     expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).not.toHaveProperty('reasoning_effort');
     await make({ AI_PROVIDER: 'openai-compatible', AI_API_KEY: 'k', AI_REASONING_EFFORT: 'low' }).svc.forUser('u').completeJson({ system: 's', user: 'u' });
-    expect(JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string).reasoning_effort).toBe('low');
+    const withEffort = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
+    expect(withEffort.reasoning_effort).toBe('low');
+    expect(withEffort.max_tokens).toBeGreaterThan(800); // headroom for the model's thinking
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string).max_tokens).toBe(800);
   });
 
   it('stops at the daily cap without calling the provider', async () => {

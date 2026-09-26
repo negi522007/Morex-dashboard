@@ -21,6 +21,8 @@ import { YoutubeModule } from './youtube/youtube.module';
 import { YoutubeProvider } from './youtube/youtube.provider';
 import { SteamModule } from './steam/steam.module';
 import { SteamProvider } from './steam/steam.provider';
+import { WellbeingModule } from './wellbeing/wellbeing.module';
+import { WellbeingProvider } from './wellbeing/wellbeing.provider';
 
 // @Global so AboutModule (about.json) and TimerModule (the scheduler) can
 // both inject the same registry without re-declaring it. Adding a new
@@ -28,7 +30,7 @@ import { SteamProvider } from './steam/steam.provider';
 // below, and add it to the returned array — nothing else changes.
 @Global()
 @Module({
-  imports: [RssModule, MarketDataModule, GithubModule, WorldclockModule, WeatherModule, CalendarModule, EpitechModule, CustomApiModule, YoutubeModule, SteamModule],
+  imports: [RssModule, MarketDataModule, GithubModule, WorldclockModule, WeatherModule, CalendarModule, EpitechModule, CustomApiModule, YoutubeModule, SteamModule, WellbeingModule],
   providers: [
     {
       provide: SERVICE_PROVIDERS,
@@ -43,10 +45,11 @@ import { SteamProvider } from './steam/steam.provider';
         customApi: CustomApiProvider,
         youtube: YoutubeProvider,
         steam: SteamProvider,
-      ): ServiceProvider[] => [rss, marketData, github, worldclock, weather, calendar, epitech, customApi, youtube, steam],
+        wellbeing: WellbeingProvider,
+      ): ServiceProvider[] => [rss, marketData, github, worldclock, weather, calendar, epitech, customApi, youtube, steam, wellbeing],
       inject: [
         RssProvider, MarketDataProvider, GithubProvider, WorldclockProvider, WeatherProvider,
-        CalendarProvider, EpitechProvider, CustomApiProvider, YoutubeProvider, SteamProvider,
+        CalendarProvider, EpitechProvider, CustomApiProvider, YoutubeProvider, SteamProvider, WellbeingProvider,
       ],
     },
   ],

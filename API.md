@@ -71,7 +71,7 @@ Public. Body:
   "birthDate": "2001-02-28"
 }
 ```
-`birthDate` (`YYYY-MM-DD`, at least 13 years old) is used only to compute the zodiac sign for the well-being page (see *Well-being*). It is accepted and validated now, and made mandatory by setting `REQUIRE_BIRTH_DATE=true` on the server once the register form asks for it (`400` otherwise). Accounts created with GitHub / My Epitech / Microsoft have none until the user adds it via `PATCH /auth/me { birthDate }` (`null` removes it).
+`birthDate` (`YYYY-MM-DD`, at least 13 years old) is used only to compute the zodiac sign, which pre-selects the horoscope widget (see *Well-being*). It is accepted and validated now, and made mandatory by setting `REQUIRE_BIRTH_DATE=true` on the server once the register form asks for it (`400` otherwise). Accounts created with GitHub / My Epitech / Microsoft have none until the user adds it via `PATCH /auth/me { birthDate }` (`null` removes it).
 
 `firstName`/`lastName` are **required**. Editable later via `PATCH /auth/me` (see below).
 
@@ -543,28 +543,28 @@ This flow is tested here against a simulated Microsoft (signatures, tenant and d
 creation/linking); it has **not** been run against the real Microsoft login, which needs your app
 registration — so do the first real sign-in yourself before the defense.
 
-## Well-being
+## Well-being (a group of three widgets)
 
-🔒 `GET /wellbeing/today?lang=&offset=` — everything for a calm daily page, in the user's language
-(`lang` overrides). `offset` (0–1000) moves the quote on ("another quote").
+Not a page: a **service group "Well-being"** (`wellbeing` in `/about.json`) with three free widgets you add like any
+other — a quote, a fact and a horoscope. No account, no key, no server setup.
 
-```json
-{ "date": "2026-09-26", "language": "fr",
-  "quote": { "text": "…", "author": "Lao Tzu", "original": "…English…" },
-  "tip": { "category": "hydration|movement|eyes|sleep|focus|mind|social", "text": "…" },
-  "breathing": [ { "id": "box", "name": "Respiration carrée", "rounds": 4, "why": "…",
-                   "steps": [ { "type": "inhale|hold|exhale", "seconds": 4 } ] } ],
-  "horoscope": { "sign": "gemini", "forDate": "2026-09-26", "text": "…", "source": "ai|library", "disclaimer": "…" },
-  "needsBirthDate": false,
-  "mood": { "days": [ { "date": "2026-09-25", "mood": "🙂" } ], "counts": { "🙂": 3 }, "streak": 2 } }
-```
-- **Quotes** are real, attributed sayings (a few are proverbs) in three languages; one per day, stable all day.
-- **Horoscope** is `null` with `needsBirthDate: true` until the user has a birth date (profile). It is for fun and
-  says so (`disclaimer`): `source: "ai"` = written by the model for the *sign only* (the birth date is never
-  sent), shared between all users of that sign for the day; `source: "library"` = built from a fixed set of
-  sentences when AI is off — always show which one.
-- **Breathing**: run the timer client-side from `steps` × `rounds` (animate a circle; label steps from the `type`).
-- **Mood** reads only the mood and date of the user's journal entries (never the text).
+| Widget | Params | `cachedData` |
+|---|---|---|
+| `wellbeing/daily_quote` (Quote of the day / Citation du jour) | none | `{ date, author, text: { en, fr, es } }` — a real, attributed quote (a few are proverbs); one per day |
+| `wellbeing/did_you_know` (Did you know? / Le saviez-vous ?) | none | `{ date, topic: "nature"\|"space"\|"science"\|"history"\|"tech"\|"body", text: { en, fr, es } }` — a short, well-established fact; one per day |
+| `wellbeing/horoscope` | `sign` (required; has `optionsUrl: "/services/wellbeing/signs"`) | `{ sign, forDate, text: { en, fr, es }, source: "library", disclaimer: { en, fr, es } }` |
+
+- **Language:** the three texts are all in `cachedData`; **show the one for the interface language** (`user.language` / the
+  UI switch), so switching language needs no refetch.
+- **Refresh rate:** the content changes once a day; suggest ≥ 1 hour (the minimum the API accepts is 10 s).
+- **Horoscope:** it is for fun and says so (`disclaimer`, always show it). The base text is built from a fixed set of sentences
+  (`source: "library"`, say so with a small label). With **AI analysis** switched on for the widget (`aiEnabled`), `insight`
+  becomes `{ kind: "horoscope", sign, forDate, text, source: "ai", language, disclaimer }` — a freshly written text for the
+  sign, in the user's language, shared by every user of that sign for the day; only the sign and the date are sent to the
+  model, never the birth date. Show `insight.text` (badge "AI") when present, otherwise `cachedData.text[lang]`.
+- **Which sign?** `GET /auth/me` → `zodiac` (derived from the birth date given at sign-up or in the profile) is the natural default:
+  pre-select it in the add-widget form; a user without a birth date picks any sign from the list.
+- `GET /services/wellbeing/signs?lang=fr` 🔒 → `[{ value: "gemini", label: "Gémeaux", glyph: "♊", range: "05-21 → 06-20" }]` for that dropdown.
 
 ## Alerts
 
@@ -789,7 +789,7 @@ backend; only the wiring is left on the frontend side.
 
 **Dev proxy:** every backend route prefix must be in `frontend/vite.config.ts`'s proxy list. Beyond `/auth`,
 `/widgets` and `/about.json`, add: **`/journal`, `/services`, `/uploads`, `/ai`, `/brief`, `/assistant`,
-`/alerts`, `/share`, `/public`, `/helpdesk`, `/wellbeing`** — otherwise Vite answers with its own `index.html` (HTTP 200) and the page
+`/alerts`, `/share`, `/public`, `/helpdesk`** — otherwise Vite answers with its own `index.html` (HTTP 200) and the page
 gets HTML where it expects JSON (this caused a white page once already). Note `/public/…` here is the
 *API*; pick a different name for the frontend's own share page route (e.g. `/s/:token`) so the proxy
 doesn't swallow it.

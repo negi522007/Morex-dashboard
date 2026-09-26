@@ -34,10 +34,11 @@ automatically at a user-defined interval.
 | Calendar | No (secret iCal URL) | ✅ Done | `upcoming_events` (url, days, number) — Google Calendar's secret iCal address or any `.ics` |
 | My Epitech | Optional ("Connect with My Epitech", OIDC) | ✅ Done* | `planning` (calendarToken), `profile` — *login needs Epitech staff to declare the app, see API.md |
 | Custom API | No | ✅ Done | `json_value`, `json_list` — any public JSON API, chosen with a URL + path |
+| Well-being | No | ✅ Done | `daily_quote`, `did_you_know`, `horoscope` (sign) — written in EN/FR/ES, horoscope labelled "for fun" |
 | Steam | Server API key (`STEAM_API_KEY`) | ✅ Done | `profile`, `recent_games`, `library_stats` (steamId — public profiles) |
 | Maps / Cinema | API key | ⏳ Not started | — |
 
-**Beyond widgets** (all documented in [API.md](./API.md)): a **well-being page** (daily quote, horoscope, breathing exercises, tips, mood streak), an "Is this you?" **confirmation page** with a "not me" option, **sign-in with a school Microsoft account**, a **help assistant** that explains the app, each service and the technical vocabulary in plain words (English/French/Spanish, works with or without AI), optional **AI** (article recaps with images,
+**Beyond widgets** (all documented in [API.md](./API.md)): a **Well-being** widget group (quote of the day, "did you know?", horoscope), an "Is this you?" **confirmation page** with a "not me" option, **sign-in with a school Microsoft account**, a **help assistant** that explains the app, each service and the technical vocabulary in plain words (English/French/Spanish, works with or without AI), optional **AI** (article recaps with images,
 per-widget insights, a daily brief, a natural-language widget assistant — off unless `AI_PROVIDER`/`AI_API_KEY`
 are set, opt-in per widget, never touches the journal), **threshold alerts** (in-app + email), **value
 history** for charts, a **read-only public share link**, and **SSRF protection** on every user-supplied URL
@@ -203,7 +204,7 @@ important, what isn't and why.
 - [x] Backend: AI enrichment, calendar/Epitech/custom-API services, alerts, history, share link, My Epitech OIDC, SSRF guard (see API.md; frontend adaptation checklist at the end of it)
 - [ ] Get the app declared by Epitech staff (OIDC client id/secret) — needed before "Connect with My Epitech" works
 - [x] Steam service
-- [x] Backend: "Is this you?" confirmation page, birth date at sign-up, well-being data (quote, horoscope, breathing, tips, moods), Microsoft sign-in (see API.md)
+- [x] Backend: "Is this you?" confirmation page, birth date at sign-up, Well-being widgets (quote of the day, did you know, horoscope), Microsoft sign-in (see API.md)
 - [ ] Services: Maps/Cinema
 - [ ] Frontend: apply the Morex mockup (`frontend/public/mockups.html`) — Morayo; the backend side is done, see "Backing the Morex mockup" in [API.md](./API.md)
 - [ ] Frontend: Terms of Service/Privacy Policy acceptance, in-app docs page
