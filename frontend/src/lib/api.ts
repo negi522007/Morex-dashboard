@@ -8,10 +8,12 @@ export class ApiError extends Error {
 }
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  // A FormData body (photo upload) must let the browser set its own multipart Content-Type
+  const isForm = options.body instanceof FormData
   const res = await fetch(path, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(options.headers ?? {}) },
     ...options,
+    headers: { ...(isForm ? {} : { 'Content-Type': 'application/json' }), ...(options.headers ?? {}) },
   })
 
   const contentType = res.headers.get('content-type') ?? ''
@@ -25,4 +27,12 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   }
 
   return body as T
+}
+
+// Small helpers so components read like the REST calls they make
+export const api = {
+  get: <T>(path: string) => apiFetch<T>(path),
+  post: <T>(path: string, body?: unknown) => apiFetch<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) }),
+  patch: <T>(path: string, body: unknown) => apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
+  del: (path: string) => apiFetch<void>(path, { method: 'DELETE' }),
 }

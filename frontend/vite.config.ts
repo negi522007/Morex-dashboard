@@ -10,6 +10,8 @@ export default defineConfig({
       '/auth': 'http://localhost:8080',
       '/widgets': 'http://localhost:8080',
       '/about.json': 'http://localhost:8080',
+      '/journal': 'http://localhost:8080',
+      '/uploads': 'http://localhost:8080',
     },
   },
 })
