@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { fetchWithTimeout } from '../../common/fetch-timeout.util';
 import { ConfigService } from '@nestjs/config';
 import { ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
 
@@ -147,15 +148,11 @@ export class YoutubeProvider implements ServiceProvider {
     const key = this.config.get<string>('YOUTUBE_API_KEY');
     if (!key) throw new ServiceFetchError('youtube', widgetName, 'YouTube is not configured on the server (YOUTUBE_API_KEY)');
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     let res: Response;
     try {
-      res = await fetch(`${API_URL}${path}?${new URLSearchParams({ ...params, key })}`, { signal: controller.signal });
+      res = await fetchWithTimeout(`${API_URL}${path}?${new URLSearchParams({ ...params, key })}`, {}, FETCH_TIMEOUT_MS);
     } catch (err) {
       throw new ServiceFetchError('youtube', widgetName, `Could not reach YouTube: ${(err as Error).message}`);
-    } finally {
-      clearTimeout(timeout);
     }
     if (!res.ok) {
       // 403 is usually the daily quota or a key restricted to other APIs

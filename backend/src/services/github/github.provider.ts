@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { fetchWithTimeout } from '../../common/fetch-timeout.util';
 import { UNTRUSTED_RULES, clip, languageName } from '../../ai/ai.service';
 import { ServiceAuthContext, ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
 
@@ -27,8 +28,6 @@ function parsePerPage(config: Record<string, string | number>): number {
 // nestjs/nest works). Widgets configured against a private repo will error
 // — expected given the scope, not a bug.
 async function githubGet(path: string, auth: ServiceAuthContext | undefined, widgetName: string): Promise<any> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
     'User-Agent': 'dashboard-app',
@@ -37,11 +36,9 @@ async function githubGet(path: string, auth: ServiceAuthContext | undefined, wid
 
   let res: Response;
   try {
-    res = await fetch(`https://api.github.com${path}`, { headers, signal: controller.signal });
+    res = await fetchWithTimeout(`https://api.github.com${path}`, { headers }, FETCH_TIMEOUT_MS);
   } catch (err) {
     throw new ServiceFetchError('github', widgetName, `Could not reach GitHub API: ${(err as Error).message}`);
-  } finally {
-    clearTimeout(timeout);
   }
   if (!res.ok) {
     throw new ServiceFetchError('github', widgetName, `GitHub API returned HTTP ${res.status}`);

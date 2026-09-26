@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { fetchWithTimeout } from '../../common/fetch-timeout.util';
 import { UNTRUSTED_RULES, clip, languageName } from '../../ai/ai.service';
 import { EnrichContext, ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
 
@@ -23,15 +24,11 @@ export function conditionOf(code: number): string {
 }
 
 async function fetchJson(url: string, widgetName: string): Promise<any> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   let res: Response;
   try {
-    res = await fetch(url, { signal: controller.signal });
+    res = await fetchWithTimeout(url, {}, FETCH_TIMEOUT_MS);
   } catch (err) {
     throw new ServiceFetchError('weather', widgetName, `Could not reach the weather API: ${(err as Error).message}`);
-  } finally {
-    clearTimeout(timeout);
   }
   if (!res.ok) throw new ServiceFetchError('weather', widgetName, `Weather API returned HTTP ${res.status}`);
   return res.json();

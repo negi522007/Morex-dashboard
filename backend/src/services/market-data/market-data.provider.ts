@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { fetchWithTimeout } from '../../common/fetch-timeout.util';
 import { ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
 import { TtlCache } from '../../common/ttl-cache.util';
 
@@ -14,15 +15,11 @@ const HISTORY_TTL_MS = 10 * 60_000;
 const FIAT_TTL_MS = 60 * 60_000; // ECB publishes once a day
 
 async function fetchJsonUncached(url: string, widgetName: string): Promise<any> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   let res: Response;
   try {
-    res = await fetch(url, { signal: controller.signal });
+    res = await fetchWithTimeout(url, {}, FETCH_TIMEOUT_MS);
   } catch (err) {
     throw new ServiceFetchError('market_data', widgetName, `Could not reach market data API: ${(err as Error).message}`);
-  } finally {
-    clearTimeout(timeout);
   }
   if (!res.ok) {
     throw new ServiceFetchError('market_data', widgetName, `Market data API returned HTTP ${res.status}`);
@@ -55,15 +52,11 @@ async function fetchFiatSeriesUncached(base: string, quote: string, days: number
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   const url = `https://api.frankfurter.dev/v1/${iso(start)}..${iso(end)}?base=${base.toUpperCase()}&symbols=${quote.toUpperCase()}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   let res: Response;
   try {
-    res = await fetch(url, { signal: controller.signal });
+    res = await fetchWithTimeout(url, {}, FETCH_TIMEOUT_MS);
   } catch (err) {
     throw new ServiceFetchError('market_data', 'exchange_rate', `Could not reach market data API: ${(err as Error).message}`);
-  } finally {
-    clearTimeout(timeout);
   }
   if (res.status === 404 || res.status === 422) return null;
   if (!res.ok) {
