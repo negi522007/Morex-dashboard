@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch, ApiError } from '../lib/api'
 import { PasswordInput } from '../components/PasswordInput'
-import { Logo } from '../components/Logo'
+import { AuthLayout, glassInputClass, glassLabelClass } from '../components/AuthLayout'
 
 export function RegisterPage() {
   const [firstName, setFirstName] = useState('')
@@ -43,124 +43,107 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl ring-1 ring-black/5">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 w-fit">
-            <Logo />
-          </div>
-          <h1 className="text-xl font-semibold text-gray-900">
-            {submitted ? 'Check your inbox' : 'Create your account'}
-          </h1>
-          {!submitted && <p className="mt-1 text-sm text-gray-500">Start building your dashboard.</p>}
-        </div>
-
-        {submitted ? (
-          <p className="text-center text-sm text-gray-600">
-            We sent a confirmation link to <strong className="text-gray-900">{email}</strong>. Click it to
-            activate your account, then{' '}
-            <Link to="/login" className="font-medium text-blue-600 hover:underline">
-              log in
-            </Link>
-            .
-          </p>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="firstName" className="mb-1 block text-sm font-medium text-gray-700">
-                  First name
-                </label>
-                <input
-                  id="firstName"
-                  type="text"
-                  required
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Ada"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label htmlFor="lastName" className="mb-1 block text-sm font-medium text-gray-700">
-                  Last name
-                </label>
-                <input
-                  id="lastName"
-                  type="text"
-                  required
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Lovelace"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none"
-                />
-              </div>
-            </div>
-
+    <AuthLayout
+      title={submitted ? 'Check your inbox' : 'Sign up'}
+      subtitle={submitted ? undefined : 'Create your account and start exploring'}
+      switchPrompt="Already a member?"
+      switchLabel="Sign in"
+      switchTo="/login"
+    >
+      {submitted ? (
+        <p className="text-base leading-relaxed text-white/80">
+          We sent a confirmation link to <strong className="text-white">{email}</strong>. Click it to activate
+          your account, then{' '}
+          <Link to="/login" className="font-medium text-sky-300 hover:underline">
+            log in
+          </Link>
+          .
+        </p>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
-                Email
+              <label htmlFor="firstName" className={glassLabelClass}>
+                First name
               </label>
               <input
-                id="email"
-                type="email"
+                id="firstName"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Ada"
+                className={glassInputClass}
               />
             </div>
-
             <div>
-              <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
-                Password
+              <label htmlFor="lastName" className={glassLabelClass}>
+                Last name
               </label>
-              <PasswordInput
-                id="password"
+              <input
+                id="lastName"
+                type="text"
                 required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Lovelace"
+                className={glassInputClass}
               />
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-gray-700">
-                Confirm password
-              </label>
-              <PasswordInput
-                id="confirmPassword"
-                required
-                minLength={8}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Type it again"
-              />
-            </div>
+          <div>
+            <label htmlFor="email" className={glassLabelClass}>
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className={glassInputClass}
+            />
+          </div>
 
-            {error && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-            )}
+          <div>
+            <label htmlFor="password" className={glassLabelClass}>
+              Password
+            </label>
+            <PasswordInput
+              id="password"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 8 characters"
+            />
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+          <div>
+            <label htmlFor="confirmPassword" className={glassLabelClass}>
+              Confirm password
+            </label>
+            <PasswordInput
+              id="confirmPassword"
+              required
+              minLength={8}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Type it again"
+            />
+          </div>
+
+          {error && <p className="rounded-2xl border border-red-300/30 bg-red-500/15 px-5 py-3 text-sm text-red-100">{error}</p>}
+
+          <div className="pt-2">
+            <button type="submit" disabled={loading} className="w-full rounded-full bg-white py-4 text-base font-semibold text-indigo-950 shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:bg-indigo-50 hover:shadow-indigo-400/40 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0">
               {loading ? 'Creating account…' : 'Create account'}
             </button>
-
-            <p className="text-center text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link to="/login" className="font-medium text-blue-600 hover:underline">
-                Log in
-              </Link>
-            </p>
-          </form>
-        )}
-      </div>
-    </div>
+          </div>
+        </form>
+      )}
+    </AuthLayout>
   )
 }
