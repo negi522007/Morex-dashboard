@@ -212,6 +212,18 @@ Also show the empty and loading states (the same standard as the dashboard, see 
 **Not in scope:** promoting/demoting admins, changing a user's password or email (no endpoints, by design),
 and viewing anyone's widgets or journal (the admin API never exposes private content; keep it that way).
 
+## Login / Register: "Continue with My Epitech" (spec — backend is done)
+
+Creating an account with My Epitech already works on the backend (`GET /auth/epitech/login`: first use
+creates the account, already email-verified; a matching verified email attaches to the existing account).
+Only the button is missing. `LoginPage` has "Continue with GitHub" (`<a href="/auth/github/login">`); add
+next to it, on **both** the login and register pages, **"Continue with My Epitech"** →
+`<a href="/auth/epitech/login">` (a real navigation, never `fetch`). Show it only when
+`GET /auth/epitech/status` answers `{ "configured": true }` (Epitech staff must declare the app first, see
+API.md → My Epitech) — otherwise the button would lead to an error. Failures come back as
+`/login?error=<message>`, which the login page already displays. Explain in one line under the button that
+the sign-in happens with the student's Microsoft account on Epitech's page.
+
 ## Profile → "Connected accounts" (spec — backend is done, this section is missing from the profile)
 
 The profile modal has no way to link or unlink GitHub / My Epitech: today the only entry point is the
