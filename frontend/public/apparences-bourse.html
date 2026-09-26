@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex market widgets</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root { --a1: #818cf8; --a2: #38bdf8; --glow: 99 102 241; --up: #34d399; --down: #f87171; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .62), rgb(15 12 50 / .8)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 36px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .65); margin: 8px auto 6px; max-width: 820px; }
+  section { max-width: 1250px; margin: 0 auto; padding: 26px 20px 8px; }
+  h2 { font-size: 19px; font-weight: 600; margin: 0 0 14px; } h2 code { font-size: 12px; font-weight: 400; color: rgb(255 255 255 / .55); margin-left: 8px; }
+  .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  @media (max-width: 1000px) { .row { grid-template-columns: 1fr; } }
+  .opt { min-width: 0; } .opt > p { margin: 10px 0 0; font-size: 13px; color: rgb(255 255 255 / .65); } .opt > p b { color: #fff; }
+  .card { position: relative; overflow: hidden; border-radius: 24px; padding: 18px; height: 290px; display: flex; flex-direction: column; gap: 8px;
+    background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); backdrop-filter: blur(22px); }
+  .s { font-size: 11.5px; color: rgb(255 255 255 / .6); } .tab { font-variant-numeric: tabular-nums; }
+  .big { font-size: 40px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+  .pill.up { background: rgb(52 211 153 / .15); color: var(--up); } .pill.down { background: rgb(248 113 113 / .15); color: var(--down); }
+  svg.chart { width: 100%; flex: 1; min-height: 70px; overflow: visible; display: block; }
+  .mm { display: flex; justify-content: space-between; font-size: 11px; color: rgb(255 255 255 / .55); }
+  .coin { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; font-weight: 800; flex: none; color: #7c2d12;
+    background: radial-gradient(circle at 35% 30%, #fde68a, #f59e0b 70%); box-shadow: 0 0 24px rgb(245 158 11 / .55); animation: spinY 4s linear infinite; }
+  @keyframes spinY { to { transform: rotateY(360deg); } }
+  /* hover layer */
+  .hover { position: relative; flex: 1; min-height: 70px; display: flex; }
+  .tip { position: absolute; pointer-events: none; transform: translate(-50%, -115%); padding: 5px 9px; border-radius: 10px; font-size: 11px; white-space: nowrap;
+    background: rgb(15 23 42 / .92); border: 1px solid rgb(255 255 255 / .15); opacity: 0; transition: opacity .15s; }
+  .hover:hover .tip { opacity: 1; }
+  /* fx 2 ticker */
+  .ticker { display: flex; align-items: center; gap: 10px; font-family: 'JetBrains Mono', monospace; }
+  .periods { display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: rgb(255 255 255 / .06); align-self: flex-start; }
+  .periods span { font-size: 11px; padding: 4px 10px; border-radius: 999px; color: rgb(255 255 255 / .6); }
+  .periods span.on { background: #fff; color: #111; font-weight: 600; }
+  /* fx 3 range gauge */
+  .gauge { position: relative; height: 10px; border-radius: 999px; background: linear-gradient(90deg, var(--down), #fbbf24, var(--up)); margin: 30px 4px 6px; }
+  .gauge .cursor { position: absolute; top: 50%; width: 22px; height: 22px; border-radius: 50%; background: #fff; transform: translate(-50%, -50%); box-shadow: 0 0 0 4px rgb(255 255 255 / .25), 0 4px 12px rgb(0 0 0 / .5); }
+  .gauge .lbl { position: absolute; bottom: 20px; transform: translateX(-50%); font-size: 12px; font-weight: 700; white-space: nowrap; }
+  /* price 3 heat */
+  .heat { flex: 1; display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; align-content: center; }
+  .heat i { aspect-ratio: 1; border-radius: 5px; position: relative; }
+  .heat i:hover::after { content: attr(data-t); position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 10px; font-style: normal; padding: 3px 7px; border-radius: 6px; background: #0f172a; z-index: 2; }
+  .legend { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: rgb(255 255 255 / .55); }
+  .legend b { display: inline-block; width: 60px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--down), rgb(255 255 255 / .1), var(--up)); vertical-align: middle; margin: 0 6px; }
+</style>
+</head>
+<body>
+<h1>Bourse (Market data), 3 propositions par widget</h1>
+<p class="lead">Avec les vraies données renvoyées par le backend. Passe la souris sur les courbes pour voir la valeur à chaque instant</p>
+<div id="app"></div>
+<script>
+const FX = {"max": 76276.8765579455, "min": 69893.73822580682, "asOf": "2026-09-25T14:45:10.255Z", "base": "bitcoin", "days": 7, "rate": 73520, "quote": "eur", "history": [{"price": 70583.60773502233, "timestamp": "2026-09-18T15:00:00.000Z"}, {"price": 70442.78331501258, "timestamp": "2026-09-18T17:00:00.000Z"}, {"price": 70465.45311675326, "timestamp": "2026-09-18T19:00:00.000Z"}, {"price": 70617.67825873483, "timestamp": "2026-09-18T21:00:00.000Z"}, {"price": 70613.35162788923, "timestamp": "2026-09-18T23:00:00.000Z"}, {"price": 71032.45330674342, "timestamp": "2026-09-19T01:00:00.000Z"}, {"price": 70745.16692052121, "timestamp": "2026-09-19T03:00:00.000Z"}, {"price": 70499.10752739848, "timestamp": "2026-09-19T05:00:00.000Z"}, {"price": 70528.18231606734, "timestamp": "2026-09-19T07:00:00.000Z"}, {"price": 70784.64373161347, "timestamp": "2026-09-19T09:00:00.000Z"}, {"price": 70740.55654258735, "timestamp": "2026-09-19T11:00:00.000Z"}, {"price": 70828.32197370147, "timestamp": "2026-09-19T13:00:00.000Z"}, {"price": 71037.17154654118, "timestamp": "2026-09-19T15:00:00.000Z"}, {"price": 71275.59959290674, "timestamp": "2026-09-19T17:00:00.000Z"}, {"price": 70918.3309798157, "timestamp": "2026-09-19T19:00:00.000Z"}, {"price": 70657.20947881414, "timestamp": "2026-09-19T21:00:00.000Z"}, {"price": 70761.02265161488, "timestamp": "2026-09-19T23:00:00.000Z"}, {"price": 70796.67180662094, "timestamp": "2026-09-20T01:00:00.000Z"}, {"price": 69932.79493184453, "timestamp": "2026-09-20T03:00:00.000Z"}, {"price": 70039.88924966798, "timestamp": "2026-09-20T05:00:00.000Z"}, {"price": 69935.631719041, "timestamp": "2026-09-20T07:00:00.000Z"}, {"price": 69893.73822580682, "timestamp": "2026-09-20T09:00:00.000Z"}, {"price": 69946.49492046898, "timestamp": "2026-09-20T11:00:00.000Z"}, {"price": 70085.08422664355, "timestamp": "2026-09-20T13:00:00.000Z"}, {"price": 70260.8912865166, "timestamp": "2026-09-20T15:00:00.000Z"}, {"price": 70825.29318754953, "timestamp": "2026-09-20T17:00:00.000Z"}, {"price": 70601.20266050723, "timestamp": "2026-09-20T19:00:00.000Z"}, {"price": 70584.27031484556, "timestamp": "2026-09-20T21:00:00.000Z"}, {"price": 70726.60630424402, "timestamp": "2026-09-20T23:00:00.000Z"}, {"price": 71068.76846005497, "timestamp": "2026-09-21T01:00:00.000Z"}, {"price": 70831.04448150635, "timestamp": "2026-09-21T03:00:00.000Z"}, {"price": 70917.7430788791, "timestamp": "2026-09-21T05:00:00.000Z"}, {"price": 71128.92981558645, "timestamp": "2026-09-21T07:00:00.000Z"}, {"price": 72936.95466647488, "timestamp": "2026-09-21T09:00:00.000Z"}, {"price": 73516.86455973964, "timestamp": "2026-09-21T11:00:00.000Z"}, {"price": 74253.20702538782, "timestamp": "2026-09-21T13:00:00.000Z"}, {"price": 74806.15788634842, "timestamp": "2026-09-21T15:00:00.000Z"}, {"price": 74967.33729407856, "timestamp": "2026-09-21T17:00:00.000Z"}, {"price": 75058.16409826472, "timestamp": "2026-09-21T19:00:00.000Z"}, {"price": 75862.70748998995, "timestamp": "2026-09-21T21:00:00.000Z"}, {"price": 75381.03132169892, "timestamp": "2026-09-21T23:00:00.000Z"}, {"price": 74898.49342736775, "timestamp": "2026-09-22T01:00:00.000Z"}, {"price": 74718.01161101476, "timestamp": "2026-09-22T03:00:00.000Z"}, {"price": 74418.41052191016, "timestamp": "2026-09-22T05:00:00.000Z"}, {"price": 74453.54852055866, "timestamp": "2026-09-22T07:00:00.000Z"}, {"price": 75217.65513374483, "timestamp": "2026-09-22T09:00:00.000Z"}, {"price": 74912.99537891193, "timestamp": "2026-09-22T11:00:00.000Z"}, {"price": 75067.12238785948, "timestamp": "2026-09-22T13:00:00.000Z"}, {"price": 75336.50399858892, "timestamp": "2026-09-22T15:00:00.000Z"}, {"price": 75539.7162369283, "timestamp": "2026-09-22T17:00:00.000Z"}, {"price": 75577.55114131465, "timestamp": "2026-09-22T19:00:00.000Z"}, {"price": 75334.24342864777, "timestamp": "2026-09-22T21:00:00.000Z"}, {"price": 75234.51582497521, "timestamp": "2026-09-22T23:00:00.000Z"}, {"price": 75525.75547521333, "timestamp": "2026-09-23T01:00:00.000Z"}, {"price": 75677.82714857227, "timestamp": "2026-09-23T03:00:00.000Z"}, {"price": 76276.8765579455, "timestamp": "2026-09-23T05:00:00.000Z"}, {"price": 75683.01287234243, "timestamp": "2026-09-23T07:00:00.000Z"}, {"price": 75224.94604281381, "timestamp": "2026-09-23T09:00:00.000Z"}, {"price": 75248.95714675555, "timestamp": "2026-09-23T11:00:00.000Z"}, {"price": 74924.34375064388, "timestamp": "2026-09-23T13:00:00.000Z"}, {"price": 74082.6790306288, "timestamp": "2026-09-23T15:00:00.000Z"}, {"price": 73876.28572532335, "timestamp": "2026-09-23T17:00:00.000Z"}, {"price": 74064.4303300458, "timestamp": "2026-09-23T19:00:00.000Z"}, {"price": 73985.9206639162, "timestamp": "2026-09-23T21:00:00.000Z"}, {"price": 74265.12443711188, "timestamp": "2026-09-23T23:00:00.000Z"}, {"price": 74104.91392795926, "timestamp": "2026-09-24T01:00:00.000Z"}, {"price": 74094.72264464275, "timestamp": "2026-09-24T03:00:00.000Z"}, {"price": 73806.48778541564, "timestamp": "2026-09-24T05:00:00.000Z"}, {"price": 73855.29144478215, "timestamp": "2026-09-24T07:00:00.000Z"}, {"price": 73463.42913851315, "timestamp": "2026-09-24T09:00:00.000Z"}, {"price": 73427.45998690728, "timestamp": "2026-09-24T11:00:00.000Z"}, {"price": 73495.07738938372, "timestamp": "2026-09-24T13:00:00.000Z"}, {"price": 73473.55083971455, "timestamp": "2026-09-24T15:00:00.000Z"}, {"price": 74179.19172323863, "timestamp": "2026-09-24T17:00:00.000Z"}, {"price": 74255.45120570235, "timestamp": "2026-09-24T19:00:00.000Z"}, {"price": 74103.7442747012, "timestamp": "2026-09-24T21:00:00.000Z"}, {"price": 74046.8719972067, "timestamp": "2026-09-24T23:00:00.000Z"}, {"price": 74344.62198923618, "timestamp": "2026-09-25T01:00:00.000Z"}, {"price": 74036.2169964288, "timestamp": "2026-09-25T03:00:00.000Z"}, {"price": 74031.99934819127, "timestamp": "2026-09-25T05:00:00.000Z"}, {"price": 73795.98213331932, "timestamp": "2026-09-25T07:00:00.000Z"}, {"price": 74083.62505917372, "timestamp": "2026-09-25T09:00:00.000Z"}, {"price": 74319.22227087863, "timestamp": "2026-09-25T11:00:00.000Z"}, {"price": 74060.19719867251, "timestamp": "2026-09-25T13:00:00.000Z"}, {"price": 73565.92092781846, "timestamp": "2026-09-25T14:38:40.000Z"}], "changePct": 4.160161770139555}, PH = [{"price": 77778.81759411356, "timestamp": "2026-08-26T15:00:00.000Z"}, {"price": 78717.16727941387, "timestamp": "2026-08-27T03:00:00.000Z"}, {"price": 80190.32101475948, "timestamp": "2026-08-27T15:00:00.000Z"}, {"price": 79935.57059402476, "timestamp": "2026-08-28T03:00:00.000Z"}, {"price": 79607.76745531596, "timestamp": "2026-08-28T15:00:00.000Z"}, {"price": 77669.86720102842, "timestamp": "2026-08-29T03:00:00.000Z"}, {"price": 78010.76127895089, "timestamp": "2026-08-29T15:00:00.000Z"}, {"price": 78102.99055280742, "timestamp": "2026-08-30T03:00:00.000Z"}, {"price": 78776.41086229906, "timestamp": "2026-08-30T15:00:00.000Z"}, {"price": 77453.7976096339, "timestamp": "2026-08-31T03:00:00.000Z"}, {"price": 78590.3128650354, "timestamp": "2026-08-31T15:00:00.000Z"}, {"price": 78421.83031494952, "timestamp": "2026-09-01T03:00:00.000Z"}, {"price": 78137.78899466433, "timestamp": "2026-09-01T15:00:00.000Z"}, {"price": 77275.44455077226, "timestamp": "2026-09-02T03:00:00.000Z"}, {"price": 77019.25544923359, "timestamp": "2026-09-02T15:00:00.000Z"}, {"price": 77776.26490321505, "timestamp": "2026-09-03T03:00:00.000Z"}, {"price": 80503.98990012161, "timestamp": "2026-09-03T15:00:00.000Z"}, {"price": 80812.35052737984, "timestamp": "2026-09-04T03:00:00.000Z"}, {"price": 78918.77058040584, "timestamp": "2026-09-04T15:00:00.000Z"}, {"price": 79577.31078765137, "timestamp": "2026-09-05T03:00:00.000Z"}, {"price": 79730.88136501185, "timestamp": "2026-09-05T15:00:00.000Z"}, {"price": 79906.5630995094, "timestamp": "2026-09-06T03:00:00.000Z"}, {"price": 79526.7967398626, "timestamp": "2026-09-06T15:00:00.000Z"}, {"price": 79848.98832803365, "timestamp": "2026-09-07T03:00:00.000Z"}, {"price": 79180.43723886288, "timestamp": "2026-09-07T15:00:00.000Z"}, {"price": 78927.12553007393, "timestamp": "2026-09-08T03:00:00.000Z"}, {"price": 78535.15771615456, "timestamp": "2026-09-08T15:00:00.000Z"}, {"price": 78722.42026766515, "timestamp": "2026-09-09T03:00:00.000Z"}, {"price": 78949.21330811581, "timestamp": "2026-09-09T15:00:00.000Z"}, {"price": 78329.34789117156, "timestamp": "2026-09-10T03:00:00.000Z"}, {"price": 77359.53454949934, "timestamp": "2026-09-10T15:00:00.000Z"}, {"price": 76824.79305692423, "timestamp": "2026-09-11T03:00:00.000Z"}, {"price": 78783.77426720792, "timestamp": "2026-09-11T15:00:00.000Z"}, {"price": 77256.74504889011, "timestamp": "2026-09-12T03:00:00.000Z"}, {"price": 77445.64426190322, "timestamp": "2026-09-12T15:00:00.000Z"}, {"price": 77273.86828489418, "timestamp": "2026-09-13T03:00:00.000Z"}, {"price": 77186.99824765752, "timestamp": "2026-09-13T15:00:00.000Z"}, {"price": 77570.55529884281, "timestamp": "2026-09-14T03:00:00.000Z"}, {"price": 78476.07323013752, "timestamp": "2026-09-14T15:00:00.000Z"}, {"price": 77885.53242277539, "timestamp": "2026-09-15T03:00:00.000Z"}, {"price": 75903.01064422875, "timestamp": "2026-09-15T15:00:00.000Z"}, {"price": 75831.86578487034, "timestamp": "2026-09-16T03:00:00.000Z"}, {"price": 75628.25325189572, "timestamp": "2026-09-16T15:00:00.000Z"}, {"price": 76308.60784780057, "timestamp": "2026-09-17T03:00:00.000Z"}, {"price": 76443.5456147915, "timestamp": "2026-09-17T15:00:00.000Z"}, {"price": 76924.54758447783, "timestamp": "2026-09-18T03:00:00.000Z"}, {"price": 80901.08489368358, "timestamp": "2026-09-18T15:00:00.000Z"}, {"price": 81275.55262020552, "timestamp": "2026-09-19T03:00:00.000Z"}, {"price": 81543.5714688772, "timestamp": "2026-09-19T15:00:00.000Z"}, {"price": 80275.857517878, "timestamp": "2026-09-20T03:00:00.000Z"}, {"price": 80652.47933380083, "timestamp": "2026-09-20T15:00:00.000Z"}, {"price": 81293.14737623878, "timestamp": "2026-09-21T03:00:00.000Z"}, {"price": 85822.11261773574, "timestamp": "2026-09-21T15:00:00.000Z"}, {"price": 85700.6334938903, "timestamp": "2026-09-22T03:00:00.000Z"}, {"price": 86207.13787784762, "timestamp": "2026-09-22T15:00:00.000Z"}, {"price": 86527.61079359149, "timestamp": "2026-09-23T03:00:00.000Z"}, {"price": 84470.52649714124, "timestamp": "2026-09-23T15:00:00.000Z"}, {"price": 84348.7467395268, "timestamp": "2026-09-24T03:00:00.000Z"}, {"price": 83565.98156532156, "timestamp": "2026-09-24T15:00:00.000Z"}, {"price": 84194.82818604415, "timestamp": "2026-09-25T03:00:00.000Z"}, {"price": 83793.8865511238, "timestamp": "2026-09-25T14:41:00.000Z"}]
+const SYM = { usd: '$', eur: '€', gbp: '£', jpy: '¥', xof: 'F CFA' }
+const fmt = (n, cur, d = 0) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: d })} ${SYM[cur.toLowerCase()] ?? cur.toUpperCase()}`
+const TICK = { bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL', dogecoin: 'DOGE' }
+const pct = (v) => `<span class="pill ${v >= 0 ? 'up' : 'down'}">${v >= 0 ? '▲' : '▼'} ${Math.abs(v).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} %</span>`
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1)
+const COIN = { bitcoin: '₿', ethereum: 'Ξ', solana: '◎' }
+
+// line/area path in a 300xH box
+function path(vals, H = 90, pad = 8) {
+  const mn = Math.min(...vals), mx = Math.max(...vals)
+  const pts = vals.map((v, i) => [(i / (vals.length - 1)) * 300, H - pad - ((v - mn) / (mx - mn || 1)) * (H - 2 * pad)])
+  return { d: pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' '), pts }
+}
+function area(vals, color, id, H = 90) {
+  const { d } = path(vals, H)
+  return `<svg class="chart" viewBox="0 0 300 ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".38"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+    <path d="${d} L300 ${H} L0 ${H}Z" fill="url(#${id})"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`
+}
+// chart with a crosshair + tooltip following the mouse
+function hoverChart(series, key, cur, color, id, label) {
+  const vals = series.map((p) => p[key])
+  return `<div class="hover" data-series='${id}' role="img" aria-label="${label}">${area(vals, color, id)}
+    <svg class="chart" viewBox="0 0 300 90" preserveAspectRatio="none" style="position:absolute;inset:0;height:100%" aria-hidden="true"><line class="xline" x1="0" x2="0" y1="0" y2="90" stroke="rgb(255 255 255 / .35)" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" opacity="0"/></svg>
+    <span class="dot" style="position:absolute;width:10px;height:10px;border-radius:50%;background:${color};border:2px solid #fff;transform:translate(-50%,-50%);opacity:0;pointer-events:none"></span>
+    <span class="tip"></span></div>`
+}
+const SERIES = {}
+
+const fxVals = FX.history.map((p) => p.rate ?? p.price), fxKey = FX.history[0].rate !== undefined ? 'rate' : 'price'
+const up = FX.changePct >= 0, fxColor = up ? '#34d399' : '#f87171'
+const phVals = PH.map((p) => p.price), phChange = ((phVals.at(-1) - phVals[0]) / phVals[0]) * 100
+SERIES.fx1 = { series: FX.history, key: fxKey, cur: FX.quote }
+SERIES.ph2 = { series: PH, key: 'price', cur: 'usd' }
+
+// daily closes for the heat grid (30 days)
+const byDay = new Map(); PH.forEach((p) => byDay.set(p.timestamp.slice(0, 10), p.price))
+const days = [...byDay.entries()]; const deltas = days.slice(1).map(([d, v], i) => [d, ((v - days[i][1]) / days[i][1]) * 100])
+const maxAbs = Math.max(...deltas.map(([, x]) => Math.abs(x)), 1)
+const heatColor = (x) => x >= 0 ? `rgb(52 211 153 / ${0.15 + 0.85 * (x / maxAbs)})` : `rgb(248 113 113 / ${0.15 + 0.85 * (-x / maxAbs)})`
+
+const pos = ((FX.rate - FX.min) / (FX.max - FX.min || 1)) * 100
+const sections = [
+  ['💱 Taux de change', 'exchange_rate', [
+    ['Tendance', 'celle que tu avais choisie, maintenant avec la vraie courbe des 7 jours (survole-la)', `<div class="card">
+      <div class="s">${FX.base.toUpperCase()} → ${FX.quote.toUpperCase()} · ${FX.days} j</div>
+      <div style="display:flex;align-items:center;gap:10px"><span class="big tab">${fmt(FX.rate, FX.quote)}</span>${pct(FX.changePct)}</div>
+      ${hoverChart(FX.history, fxKey, FX.quote, fxColor, 'fx1', `Taux sur ${FX.days} jours`)}
+      <div class="mm"><span>min ${fmt(FX.min, FX.quote)}</span><span>max ${fmt(FX.max, FX.quote)}</span></div></div>`],
+    ['Carte boursière', 'façon appli de trading : police de terminal, onglets de période, courbe verte ou rouge selon la tendance', `<div class="card" style="background:rgb(2 6 23 / .75)">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div class="ticker"><span style="font-weight:700">${TICK[FX.base] ?? FX.base.slice(0, 3).toUpperCase()}/${FX.quote.toUpperCase()}</span></div><div class="periods"><span>24h</span><span class="on">${FX.days}j</span><span>30j</span></div></div>
+      <div class="ticker"><span class="big" style="font-family:inherit">${FX.rate.toLocaleString('fr-FR')}</span><span style="color:${fxColor};font-weight:700">${up ? '+' : ''}${FX.changePct.toFixed(2)}%</span></div>
+      ${area(fxVals, fxColor, 'fx2')}
+      <div class="mm" style="font-family:'JetBrains Mono',monospace"><span>L ${Math.round(FX.min).toLocaleString('fr-FR')}</span><span>H ${Math.round(FX.max).toLocaleString('fr-FR')}</span></div></div>`],
+    ['Jauge min / max', 'où se situe le taux actuel entre le plus bas et le plus haut de la période', `<div class="card">
+      <div class="s">${cap(FX.base)} en ${FX.quote.toUpperCase()} · ${FX.days} derniers jours</div>
+      <div style="display:flex;align-items:center;gap:10px"><span class="big tab">${fmt(FX.rate, FX.quote)}</span>${pct(FX.changePct)}</div>
+      <div class="gauge"><span class="cursor" style="left:${pos}%"></span><span class="lbl" style="left:${pos}%">maintenant</span></div>
+      <div class="mm"><span>▼ plus bas<br><b class="tab" style="color:#fff">${fmt(FX.min, FX.quote)}</b></span><span style="text-align:right">plus haut ▲<br><b class="tab" style="color:#fff">${fmt(FX.max, FX.quote)}</b></span></div>
+      <div class="s" style="margin-top:auto">À ${Math.round(pos)} % entre le plus bas et le plus haut</div></div>`],
+  ]],
+  ['📈 Historique de prix', 'price_history', [
+    ['Pièce qui tourne', 'celle que tu avais choisie : la pièce, le prix, la courbe orange', `<div class="card">
+      <div style="display:flex;align-items:center;gap:12px"><div class="coin">${COIN.bitcoin}</div><div><div style="font-weight:600">Bitcoin ${pct(phChange)}</div><div class="big tab" style="font-size:28px">${fmt(phVals.at(-1), 'usd')}</div></div></div>
+      ${area(phVals, '#f59e0b', 'ph1')}<div class="s">30 derniers jours</div></div>`],
+    ['Courbe interactive', 'survole la courbe : un curseur suit la souris et affiche le prix et la date exacts', `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div><div class="s">Bitcoin · 30 j</div><div class="big tab" style="font-size:30px">${fmt(phVals.at(-1), 'usd')}</div></div>${pct(phChange)}</div>
+      ${hoverChart(PH, 'price', 'usd', '#f59e0b', 'ph2', 'Prix du Bitcoin sur 30 jours')}
+      <div class="mm"><span>${new Date(PH[0].timestamp).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span><span>aujourd’hui</span></div></div>`],
+    ['Calendrier des variations', 'une case par jour : verte quand ça a monté, rouge quand ça a baissé (survole une case)', `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div><div class="s">Bitcoin · 30 j</div><div class="big tab" style="font-size:26px">${fmt(phVals.at(-1), 'usd')}</div></div>${pct(phChange)}</div>
+      <div class="heat">${deltas.map(([d, x]) => `<i style="background:${heatColor(x)}" data-t="${new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} : ${x >= 0 ? '+' : ''}${x.toFixed(1)} %"></i>`).join('')}</div>
+      <div class="legend"><span>${deltas.filter(([, x]) => x >= 0).length} jours en hausse</span><span>baisse<b></b>hausse</span></div></div>`],
+  ]],
+]
+document.getElementById('app').innerHTML = sections.map(([title, key, opts]) => `<section><h2>${title}<code>${key}</code></h2><div class="row">${opts.map(([name, desc, html], i) => `<div class="opt">${html}<p><b>${i + 1} · ${name}</b> : ${desc}</p></div>`).join('')}</div></section>`).join('') + '<div style="height:50px"></div>'
+
+// hover layer: crosshair + dot + tooltip
+document.querySelectorAll('.hover').forEach((el) => {
+  const { series, key, cur } = SERIES[el.dataset.series]
+  const vals = series.map((p) => p[key]), { pts } = path(vals)
+  const line = el.querySelector('.xline'), dot = el.querySelector('.dot'), tip = el.querySelector('.tip')
+  el.addEventListener('pointermove', (e) => {
+    const r = el.getBoundingClientRect(), i = Math.round(((e.clientX - r.left) / r.width) * (pts.length - 1))
+    const [x, y] = pts[Math.max(0, Math.min(pts.length - 1, i))], p = series[Math.max(0, Math.min(series.length - 1, i))]
+    const px = (x / 300) * r.width, py = (y / 90) * r.height
+    line.setAttribute('x1', x); line.setAttribute('x2', x); line.setAttribute('opacity', 1)
+    dot.style.left = `${px}px`; dot.style.top = `${py}px`; dot.style.opacity = 1
+    tip.style.left = `${px}px`; tip.style.top = `${py}px`
+    tip.innerHTML = `<b>${fmt(p[key], cur)}</b><br>${new Date(p.timestamp).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+  })
+  el.addEventListener('pointerleave', () => { line.setAttribute('opacity', 0); dot.style.opacity = 0 })
+})
+</script>
+</body>
+</html>

@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex clocks</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Caveat:wght@600&display=swap" rel="stylesheet" />
+<style>
+  :root { --a1: #818cf8; --a2: #38bdf8; --a3: #f472b6; --glow: 99 102 241; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .6), rgb(15 12 50 / .75)), url(/accueil_photo.jpg) center/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 36px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .65); margin: 8px 0 32px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px; max-width: 1400px; margin: 0 auto; padding: 0 20px 60px; }
+  .card { position: relative; overflow: hidden; border-radius: 24px; padding: 22px; min-height: 380px; display: flex; flex-direction: column; align-items: center;
+    background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+  .num { position: absolute; top: 16px; left: 18px; font-size: 13px; color: rgb(255 255 255 / .5); }
+  .stage { flex: 1; width: 100%; display: grid; place-items: center; }
+  .name { font-weight: 600; font-size: 17px; margin-top: 8px; }
+  .desc { font-size: 13px; color: rgb(255 255 255 / .6); text-align: center; margin: 4px 0 0; line-height: 1.5; }
+  .tab { font-variant-numeric: tabular-nums; }
+
+  /* 1. Orbite */
+  .orbit { position: relative; width: 220px; aspect-ratio: 1; }
+  .orbit svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+  .orbit .track { fill: none; stroke: rgb(255 255 255 / .1); stroke-width: 5; }
+  .orbit .ticks { fill: none; stroke: rgb(255 255 255 / .25); stroke-width: 2; stroke-dasharray: 1 46.12; }
+  .orbit .prog { fill: none; stroke: url(#g1); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 565.49; transition: stroke-dashoffset 1s linear; }
+  .orbit .sat { transform-origin: 100px 100px; transition: transform 1s linear; }
+  .orbit .in { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .orbit .t { font-size: 54px; font-weight: 600; line-height: 1; letter-spacing: -.03em; }
+  .orbit .s { font-size: 13px; letter-spacing: .3em; color: rgb(255 255 255 / .55); margin-top: 6px; }
+
+  /* 2. Flip */
+  .flip { display: flex; align-items: center; gap: 4px; perspective: 400px; }
+  .flip .d { width: 38px; height: 58px; border-radius: 9px; display: grid; place-items: center; font-size: 36px; font-weight: 600; position: relative;
+    background: linear-gradient(#1e1b4b 50%, #17153d 50%); box-shadow: 0 8px 20px -6px rgb(0 0 0 / .6), inset 0 1px 0 rgb(255 255 255 / .1); }
+  .flip .d::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgb(0 0 0 / .5); }
+  .flip .d.sm { width: 26px; height: 40px; font-size: 22px; border-radius: 7px; }
+  .flip .d.go { animation: flipDown .45s cubic-bezier(.3,.6,.4,1); }
+  @keyframes flipDown { 0% { transform: rotateX(80deg); filter: brightness(1.6); } 100% { transform: rotateX(0); } }
+  .flip .c { font-size: 26px; opacity: .6; }
+
+  /* 3. Analogique étoilée */
+  .analog svg { width: 220px; height: 220px; }
+  .analog .face { fill: rgb(255 255 255 / .05); stroke: rgb(255 255 255 / .18); }
+  .analog .hand { stroke: #fff; stroke-linecap: round; transform-origin: 100px 100px; }
+  .analog .sec { stroke: var(--a2); }
+
+  /* 4. Système solaire */
+  .solar svg { width: 230px; height: 230px; overflow: visible; }
+  .solar .ring { fill: none; stroke: rgb(255 255 255 / .14); stroke-dasharray: 2 4; }
+  .solar .planet { transition: transform 1s linear; transform-origin: 100px 100px; }
+  .solar .t { font-size: 22px; font-weight: 600; margin-top: 6px; text-align: center; }
+
+  /* 5. Néon */
+  .neon { text-align: center; }
+  .neon .t { font-size: 76px; font-weight: 600; letter-spacing: .02em; color: #e0f2fe;
+    text-shadow: 0 0 6px #fff, 0 0 18px var(--a2), 0 0 40px var(--a2), 0 0 80px var(--a1); }
+  .neon .colon { animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: .15; } }
+  .neon .dt { margin-top: 6px; font-size: 14px; letter-spacing: .3em; text-transform: uppercase; color: var(--a3);
+    text-shadow: 0 0 10px var(--a3); }
+
+  /* 6. Jour / nuit */
+  .sky { width: 100%; max-width: 280px; border-radius: 18px; overflow: hidden; position: relative; transition: background 2s; }
+  .sky svg { width: 100%; display: block; }
+  .sky .t { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 34px; font-weight: 600; text-shadow: 0 2px 10px rgb(0 0 0 / .4); }
+  .sky .lbl { position: absolute; top: 10px; left: 14px; font-size: 12px; opacity: .8; }
+
+  /* 7. Anneaux */
+  .rings { position: relative; width: 220px; aspect-ratio: 1; }
+  .rings svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .rings circle { fill: none; stroke-width: 14; stroke-linecap: round; }
+  .rings .bg { stroke: rgb(255 255 255 / .07); }
+  .rings .fg { transition: stroke-dashoffset 1s linear; }
+  .rings .in { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; font-size: 30px; font-weight: 600; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: rgb(255 255 255 / .7); margin-top: 8px; }
+  .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+
+  /* 8. En toutes lettres */
+  .words { font-family: Caveat, cursive; font-size: 40px; line-height: 1.15; text-align: center; padding: 0 6px; }
+  .words .dim { color: rgb(255 255 255 / .35); font-size: 28px; display: block; }
+  .words b { background: linear-gradient(90deg, #fff, var(--a1), var(--a2)); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 600; }
+  /* ---------- World clocks ---------- */
+  h2 { text-align: center; font-weight: 600; margin: 10px 0 0; }
+  .wgrid { display: grid; grid-template-columns: 380px 1fr; gap: 22px; max-width: 1400px; margin: 0 auto; padding: 0 20px 60px; }
+  .wgrid .wide { grid-column: 2; }
+  .wgrid .tall { grid-row: span 2; }
+  @media (max-width: 1000px) { .wgrid { grid-template-columns: 1fr; } .wgrid .wide { grid-column: auto; } }
+  .wcard { align-items: stretch; min-height: 0; }
+  .here { text-align: center; padding: 18px 0 16px; border-bottom: 1px solid rgb(255 255 255 / .1); margin-bottom: 6px; }
+  .here small { color: rgb(255 255 255 / .6); font-size: 13px; }
+  .here .t { font-size: 56px; font-weight: 600; line-height: 1.1; letter-spacing: -.02em; }
+  .cities { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .cities li { display: grid; grid-template-columns: 34px 1fr auto 26px; align-items: center; gap: 10px; padding: 11px 6px; border-radius: 14px; }
+  .cities li:hover { background: rgb(255 255 255 / .06); }
+  .cities .flag { font-size: 24px; }
+  .cities b { display: block; font-weight: 500; }
+  .cities small { color: rgb(255 255 255 / .5); font-size: 12px; }
+  .cities .ct { text-align: right; font-size: 22px; font-weight: 600; }
+  .cities .ct small { display: block; font-weight: 400; }
+  .cities .x { opacity: 0; border: 0; background: none; color: rgb(255 255 255 / .6); cursor: pointer; font-size: 18px; }
+  .cities li:hover .x { opacity: 1; }
+  .adder { display: flex; gap: 8px; margin-top: 12px; }
+  .adder select { flex: 1; padding: 11px 14px; border-radius: 999px; background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .18); color: #fff; font: inherit; outline: none; }
+  .adder select option { background: #0f172a; }
+  .adder button { padding: 11px 18px; border-radius: 999px; border: 0; background: #fff; color: #111; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+  .timeline { position: relative; width: 100%; height: 190px; margin-top: 10px; }
+  .timeline .bar { position: absolute; left: 0; right: 0; top: 50%; height: 16px; transform: translateY(-50%); border-radius: 999px;
+    background: linear-gradient(90deg, #0b1026 0%, #1e1b4b 20%, #f9a8d4 26%, #fcd34d 32%, #38bdf8 45%, #7dd3fc 60%, #fb7185 74%, #7c3aed 80%, #1e1b4b 88%, #0b1026 100%); }
+  .timeline .hours { position: absolute; left: 0; right: 0; top: calc(50% + 14px); display: flex; justify-content: space-between; font-size: 11px; color: rgb(255 255 255 / .45); }
+  .pin { position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; transition: left 1s linear; white-space: nowrap; }
+  .pin.up { bottom: calc(50% + 10px); } .pin.down { top: calc(50% + 10px); flex-direction: column-reverse; }
+  .pin .lbl { padding: 5px 10px; border-radius: 12px; background: rgb(15 23 42 / .85); border: 1px solid rgb(255 255 255 / .15); font-size: 12px; text-align: center; }
+  .pin .lbl b { font-size: 15px; }
+  .pin .stem { width: 2px; height: 18px; background: rgb(255 255 255 / .6); }
+  .pin .dot { width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 0 12px #fff; }
+  .pin.me .dot { background: var(--a2); box-shadow: 0 0 14px var(--a2); }
+
+  .minis { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px; width: 100%; margin-top: 10px; }
+  .mini { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; border-radius: 18px; background: rgb(255 255 255 / .05); border: 1px solid rgb(255 255 255 / .1); }
+  .mini .dialw { position: relative; width: 92px; aspect-ratio: 1; }
+  .mini svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .mini .in { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; font-weight: 600; font-size: 19px; line-height: 1.1; }
+  .mini .in span { font-size: 16px; }
+  .mini b { font-weight: 500; font-size: 14px; }
+  .mini small { color: rgb(255 255 255 / .5); font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>L'heure, version Morex</h1>
+<p class="lead">8 designs, tous en direct. Dis-moi le numéro que tu préfères</p>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#818cf8" /><stop offset="1" stop-color="#38bdf8" /></linearGradient>
+  <radialGradient id="sun" cx=".4" cy=".4" r=".6"><stop offset="0" stop-color="#fff7cc" /><stop offset="1" stop-color="#fbbf24" /></radialGradient>
+  <radialGradient id="pl" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="#c7d2fe" /><stop offset="1" stop-color="#4f46e5" /></radialGradient>
+</defs></svg>
+
+<div class="grid">
+  <div class="card"><span class="num">1</span>
+    <div class="stage"><div class="orbit">
+      <svg viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="90" /><circle class="ticks" cx="100" cy="100" r="80" />
+        <circle class="prog" id="oProg" cx="100" cy="100" r="90" />
+        <g class="sat" id="oSat"><circle cx="190" cy="100" r="7" fill="#fff" /><circle cx="190" cy="100" r="13" fill="#38bdf8" fill-opacity=".3" /></g></svg>
+      <div class="in"><div class="t tab" data-hm></div><div class="s tab" data-ss></div></div>
+    </div></div>
+    <div class="name">Orbite</div><p class="desc">L'actuelle : un satellite fait le tour à chaque minute</p>
+  </div>
+
+  <div class="card"><span class="num">2</span>
+    <div class="stage"><div class="flip" id="flip"></div></div>
+    <div class="name">Flip rétro</div><p class="desc">Les chiffres basculent comme un vieux panneau d'aéroport</p>
+  </div>
+
+  <div class="card"><span class="num">3</span>
+    <div class="stage analog"><svg viewBox="0 0 200 200" id="analog">
+      <circle class="face" cx="100" cy="100" r="92" />
+      <g id="stars"></g>
+      <line class="hand" id="hH" x1="100" y1="100" x2="100" y2="52" stroke-width="7" />
+      <line class="hand" id="hM" x1="100" y1="100" x2="100" y2="30" stroke-width="4" />
+      <g class="hand sec" id="hS"><line x1="100" y1="116" x2="100" y2="22" stroke-width="2" /><circle cx="100" cy="22" r="4" fill="#38bdf8" /></g>
+      <circle cx="100" cy="100" r="9" fill="url(#pl)" /><ellipse cx="100" cy="100" rx="14" ry="4" fill="none" stroke="#c7d2fe" stroke-width="1.5" transform="rotate(-20 100 100)" />
+    </svg></div>
+    <div class="name">Analogique étoilée</div><p class="desc">Des aiguilles, des étoiles à la place des heures, une planète au centre</p>
+  </div>
+
+  <div class="card"><span class="num">4</span>
+    <div class="stage solar"><div>
+      <svg viewBox="0 0 200 200">
+        <circle class="ring" cx="100" cy="100" r="38" /><circle class="ring" cx="100" cy="100" r="64" /><circle class="ring" cx="100" cy="100" r="90" />
+        <circle cx="100" cy="100" r="18" fill="url(#sun)" /><circle cx="100" cy="100" r="28" fill="#fbbf24" fill-opacity=".12" />
+        <g class="planet" id="pH"><circle cx="100" cy="62" r="9" fill="#f472b6" /></g>
+        <g class="planet" id="pM"><circle cx="100" cy="36" r="7" fill="url(#pl)" /><ellipse cx="100" cy="36" rx="11" ry="3" fill="none" stroke="#c7d2fe" stroke-width="1.2" /></g>
+        <g class="planet" id="pS"><circle cx="100" cy="10" r="4" fill="#38bdf8" /></g>
+      </svg>
+      <div class="t tab" data-hm></div></div></div>
+    <div class="name">Système solaire</div><p class="desc">Rose = heures, violette = minutes, bleue = secondes. Elles tournent autour du soleil</p>
+  </div>
+
+  <div class="card"><span class="num">5</span>
+    <div class="stage neon"><div><div class="t tab" id="neon"></div><div class="dt" data-day></div></div></div>
+    <div class="name">Néon</div><p class="desc">Des chiffres lumineux, les deux points clignotent</p>
+  </div>
+
+  <div class="card"><span class="num">6</span>
+    <div class="stage"><div class="sky" id="sky">
+      <span class="lbl" id="skyLbl"></span>
+      <svg viewBox="0 0 280 200">
+        <path d="M20 170 A120 120 0 0 1 260 170" fill="none" stroke="#fff" stroke-opacity=".35" stroke-dasharray="3 6" />
+        <line x1="0" y1="170" x2="280" y2="170" stroke="#fff" stroke-opacity=".25" />
+        <g id="skyBody"></g>
+      </svg>
+      <div class="t tab" data-hm></div>
+    </div></div>
+    <div class="name">Jour / nuit</div><p class="desc">Le soleil (ou la lune) suit sa course dans le ciel, qui change de couleur</p>
+  </div>
+
+  <div class="card"><span class="num">7</span>
+    <div class="stage"><div>
+      <div class="rings"><svg viewBox="0 0 200 200">
+        <circle class="bg" cx="100" cy="100" r="88" /><circle class="fg" id="rH" cx="100" cy="100" r="88" stroke="#f472b6" />
+        <circle class="bg" cx="100" cy="100" r="68" /><circle class="fg" id="rM" cx="100" cy="100" r="68" stroke="#818cf8" />
+        <circle class="bg" cx="100" cy="100" r="48" /><circle class="fg" id="rS" cx="100" cy="100" r="48" stroke="#38bdf8" />
+      </svg><div class="in tab" data-hm></div></div>
+      <div class="legend"><span><i style="background:#f472b6"></i>journée</span><span><i style="background:#818cf8"></i>heure</span><span><i style="background:#38bdf8"></i>minute</span></div>
+    </div></div>
+    <div class="name">Anneaux</div><p class="desc">Façon montre connectée : les anneaux se remplissent au fil de la journée</p>
+  </div>
+
+  <div class="card"><span class="num">8</span>
+    <div class="stage"><div class="words" id="words"></div></div>
+    <div class="name">En toutes lettres</div><p class="desc">L'heure écrite à la main, comme une phrase</p>
+  </div>
+</div>
+
+<h2>🌍 Heure du monde</h2>
+<p class="lead">3 façons de voir l'heure des autres pays. Tu peux ajouter ou retirer des villes</p>
+<div class="wgrid">
+  <div class="card wcard tall"><span class="num">A</span>
+    <div class="here"><small>📍 Ici · Cotonou</small><div class="t tab" data-hm></div><small data-day></small></div>
+    <ul class="cities" id="cityList"></ul>
+    <div class="adder"><select id="citySelect"></select><button id="addCity">＋ Ajouter</button></div>
+    <div class="name" style="text-align:center;margin-top:16px">Liste des villes</div>
+    <p class="desc">Drapeau, heure, décalage avec toi, jour ou nuit, et « demain » / « hier » si la date change</p>
+  </div>
+  <div class="card wcard wide"><span class="num">B</span>
+    <div class="timeline" id="timeline"><div class="bar"></div><div class="hours"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div></div>
+    <div class="name" style="text-align:center">Frise 24 h</div>
+    <p class="desc">Chaque ville est placée sur la journée : on voit d'un coup d'œil qui dort, qui se lève, qui travaille</p>
+  </div>
+  <div class="card wcard wide"><span class="num">C</span>
+    <div class="minis" id="minis"></div>
+    <div class="name" style="text-align:center">Mini-orbites</div>
+    <p class="desc">Une petite horloge par ville : l'anneau montre où en est sa journée, ☀️ ou 🌙 selon l'heure</p>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id)
+const pad = (n) => String(n).padStart(2, '0')
+const C = (r) => 2 * Math.PI * r
+
+// Star markers for the analog clock
+$('stars').innerHTML = Array.from({ length: 12 }, (_, i) => {
+  const a = (i * 30 - 90) * Math.PI / 180, x = 100 + 80 * Math.cos(a), y = 100 + 80 * Math.sin(a), r = i % 3 === 0 ? 5 : 2.6
+  return `<path d="M${x} ${y - r}L${x + r * .3} ${y - r * .3}L${x + r} ${y}L${x + r * .3} ${y + r * .3}L${x} ${y + r}L${x - r * .3} ${y + r * .3}L${x - r} ${y}L${x - r * .3} ${y - r * .3}Z" fill="#fff" fill-opacity="${i % 3 === 0 ? 1 : .6}"/>`
+}).join('')
+
+// Flip clock digits
+$('flip').innerHTML = '<span class="d"></span><span class="d"></span><span class="c">:</span><span class="d"></span><span class="d"></span><span class="c">:</span><span class="d sm"></span><span class="d sm"></span>'
+const flipDigits = [...$('flip').querySelectorAll('.d')]
+
+// French number words for the handwritten clock
+const U = ['zéro','une','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize']
+const T10 = { 20: 'vingt', 30: 'trente', 40: 'quarante', 50: 'cinquante' }
+function fr(n) {
+  if (n <= 16) return U[n]
+  if (n < 20) return 'dix-' + U[n - 10]
+  const t = Math.floor(n / 10) * 10, u = n % 10
+  return T10[t] + (u === 0 ? '' : u === 1 ? ' et une' : '-' + U[u])
+}
+
+const rings = { rH: C(88), rM: C(68), rS: C(48) }
+for (const [id, c] of Object.entries(rings)) $(id).style.strokeDasharray = c
+
+function tick() {
+  const n = new Date(), h = n.getHours(), m = n.getMinutes(), s = n.getSeconds()
+  const hm = `${pad(h)}:${pad(m)}`
+  document.querySelectorAll('[data-hm]').forEach((el) => (el.textContent = hm))
+  document.querySelectorAll('[data-ss]').forEach((el) => (el.textContent = pad(s)))
+  document.querySelectorAll('[data-day]').forEach((el) => (el.textContent = n.toLocaleDateString('fr-FR', { weekday: 'long' })))
+
+  // 1 orbit
+  const wrap = s === 0
+  $('oProg').style.transition = $('oSat').style.transition = wrap ? 'none' : ''
+  $('oProg').style.strokeDashoffset = 565.49 * (1 - s / 60)
+  $('oSat').style.transform = `rotate(${s * 6}deg)`
+
+  // 2 flip
+  const digits = (pad(h) + pad(m) + pad(s)).split('')
+  flipDigits.forEach((el, i) => {
+    if (el.textContent !== digits[i]) { el.textContent = digits[i]; el.classList.remove('go'); void el.offsetWidth; el.classList.add('go') }
+  })
+
+  // 3 analog
+  $('hH').style.transform = `rotate(${(h % 12) * 30 + m * .5}deg)`
+  $('hM').style.transform = `rotate(${m * 6 + s * .1}deg)`
+  $('hS').style.transform = `rotate(${s * 6}deg)`
+
+  // 4 solar
+  $('pH').style.transform = `rotate(${(h % 12) * 30 + m * .5}deg)`
+  $('pM').style.transform = `rotate(${m * 6}deg)`
+  $('pS').style.transition = wrap ? 'none' : ''
+  $('pS').style.transform = `rotate(${s * 6}deg)`
+
+  // 5 neon
+  $('neon').innerHTML = `${pad(h)}<span class="colon">:</span>${pad(m)}`
+
+  // 6 day / night: the sun travels 6h→18h, the moon 18h→6h
+  const mins = h * 60 + m, day = mins >= 360 && mins < 1080
+  const p = day ? (mins - 360) / 720 : ((mins - 1080 + 1440) % 1440) / 720
+  const a = Math.PI * (1 - p), x = 140 + 120 * Math.cos(a), y = 170 - 120 * Math.sin(a)
+  $('skyBody').innerHTML = day
+    ? `<circle cx="${x}" cy="${y}" r="30" fill="#fde68a" fill-opacity=".25"/><circle cx="${x}" cy="${y}" r="16" fill="url(#sun)"/>`
+    : `<circle cx="${x}" cy="${y}" r="14" fill="#f1f5f9"/><circle cx="${x + 6}" cy="${y - 4}" r="12" fill="#1e1b4b"/>` +
+      [[40,40],[90,25],[200,35],[240,70],[60,95],[160,60]].map(([a, b]) => `<circle cx="${a}" cy="${b}" r="1.4" fill="#fff"/>`).join('')
+  const skies = [[5, 'linear-gradient(#0b1026, #1e1b4b)', 'Nuit'], [8, 'linear-gradient(#f9a8d4, #fcd34d)', 'Aube'],
+    [17, 'linear-gradient(#38bdf8, #a5f3fc)', 'Jour'], [20, 'linear-gradient(#7c3aed, #fb7185)', 'Crépuscule'], [24, 'linear-gradient(#0b1026, #1e1b4b)', 'Nuit']]
+  const [, bg, lbl] = skies.find(([limit]) => h < limit)
+  $('sky').style.background = bg; $('skyLbl').textContent = lbl
+
+  // 7 rings: day, hour, minute progress
+  $('rH').style.strokeDashoffset = rings.rH * (1 - mins / 1440)
+  $('rM').style.strokeDashoffset = rings.rM * (1 - m / 60)
+  $('rS').style.transition = wrap ? 'none' : ''
+  $('rS').style.strokeDashoffset = rings.rS * (1 - s / 60)
+
+  // 8 words
+  const hh = h === 0 ? 'minuit' : h === 12 ? 'midi' : fr(h) + (h === 1 ? ' heure' : ' heures')
+  $('words').innerHTML = `<span class="dim">il est</span><b>${hh}</b>${m ? `<span class="dim">et</span><b>${fr(m)}</b>` : ''}`
+}
+tick(); setInterval(tick, 1000)
+// ---------- World clocks ----------
+const HERE = 'Africa/Porto-Novo'
+const CITIES = {
+  paris: ['🇫🇷', 'Paris', 'France', 'Europe/Paris'], madrid: ['🇪🇸', 'Madrid', 'Espagne', 'Europe/Madrid'], london: ['🇬🇧', 'Londres', 'Royaume-Uni', 'Europe/London'],
+  newyork: ['🇺🇸', 'New York', 'États-Unis', 'America/New_York'], la: ['🇺🇸', 'Los Angeles', 'États-Unis', 'America/Los_Angeles'],
+  montreal: ['🇨🇦', 'Montréal', 'Canada', 'America/Toronto'], saopaulo: ['🇧🇷', 'São Paulo', 'Brésil', 'America/Sao_Paulo'],
+  mexico: ['🇲🇽', 'Mexico', 'Mexique', 'America/Mexico_City'], abidjan: ['🇨🇮', 'Abidjan', 'Côte d\u2019Ivoire', 'Africa/Abidjan'],
+  dakar: ['🇸🇳', 'Dakar', 'Sénégal', 'Africa/Dakar'], nairobi: ['🇰🇪', 'Nairobi', 'Kenya', 'Africa/Nairobi'], dubai: ['🇦🇪', 'Dubaï', 'Émirats', 'Asia/Dubai'],
+  tokyo: ['🇯🇵', 'Tokyo', 'Japon', 'Asia/Tokyo'], seoul: ['🇰🇷', 'Séoul', 'Corée du Sud', 'Asia/Seoul'], sydney: ['🇦🇺', 'Sydney', 'Australie', 'Australia/Sydney'],
+}
+let picked = ['paris', 'newyork', 'tokyo', 'montreal', 'dubai']
+
+function zoned(now, tz) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', year: 'numeric', month: '2-digit', day: '2-digit', hourCycle: 'h23' })
+    .formatToParts(now).map((x) => [x.type, x.value]))
+  return { h: +p.hour, m: +p.minute, key: `${p.year}${p.month}${p.day}`, abs: Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) }
+}
+function cityInfo(now, tz) {
+  const c = zoned(now, tz), me = zoned(now, HERE)
+  const diffH = Math.round((c.abs - me.abs) / 36e5 * 2) / 2
+  const off = diffH === 0 ? 'même heure' : `${diffH > 0 ? '+' : '−'}${Math.abs(diffH)} h`
+  const day = c.key === me.key ? '' : c.key > me.key ? 'demain' : 'hier'
+  const isDay = c.h >= 6 && c.h < 18
+  return { ...c, off, day, isDay, hm: `${pad(c.h)}:${pad(c.m)}` }
+}
+function renderWorld() {
+  const now = new Date()
+  $('cityList').innerHTML = picked.map((k) => {
+    const [flag, name, country, tz] = CITIES[k], i = cityInfo(now, tz)
+    return `<li><span class="flag">${flag}</span><span><b>${name}</b><small>${country} · ${i.off}</small></span>
+      <span class="ct tab">${i.hm}<small>${i.isDay ? '☀️' : '🌙'} ${i.day}</small></span><button class="x" data-rm="${k}" aria-label="Retirer">×</button></li>`
+  }).join('')
+  $('citySelect').innerHTML = Object.entries(CITIES).filter(([k]) => !picked.includes(k)).map(([k, [f, n]]) => `<option value="${k}">${f} ${n}</option>`).join('')
+
+  const all = [['me', '📍', 'Cotonou', '', HERE], ...picked.map((k) => [k, ...CITIES[k]])]
+    .map(([k, flag, name, , tz]) => ({ k, flag, name, ...cityInfo(now, tz) }))
+    .sort((a, b) => (a.h * 60 + a.m) - (b.h * 60 + b.m))
+  $('timeline').querySelectorAll('.pin').forEach((p) => p.remove())
+  all.forEach((c, i) => {
+    const el = document.createElement('div')
+    el.className = `pin ${i % 2 ? 'down' : 'up'}${c.k === 'me' ? ' me' : ''}`
+    el.style.left = `${((c.h * 60 + c.m) / 1440) * 100}%`
+    el.innerHTML = `<div class="lbl">${c.flag} ${c.name}<br /><b class="tab">${c.hm}</b></div><div class="stem"></div><div class="dot"></div>`
+    $('timeline').append(el)
+  })
+
+  const R = 40, CIRC = 2 * Math.PI * R
+  $('minis').innerHTML = all.map((c) => `<div class="mini"><div class="dialw"><svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="${R}" fill="none" stroke="rgb(255 255 255 / .1)" stroke-width="6" />
+      <circle cx="50" cy="50" r="${R}" fill="none" stroke="${c.isDay ? '#fcd34d' : '#818cf8'}" stroke-width="6" stroke-linecap="round"
+        stroke-dasharray="${CIRC}" stroke-dashoffset="${CIRC * (1 - (c.h * 60 + c.m) / 1440)}" /></svg>
+      <div class="in tab"><span>${c.isDay ? '☀️' : '🌙'}</span>${c.hm}</div></div>
+      <b>${c.flag} ${c.name}</b><small>${c.k === 'me' ? 'ici' : c.off}${c.day ? ' · ' + c.day : ''}</small></div>`).join('')
+}
+document.addEventListener('click', (e) => {
+  const rm = e.target.closest('[data-rm]'); if (rm) { picked = picked.filter((k) => k !== rm.dataset.rm); renderWorld() }
+  if (e.target.id === 'addCity' && $('citySelect').value) { picked.push($('citySelect').value); renderWorld() }
+})
+renderWorld(); setInterval(renderWorld, 15000)
+</script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex dates</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Caveat:wght@600&display=swap" rel="stylesheet" />
+<style>
+  :root { --a1: #818cf8; --a2: #38bdf8; --a3: #f472b6; --glow: 99 102 241; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .6), rgb(15 12 50 / .75)), url(/accueil_photo.jpg) center/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 36px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .65); margin: 8px 0 32px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); gap: 22px; max-width: 1400px; margin: 0 auto; padding: 0 20px 60px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  .card { position: relative; overflow: hidden; border-radius: 24px; padding: 34px 36px 26px; min-height: 250px; display: flex; flex-direction: column; justify-content: center;
+    background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+  .num { position: absolute; top: 14px; left: 18px; font-size: 13px; color: rgb(255 255 255 / .5); }
+  .tag { position: absolute; top: 12px; right: 16px; font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgb(255 255 255 / .1); color: rgb(255 255 255 / .75); }
+  .hello { font-size: 42px; font-weight: 700; letter-spacing: -.02em; margin: 0; line-height: 1.1; }
+  .grad { background: linear-gradient(90deg, #fff, var(--a1) 60%, var(--a2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .row { display: flex; align-items: center; gap: 26px; }
+  .muted { color: rgb(255 255 255 / .6); }
+  .cap::first-letter { text-transform: uppercase; }
+
+  /* 1. Éphéméride */
+  .tear { width: 104px; flex: none; border-radius: 16px; overflow: hidden; text-align: center; background: #fbf5e9; color: #1e1b4b;
+    box-shadow: 0 14px 30px -10px rgb(0 0 0 / .6), 0 0 30px rgb(var(--glow) / .35); transform: rotate(-4deg); }
+  .tear .m { background: linear-gradient(135deg, var(--a1), var(--a2)); color: #fff; font-weight: 700; font-size: 14px; letter-spacing: .2em; padding: 7px 0; text-transform: uppercase; }
+  .tear .d { font-size: 50px; font-weight: 800; line-height: 1.1; padding-top: 4px; }
+  .tear .w { font-size: 12px; font-weight: 600; color: #6d5fb5; padding-bottom: 10px; text-transform: capitalize; }
+
+  /* 2. Chiffre fantôme */
+  .ghost { position: absolute; right: -10px; top: 50%; transform: translateY(-52%); font-size: 240px; font-weight: 800; line-height: 1; letter-spacing: -.05em;
+    color: transparent; -webkit-text-stroke: 2px rgb(255 255 255 / .16); pointer-events: none; }
+  .ghost-sub { font-size: 15px; letter-spacing: .35em; text-transform: uppercase; color: var(--a2); margin-bottom: 8px; font-weight: 500; }
+
+  /* 3. Semaine */
+  .week { display: flex; gap: 8px; margin-bottom: 18px; }
+  .week div { width: 46px; padding: 8px 0; border-radius: 14px; text-align: center; font-size: 11px; color: rgb(255 255 255 / .5); background: rgb(255 255 255 / .05); }
+  .week b { display: block; font-size: 17px; color: rgb(255 255 255 / .8); font-weight: 600; margin-top: 2px; }
+  .week .today { background: linear-gradient(160deg, var(--a1), var(--a2)); color: #fff; box-shadow: 0 8px 24px -6px rgb(var(--glow) / .8); transform: translateY(-4px); }
+  .week .today b { color: #fff; }
+  .week .past { opacity: .5; }
+
+  /* 4. Lune */
+  .moon { width: 92px; height: 92px; flex: none; filter: drop-shadow(0 0 22px rgb(226 232 240 / .45)); }
+  .moon-name { font-size: 13px; color: #e2e8f0; letter-spacing: .08em; }
+  .moon-date { font-size: 17px; margin: 2px 0 8px; }
+
+  /* 5. Pastilles */
+  .chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .chip { padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 500; background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .16); }
+  .chip.hot { background: linear-gradient(135deg, var(--a1), var(--a2)); border: 0; box-shadow: 0 6px 20px -6px rgb(var(--glow) / .9); font-weight: 700; }
+
+  /* 6. Orbite de l'année */
+  .year { width: 130px; height: 130px; flex: none; overflow: visible; }
+  .year-txt b { font-size: 26px; }
+  .bar { height: 6px; border-radius: 999px; background: rgb(255 255 255 / .1); margin: 8px 0 14px; overflow: hidden; width: 260px; max-width: 100%; }
+  .bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--a1), var(--a2)); }
+
+  /* 7. Ciel / zodiaque */
+  .sky-sign { font-family: Caveat, cursive; font-size: 30px; color: #e9d5ff; margin: 0; }
+  .sky-date { font-size: 14px; letter-spacing: .25em; text-transform: uppercase; color: rgb(255 255 255 / .7); margin: 2px 0 10px; }
+  .constel { position: absolute; right: 26px; top: 50%; transform: translateY(-50%); width: 190px; opacity: .9; pointer-events: none; }
+  .constel circle { fill: #fff; filter: drop-shadow(0 0 4px #fff); }
+  .constel path { stroke: rgb(255 255 255 / .35); fill: none; stroke-width: 1.2; }
+
+  /* 8. Machine à écrire / manuscrit */
+  .script { font-family: Caveat, cursive; font-size: 34px; color: #c7d2fe; margin: 0 0 4px; transform: rotate(-2deg); display: inline-block; }
+  .script u { text-decoration: none; background: linear-gradient(transparent 62%, rgb(var(--glow) / .5) 62%); }
+</style>
+</head>
+<body>
+<h1>La date, version Morex</h1>
+<p class="lead">8 façons d'afficher la date, montrées en situation au-dessus du « Bonjour »</p>
+
+<div class="grid">
+  <div class="card"><span class="num">1</span><span class="tag">Éphéméride</span>
+    <div class="row">
+      <div class="tear"><div class="m" data-mshort></div><div class="d" data-d></div><div class="w" data-wd></div></div>
+      <h2 class="hello">Bonjour,<br /><span class="grad">Morayo</span></h2>
+    </div>
+  </div>
+
+  <div class="card"><span class="num">2</span><span class="tag">Chiffre fantôme</span>
+    <div class="ghost" data-d></div>
+    <div class="ghost-sub"><span data-wd></span> · <span data-m></span></div>
+    <h2 class="hello">Bonjour, <span class="grad">Morayo</span></h2>
+  </div>
+
+  <div class="card"><span class="num">3</span><span class="tag">Ma semaine</span>
+    <div class="week" id="week"></div>
+    <h2 class="hello">Bonjour, <span class="grad">Morayo</span></h2>
+  </div>
+
+  <div class="card"><span class="num">4</span><span class="tag">Phase de lune</span>
+    <div class="row">
+      <svg class="moon" viewBox="0 0 100 100" id="moon"></svg>
+      <div>
+        <div class="moon-name" id="moonName"></div>
+        <div class="moon-date cap" data-full></div>
+        <h2 class="hello">Bonjour, <span class="grad">Morayo</span></h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="card"><span class="num">5</span><span class="tag">Pastilles</span>
+    <div class="chips"><span class="chip cap" data-wd></span><span class="chip hot"><span data-d></span> <span data-mshort></span></span><span class="chip" id="wk"></span><span class="chip" data-y></span></div>
+    <h2 class="hello">Bonjour, <span class="grad">Morayo</span></h2>
+  </div>
+
+  <div class="card"><span class="num">6</span><span class="tag">L'orbite de l'année</span>
+    <div class="row">
+      <svg class="year" viewBox="0 0 130 130" id="yearOrbit"></svg>
+      <div class="year-txt">
+        <div class="muted cap" data-full></div>
+        <div class="bar"><i id="yearBar"></i></div>
+        <h2 class="hello" style="font-size:36px">Bonjour, <span class="grad">Morayo</span></h2>
+        <div class="muted" style="font-size:13px;margin-top:6px" id="yearTxt"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card"><span class="num">7</span><span class="tag">Signe du ciel</span>
+    <svg class="constel" viewBox="0 0 200 120" id="constel"></svg>
+    <p class="sky-sign" id="sign"></p>
+    <div class="sky-date" data-full></div>
+    <h2 class="hello">Bonjour, <span class="grad">Morayo</span></h2>
+  </div>
+
+  <div class="card"><span class="num">8</span><span class="tag">Manuscrit</span>
+    <p class="script">Aujourd'hui, c'est <u><span data-wd></span> <span data-d></span> <span data-m></span></u> ✨</p>
+    <h2 class="hello">Bonjour, <span class="grad">Morayo</span></h2>
+  </div>
+</div>
+
+<script>
+const now = new Date()
+const set = (sel, v) => document.querySelectorAll(sel).forEach((el) => (el.textContent = v))
+const fmt = (o) => now.toLocaleDateString('fr-FR', o)
+set('[data-d]', now.getDate())
+set('[data-wd]', fmt({ weekday: 'long' }))
+set('[data-m]', fmt({ month: 'long' }))
+set('[data-mshort]', fmt({ month: 'short' }).replace('.', ''))
+set('[data-y]', now.getFullYear())
+set('[data-full]', fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
+
+// ISO week number and day of the year
+const d0 = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())), dow = d0.getUTCDay() || 7
+d0.setUTCDate(d0.getUTCDate() + 4 - dow)
+const week = Math.ceil(((d0 - Date.UTC(d0.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7)
+document.getElementById('wk').textContent = `Semaine ${week}`
+const start = new Date(now.getFullYear(), 0, 1), end = new Date(now.getFullYear() + 1, 0, 1)
+const dayOfYear = Math.floor((now - start) / 864e5) + 1, daysInYear = Math.round((end - start) / 864e5), frac = (now - start) / (end - start)
+
+// 3. Week strip (Monday first)
+const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+document.getElementById('week').innerHTML = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date(monday); d.setDate(monday.getDate() + i)
+  const cls = d.toDateString() === now.toDateString() ? 'today' : d < now ? 'past' : ''
+  return `<div class="${cls}">${d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '')}<b>${d.getDate()}</b></div>`
+}).join('')
+
+// 4. Moon phase (synodic month from a known new moon)
+const SYN = 29.530588853, ref = Date.UTC(2000, 0, 6, 18, 14)
+const phase = (((now - ref) / 864e5) % SYN + SYN) % SYN / SYN
+const names = ['Nouvelle lune', 'Premier croissant', 'Premier quartier', 'Lune gibbeuse croissante', 'Pleine lune', 'Lune gibbeuse décroissante', 'Dernier quartier', 'Dernier croissant']
+document.getElementById('moonName').textContent = `${names[Math.round(phase * 8) % 8]} · ${Math.round((1 - Math.cos(phase * 2 * Math.PI)) / 2 * 100)} % éclairée`
+{ // lit part: a half disc plus an ellipse whose width follows the phase
+  const k = Math.cos(phase * 2 * Math.PI), waxing = phase < .5, rx = Math.abs(k) * 40
+  const litRight = waxing
+  const half = litRight ? 'M50 10 A40 40 0 0 1 50 90' : 'M50 10 A40 40 0 0 0 50 90'
+  const sweep = (k > 0) === litRight ? 0 : 1
+  document.getElementById('moon').innerHTML = `<circle cx="50" cy="50" r="40" fill="#1e1b4b" stroke="rgb(255 255 255 / .15)"/>
+    <path d="${half} A${rx} 40 0 0 ${sweep} 50 10Z" fill="#f1f5f9"/>
+    <circle cx="38" cy="40" r="5" fill="#000" fill-opacity=".08"/><circle cx="60" cy="62" r="7" fill="#000" fill-opacity=".08"/>`
+}
+
+// 6. Earth on its yearly orbit around the sun
+{
+  const a = frac * 2 * Math.PI - Math.PI / 2, x = 65 + 52 * Math.cos(a), y = 65 + 52 * Math.sin(a)
+  const C = 2 * Math.PI * 52
+  document.getElementById('yearOrbit').innerHTML = `
+    <circle cx="65" cy="65" r="52" fill="none" stroke="rgb(255 255 255 / .12)" stroke-width="2" stroke-dasharray="3 5"/>
+    <circle cx="65" cy="65" r="52" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}" transform="rotate(-90 65 65)"/>
+    <circle cx="65" cy="65" r="16" fill="#fbbf24"/><circle cx="65" cy="65" r="24" fill="#fbbf24" fill-opacity=".15"/>
+    <circle cx="${x}" cy="${y}" r="8" fill="#3b82f6"/><path d="M${x - 4} ${y - 2}q3 -3 6 0t4 3" stroke="#22c55e" stroke-width="2.5" fill="none"/>`
+  document.getElementById('yearBar').style.width = `${frac * 100}%`
+  document.getElementById('yearTxt').textContent = `Jour ${dayOfYear} sur ${daysInYear} · la Terre a fait ${Math.round(frac * 100)} % de son tour du Soleil`
+}
+
+// 7. Zodiac season with its constellation
+{
+  const Z = [[120, '♑ Capricorne'], [219, '♒ Verseau'], [320, '♓ Poissons'], [420, '♈ Bélier'], [521, '♉ Taureau'], [621, '♊ Gémeaux'],
+    [722, '♋ Cancer'], [823, '♌ Lion'], [923, '♍ Vierge'], [1023, '♎ Balance'], [1122, '♏ Scorpion'], [1222, '♐ Sagittaire'], [1232, '♑ Capricorne']]
+  const md = (now.getMonth() + 1) * 100 + now.getDate()
+  document.getElementById('sign').textContent = `Saison ${/^[♈♊♒♓♏]/.test(Z.find(([lim]) => md < lim)[1]) ? 'du' : 'de la'} ${Z.find(([lim]) => md < lim)[1].slice(2)} ${Z.find(([lim]) => md < lim)[1].slice(0, 1)}`
+  const pts = [[20, 80], [55, 40], [90, 60], [125, 25], [160, 50], [185, 95], [120, 90]]
+  document.getElementById('constel').innerHTML = `<path d="M${pts.slice(0, 6).map((p) => p.join(' ')).join('L')}M90 60L120 90L185 95"/>` +
+    pts.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? 2 : 3.2}"/>`).join('')
+}
+</script>
+</body>
+</html>
