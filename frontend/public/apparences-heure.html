@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex world clock</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root { --a1: #818cf8; --a2: #38bdf8; --glow: 99 102 241; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .62), rgb(15 12 50 / .8)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 36px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .65); margin: 8px auto 26px; max-width: 820px; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 26px; max-width: 900px; margin: 0 auto; padding: 0 20px 60px; }
+  .opt > p { margin: 10px 0 0; font-size: 13px; color: rgb(255 255 255 / .65); } .opt > p b { color: #fff; }
+  .card { position: relative; overflow: hidden; border-radius: 24px; padding: 20px; min-height: 280px; display: flex; flex-direction: column; gap: 12px;
+    background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); backdrop-filter: blur(22px); }
+  .head { display: flex; align-items: center; gap: 10px; }
+  .ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: linear-gradient(135deg, rgb(var(--glow) / .5), rgb(255 255 255 / .06)); flex: none; }
+  .t { font-weight: 600; font-size: 14px; } .s { font-size: 11.5px; color: rgb(255 255 255 / .6); } .tab { font-variant-numeric: tabular-nums; }
+
+  /* 1 timeline */
+  .line { position: relative; flex: 1; min-height: 190px; }
+  .line .bar { position: absolute; left: 0; right: 0; top: 50%; height: 12px; transform: translateY(-50%); border-radius: 999px;
+    background: linear-gradient(90deg, #0b1026 0%, #1e1b4b 20%, #f9a8d4 26%, #fcd34d 32%, #38bdf8 45%, #7dd3fc 60%, #fb7185 74%, #7c3aed 80%, #1e1b4b 88%, #0b1026 100%); }
+  .line .hrs { position: absolute; left: 0; right: 0; top: calc(50% + 12px); display: flex; justify-content: space-between; font-size: 10px; color: rgb(255 255 255 / .45); }
+  .pin { position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; white-space: nowrap; }
+  .pin.up { bottom: calc(50% + 8px); } .pin.down { top: calc(50% + 8px); flex-direction: column-reverse; }
+  .pin .lbl { padding: 5px 10px; border-radius: 12px; background: rgb(15 23 42 / .88); border: 1px solid rgb(255 255 255 / .15); font-size: 11.5px; text-align: center; }
+  .pin .lbl b { font-size: 15px; } .pin .lbl small { display: block; color: rgb(255 255 255 / .55); font-size: 10px; }
+  .pin .stem { width: 2px; height: 14px; background: rgb(255 255 255 / .6); }
+  .pin .dot { width: 11px; height: 11px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px #fff; }
+  .pin.home .dot { background: var(--a2); box-shadow: 0 0 14px var(--a2); width: 14px; height: 14px; }
+  .pin.home .lbl { border-color: var(--a2); }
+
+  /* 2 day/night map */
+  .map { position: relative; flex: 1; min-height: 210px; border-radius: 16px; overflow: hidden; background: #0b1a33; }
+  .map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .mdot { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 6px; }
+  .mdot i { width: 10px; height: 10px; border-radius: 50%; background: #fde047; box-shadow: 0 0 10px #fde047; flex: none; }
+  .mdot.night i { background: #c7d2fe; box-shadow: 0 0 10px #818cf8; }
+  .mdot.home i { background: var(--a2); box-shadow: 0 0 0 4px rgb(56 189 248 / .3), 0 0 14px var(--a2); }
+  .mdot span { font-size: 11px; padding: 2px 7px; border-radius: 8px; background: rgb(2 6 23 / .75); white-space: nowrap; }
+  .mdot span b { font-family: 'JetBrains Mono', monospace; }
+
+  /* 3 mini clocks */
+  .clocks { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px; }
+  .ck { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; border-radius: 18px; background: rgb(255 255 255 / .05); border: 1px solid rgb(255 255 255 / .1); }
+  .ck.day { background: linear-gradient(170deg, rgb(56 189 248 / .25), rgb(253 224 71 / .12)); }
+  .ck.night { background: linear-gradient(170deg, rgb(30 27 75 / .8), rgb(124 58 237 / .25)); }
+  .ck svg { width: 78px; height: 78px; }
+  .ck b { font-size: 13px; } .ck .diff { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: rgb(255 255 255 / .1); }
+</style>
+</head>
+<body>
+<h1>Heure du monde, 3 propositions</h1>
+<p class="lead">Exactement ce que calcule le backend : ton fuseau (Cotonou), puis pour chaque ville l’heure, jour/nuit, le décalage et le changement de jour. Tout est en direct</p>
+<div class="grid" id="app"></div>
+<script>
+// Same inputs as the widget's params: homeTimezone + cities (IANA zones)
+const HOME = 'Africa/Porto-Novo'
+const CITIES = ['America/New_York', 'Europe/Paris', 'Asia/Tokyo', 'Asia/Dubai', 'America/Los_Angeles', 'Australia/Sydney']
+// Display extras the frontend adds from the zone id (the backend only returns the label)
+const EXTRA = {
+  'Africa/Porto-Novo': ['🇧🇯', 'Cotonou', 2.4, 6.4], 'America/New_York': ['🇺🇸', null, -74, 40.7], 'Europe/Paris': ['🇫🇷', null, 2.35, 48.9],
+  'Asia/Tokyo': ['🇯🇵', null, 139.7, 35.7], 'Asia/Dubai': ['🇦🇪', null, 55.3, 25.2], 'America/Los_Angeles': ['🇺🇸', null, -118.2, 34], 'Australia/Sydney': ['🇦🇺', null, 151.2, -33.9],
+}
+// ---- the backend's world_clock logic, run live ----
+function zoned(now, tz) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', year: 'numeric', month: '2-digit', day: '2-digit', hourCycle: 'h23' }).formatToParts(now).map((x) => [x.type, x.value]))
+  return { hour: +p.hour, minute: +p.minute, dateKey: `${p.year}${p.month}${p.day}`, epochMinutes: Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) / 60000 }
+}
+function worldClock() {
+  const now = new Date(), home = zoned(now, HOME)
+  return {
+    home: { timezone: HOME, hour: home.hour, minute: home.minute, isDay: home.hour >= 6 && home.hour < 18 },
+    cities: CITIES.map((tz) => { const z = zoned(now, tz)
+      return { timezone: tz, label: tz.split('/').pop().replace(/_/g, ' '), hour: z.hour, minute: z.minute, isDay: z.hour >= 6 && z.hour < 18,
+        hoursDiff: Math.round(((z.epochMinutes - home.epochMinutes) / 60) * 2) / 2, dayOffset: z.dateKey === home.dateKey ? 0 : z.dateKey > home.dateKey ? 1 : -1 } }),
+  }
+}
+const pad = (n) => String(n).padStart(2, '0')
+const hm = (c) => `${pad(c.hour)}:${pad(c.minute)}`
+const flag = (tz) => EXTRA[tz]?.[0] ?? '🌐'
+const nameOf = (c) => EXTRA[c.timezone]?.[1] ?? c.label
+const diff = (c) => (c.hoursDiff === 0 ? 'même heure' : `${c.hoursDiff > 0 ? '+' : '−'}${Math.abs(c.hoursDiff)} h`) + (c.dayOffset ? (c.dayOffset > 0 ? ' · demain' : ' · hier') : '')
+const head = `<div class="head"><span class="ico">🌍</span><div><div class="t">Heure du monde</div><div class="s">depuis Cotonou</div></div></div>`
+
+function render() {
+  const d = worldClock()
+  const all = [{ ...d.home, label: 'Cotonou', hoursDiff: 0, dayOffset: 0, home: true }, ...d.cities].sort((a, b) => (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute))
+  const pins = all.map((c, i) => `<div class="pin ${i % 2 ? 'down' : 'up'}${c.home ? ' home' : ''}" style="left:${Math.min(94, Math.max(6, ((c.hour * 60 + c.minute) / 1440) * 100))}%">
+      <div class="lbl">${flag(c.timezone)} ${c.home ? 'Cotonou' : nameOf(c)}<br><b class="tab">${hm(c)}</b> ${c.isDay ? '☀️' : '🌙'}<small>${c.home ? 'ici' : diff(c)}</small></div><div class="stem"></div><div class="dot"></div></div>`).join('')
+
+  // day/night terminator: the sun is overhead at longitude (12 - UTC hour) * 15
+  const now = new Date(), utcH = now.getUTCHours() + now.getUTCMinutes() / 60, sunLon = (12 - utcH) * 15
+  const x = (lon) => ((lon + 180) / 360) * 100, y = (lat) => ((90 - lat) / 180) * 100
+  const nightStart = x(((sunLon + 90 + 540) % 360) - 180), nightEnd = x(((sunLon - 90 + 540) % 360) - 180)
+  const nightRect = nightStart < nightEnd ? `<rect x="${nightStart}%" y="0" width="${nightEnd - nightStart}%" height="100%" fill="url(#night)"/>`
+    : `<rect x="0" y="0" width="${nightEnd}%" height="100%" fill="url(#night)"/><rect x="${nightStart}%" y="0" width="${100 - nightStart}%" height="100%" fill="url(#night)"/>`
+  const dots = [{ ...d.home, home: true }, ...d.cities].map((c) => { const e = EXTRA[c.timezone ?? HOME]; return `<div class="mdot ${c.isDay ? '' : 'night'}${c.home ? ' home' : ''}" style="left:${x(e[2])}%;top:${y(e[3])}%"><i></i><span>${c.home ? 'Cotonou' : nameOf(c)} <b>${hm(c)}</b></span></div>` }).join('')
+
+  const clock = (c) => { const ha = ((c.hour % 12) + c.minute / 60) * 30, ma = c.minute * 6
+    return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="rgb(2 6 23 / .45)" stroke="rgb(255 255 255 / .25)" stroke-width="2"/>
+      ${Array.from({ length: 12 }, (_, i) => { const a = i * 30 * Math.PI / 180; return `<circle cx="${50 + 38 * Math.sin(a)}" cy="${50 - 38 * Math.cos(a)}" r="${i % 3 ? 1.5 : 2.6}" fill="#fff" opacity=".7"/>` }).join('')}
+      <line x1="50" y1="50" x2="${50 + 22 * Math.sin(ha * Math.PI / 180)}" y2="${50 - 22 * Math.cos(ha * Math.PI / 180)}" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <line x1="50" y1="50" x2="${50 + 32 * Math.sin(ma * Math.PI / 180)}" y2="${50 - 32 * Math.cos(ma * Math.PI / 180)}" stroke="#7dd3fc" stroke-width="2.5" stroke-linecap="round"/><circle cx="50" cy="50" r="3.5" fill="#fff"/></svg>` }
+
+  document.getElementById('app').innerHTML = [
+    ['Frise 24 h', 'celle que tu avais choisie : chaque ville placée sur la journée, avec son drapeau, l’heure, ☀️/🌙, le décalage et « demain / hier ». Cotonou (toi) en bleu', `<div class="card">${head}<div class="line"><div class="bar"></div><div class="hrs"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>${pins}</div></div>`],
+    ['Carte jour / nuit', 'une carte du monde où la nuit est dessinée en temps réel : on voit qui dort et qui est réveillé', `<div class="card">${head}<div class="map">
+      <svg viewBox="0 0 100 50" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="night" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#020617" stop-opacity=".2"/><stop offset=".08" stop-color="#020617" stop-opacity=".72"/><stop offset=".92" stop-color="#020617" stop-opacity=".72"/><stop offset="1" stop-color="#020617" stop-opacity=".2"/></linearGradient>
+        <pattern id="dots" width="1.6" height="1.6" patternUnits="userSpaceOnUse"><circle cx=".8" cy=".8" r=".35" fill="#38bdf8" fill-opacity=".35"/></pattern></defs>
+        <rect width="100" height="50" fill="url(#dots)"/>${nightRect}</svg>${dots}</div></div>`],
+    ['Petites horloges', 'une vraie horloge à aiguilles par ville, sur fond de jour (bleu doré) ou de nuit (violet)', `<div class="card">${head}<div class="clocks">${[{ ...d.home, home: true, label: 'Cotonou', hoursDiff: 0, dayOffset: 0 }, ...d.cities].map((c) => `<div class="ck ${c.isDay ? 'day' : 'night'}">${clock(c)}<b>${flag(c.timezone ?? HOME)} ${c.home ? 'Cotonou' : nameOf(c)}</b><span class="tab">${hm(c)} ${c.isDay ? '☀️' : '🌙'}</span><span class="diff">${c.home ? 'ici' : diff(c)}</span></div>`).join('')}</div></div>`],
+  ].map(([name, desc, html], i) => `<div class="opt">${html}<p><b>${i + 1} · ${name}</b> : ${desc}</p></div>`).join('')
+}
+render(); setInterval(render, 30000)
+</script>
+</body>
+</html>
