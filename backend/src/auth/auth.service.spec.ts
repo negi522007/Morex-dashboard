@@ -6,13 +6,14 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import { AuthService, maskEmail } from './auth.service';
 import { hashPassword } from './password.util';
 
 function makePrismaMock() {
   return {
     user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     emailVerificationToken: { create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
+    blockedEmail: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn() },
     session: { create: jest.fn(), deleteMany: jest.fn(), findUnique: jest.fn() },
     oAuthAccount: { findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
@@ -95,8 +96,9 @@ describe('AuthService', () => {
       expect(mail.sendConfirmationEmail).toHaveBeenCalledWith(
         'new@example.com',
         expect.stringContaining('http://localhost:8080/auth/confirm?token='),
+        'en',
       );
-      expect(result).toEqual({ id: 'user-1', email: 'new@example.com', firstName: 'Ada', lastName: 'Lovelace' });
+      expect(result).toEqual({ id: 'user-1', email: 'new@example.com', firstName: 'Ada', lastName: 'Lovelace', birthDate: null, zodiac: null });
     });
 
     it('auto-promotes to admin when the email is in ADMIN_EMAILS, case-insensitively', async () => {
@@ -136,6 +138,75 @@ describe('AuthService', () => {
         service.register('new@example.com', 'password123', 'Test', 'User'),
       ).rejects.toBeInstanceOf(ServiceUnavailableException);
       expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
+    });
+  });
+
+  describe('birth date and blocked addresses', () => {
+    it('stores a birth date given at sign-up and passes the language to the email', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({ id: 'u', email: 'a@b.c' });
+      const born = new Date('2001-02-28T00:00:00Z');
+      await service.register('a@b.c', 'password123', 'A', 'B', born, 'fr');
+      expect(prisma.user.create.mock.calls[0][0].data.birthDate).toBe(born);
+      expect(mail.sendConfirmationEmail).toHaveBeenCalledWith('a@b.c', expect.any(String), 'fr');
+    });
+
+    it('refuses a password sign-up for an address that said "not me" recently, but not after the block ends', async () => {
+      prisma.blockedEmail.findUnique.mockResolvedValue({ email: 'a@b.c', until: new Date(Date.now() + 3600_000) });
+      await expect(service.register('a@b.c', 'password123', 'A', 'B')).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.user.create).not.toHaveBeenCalled();
+      prisma.blockedEmail.findUnique.mockResolvedValue({ email: 'a@b.c', until: new Date(Date.now() - 1000) });
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({ id: 'u', email: 'a@b.c' });
+      await expect(service.register('a@b.c', 'password123', 'A', 'B')).resolves.toBeDefined();
+    });
+
+    it('validates the birth date when the profile is updated, and null clears it', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u' });
+      prisma.user.update.mockResolvedValue({ id: 'u', email: 'a@b.c', birthDate: new Date('2000-05-21T00:00:00Z') });
+      await expect(service.updateProfile('u', 's', { birthDate: 'not a date' })).rejects.toBeInstanceOf(BadRequestException);
+      const out = await service.updateProfile('u', 's', { birthDate: '2000-05-21' });
+      expect(out).toMatchObject({ birthDate: '2000-05-21', zodiac: 'gemini' });
+      await service.updateProfile('u', 's', { birthDate: null });
+      expect(prisma.user.update.mock.calls[1][0].data.birthDate).toBeNull();
+    });
+  });
+
+  describe('confirmation page flow', () => {
+    const rec = (over: object = {}, userOver: object = {}) => ({
+      token: 't', userId: 'u', expiresAt: new Date(Date.now() + 3600_000),
+      user: { id: 'u', email: 'ada.lovelace@gmail.com', firstName: 'Ada', emailVerified: false, ...userOver }, ...over,
+    });
+
+    it('masks the email and reveals nothing else before the user decides', async () => {
+      prisma.emailVerificationToken.findUnique.mockResolvedValue(rec());
+      expect(maskEmail('ada.lovelace@gmail.com')).toBe('a***@gmail.com');
+      expect(await service.previewConfirmation('t')).toEqual({ email: 'a***@gmail.com', firstName: 'Ada', expiresAt: expect.any(Date) });
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects previews for unknown, expired or already-confirmed links', async () => {
+      prisma.emailVerificationToken.findUnique.mockResolvedValue(null);
+      await expect(service.previewConfirmation('x')).rejects.toBeInstanceOf(UnauthorizedException);
+      prisma.emailVerificationToken.findUnique.mockResolvedValue(rec({ expiresAt: new Date(0) }));
+      await expect(service.previewConfirmation('t')).rejects.toBeInstanceOf(UnauthorizedException);
+      prisma.emailVerificationToken.findUnique.mockResolvedValue(rec({}, { emailVerified: true }));
+      await expect(service.previewConfirmation('t')).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('"not me" deletes the pending account and blocks the address for 24 hours', async () => {
+      prisma.emailVerificationToken.findUnique.mockResolvedValue(rec());
+      await service.rejectConfirmation('t');
+      expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'u' } });
+      const up = prisma.blockedEmail.upsert.mock.calls[0][0];
+      expect(up.where.email).toBe('ada.lovelace@gmail.com');
+      expect(up.create.until.getTime() - Date.now()).toBeGreaterThan(23 * 3600_000);
+    });
+
+    it('"not me" can never delete an account that is already confirmed', async () => {
+      prisma.emailVerificationToken.findUnique.mockResolvedValue(rec({}, { emailVerified: true }));
+      await expect(service.rejectConfirmation('t')).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(prisma.user.delete).not.toHaveBeenCalled();
     });
   });
 
@@ -220,7 +291,7 @@ describe('AuthService', () => {
       expect(prisma.session.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ userId: 'user-1' }) }),
       );
-      expect(result.user).toEqual({ id: 'user-1', email: 'user@example.com' });
+      expect(result.user).toEqual({ id: 'user-1', email: 'user@example.com', birthDate: null, zodiac: null });
       expect(result.session.id).toBe('session-1');
     });
   });
@@ -251,7 +322,7 @@ describe('AuthService', () => {
         expiresAt: new Date(Date.now() + 1000),
         user: { id: 'user-1', email: 'a@example.com' },
       });
-      await expect(service.getUserBySession('valid')).resolves.toEqual({ id: 'user-1', email: 'a@example.com' });
+      await expect(service.getUserBySession('valid')).resolves.toEqual({ id: 'user-1', email: 'a@example.com', birthDate: null, zodiac: null });
     });
   });
 

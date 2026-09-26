@@ -30,6 +30,12 @@ describe('AiService', () => {
     await expect(svc.forUser('u').completeJson({ system: 's', user: 'u' })).rejects.toBeInstanceOf(AiUnavailableError);
   });
 
+  it('refuses the mock provider in production unless explicitly allowed', () => {
+    expect(make({ AI_PROVIDER: 'mock', NODE_ENV: 'production' }).svc.available).toBe(false);
+    expect(make({ AI_PROVIDER: 'mock', NODE_ENV: 'production', AI_ALLOW_MOCK: 'true' }).svc.available).toBe(true);
+    expect(make({ AI_PROVIDER: 'mock' }).svc.available).toBe(true);
+  });
+
   it('mock provider answers with the canned value and uses no quota', async () => {
     const { svc, prisma } = make({ AI_PROVIDER: 'mock' });
     expect(await svc.forUser('u').completeJson({ system: 's', user: 'u', mock: { ok: 1 } })).toEqual({ ok: 1 });

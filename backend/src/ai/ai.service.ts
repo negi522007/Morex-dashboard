@@ -41,7 +41,9 @@ export class AiService {
 
   get provider(): 'anthropic' | 'openai' | 'mock' | null {
     const p = (this.config.get<string>('AI_PROVIDER') ?? '').toLowerCase();
-    if (p === 'mock') return 'mock';
+    // The offline "mock" writes canned, meaningless text. It exists for developing without a key and
+    // is refused in production (the Docker image) so a demo can never show fake AI output by accident.
+    if (p === 'mock') return this.config.get<string>('NODE_ENV') === 'production' && this.config.get<string>('AI_ALLOW_MOCK') !== 'true' ? null : 'mock';
     if (!this.config.get<string>('AI_API_KEY')) return null;
     if (p === 'anthropic') return 'anthropic';
     if (p === 'openai' || p === 'openai-compatible') return 'openai';
