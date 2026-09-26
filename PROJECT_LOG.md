@@ -113,6 +113,13 @@ cooldown against mail spam) and purged after 24 h. The mailer now treats a refus
 adds a plain-text part, and logs what the SMTP server answered. Documented why confirmation links only work
 for the machine running the server unless `APP_URL` is public (TROUBLESHOOTING.md).
 
+**Sept 26 (defense checklist)** — Went through the school's defense checklist against the running app.
+Fixed: `docker compose up --build` now starts everything (the web app was missing from compose — it is
+built and served by nginx, which also forwards the API routes), works with **no `.env`** (safe defaults,
+mail to Mailhog, an encryption key generated once into a dedicated volume that is not served publicly),
+and waits for the database (a fresh clone used to crash on its first migration). Verified from a copy of the
+repo without `.env`. The UI findings for Morayo are listed at the end of FRONTEND.md.
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |

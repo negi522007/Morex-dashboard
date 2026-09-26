@@ -172,3 +172,22 @@ prefix anyway.
 - **Export my data / delete my account**: shown as "soon" in the profile, no backend endpoint yet.
 - **Errors from a service** are only in the server logs: the API doesn't expose them per widget, so a
   failing card keeps its last data (or keeps "waiting").
+
+
+## Defense-checklist findings to fix (found by testing the running app, Sept 26)
+
+Checked in a headless browser against `http://localhost:5173`. Backend behaviour is fine; these are UI:
+
+1. **No error state on the dashboard.** With `GET /widgets` answering `500` the page renders as if
+   nothing happened (the widget list just stays empty). The checklist asks that the user "always knows
+   what is happening: loading, errors, empty screens". Show a visible message (with a retry) when the
+   widget list fails to load, and consider an empty-state hint when there are no widgets yet.
+2. **Horizontal overflow** at every size: 16 px on a 390 px phone (the top toolbar is clipped on the left,
+   the "EN" pill is cut), 16 px on a 768 px tablet, 4 px on desktop (probably the large decorative day
+   number in the hello card). Nothing should make `document.documentElement.scrollWidth` exceed the
+   viewport.
+3. **Keyboard focus** works (Tab reaches the menu, nav links and buttons) but the focus ring is the browser
+   default on a dark glass background and hard to see on several controls; add a clear `:focus-visible`
+   style. Icon-only buttons already have names, and images have `alt`.
+4. Not verified: colour contrast (light text on the busy background images), and the loading state of the
+   dashboard on a slow connection.
