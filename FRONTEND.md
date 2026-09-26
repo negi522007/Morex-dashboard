@@ -212,6 +212,26 @@ Also show the empty and loading states (the same standard as the dashboard, see 
 **Not in scope:** promoting/demoting admins, changing a user's password or email (no endpoints, by design),
 and viewing anyone's widgets or journal (the admin API never exposes private content; keep it that way).
 
+## Profile → "Connected accounts" (spec — backend is done, this section is missing from the profile)
+
+The profile modal has no way to link or unlink GitHub / My Epitech: today the only entry point is the
+"Connect GitHub" button that appears in the add-widget drawer after picking a GitHub widget. The user
+expects to manage it in the profile. Add a **Connected accounts** block:
+
+| Row | State from `GET /auth/me` | Action |
+|---|---|---|
+| GitHub | `githubLinked: true` → "Connected" + **Disconnect**; `false` → **Connect** | Connect: a real navigation, `window.location.href = '/auth/github'` (an `<a href>` works; **never `fetch`**, GitHub's consent page can't be reached that way). Disconnect: `DELETE /auth/github` → `204`, then refresh `/auth/me`. `409` means the account has no password and GitHub is its only login — show the API message ("set a password first"). |
+| My Epitech | `epitech` is `null` → **Connect**; else show `epitech.login`, `campus`, `promotion` + **Disconnect** | Same pattern with `/auth/epitech` and `DELETE /auth/epitech`. Only show the row when `GET /auth/epitech/status` answers `{ "configured": true }` (Epitech must first declare the app — see API.md → My Epitech). |
+
+Same for GitHub: hide the Connect button when the server has no GitHub OAuth configured (the API answers
+`400 "GitHub OAuth is not configured on the server"`; show that message instead of a dead button).
+
+After the OAuth round trip the backend redirects back to `FRONTEND_URL`: GitHub *link* answers a plain-text
+page ("GitHub account linked. You can close this tab.") in the same tab — it is acceptable to open the
+Connect link in a new tab and refresh `/auth/me` when the tab closes / on window focus. Epitech redirects to
+`/dashboard?epitech=linked` or `/dashboard?epitech_error=<message>` — read those query params, show a toast,
+then clear them from the URL.
+
 ## Not built yet
 
 - **Privacy note acceptance at registration**: a required checkbox linking to a `/privacy` page rendering
