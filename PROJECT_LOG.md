@@ -105,6 +105,14 @@ value history, and a read-only share link. Credential-like widget params are enc
 Epitech credits/XP (not exposed by the OIDC scopes; the only workaround is users pasting their session
 token, refused for security). The frontend was not touched.
 
+**Sept 26** — Merged Morayo's `feat/youtube` (Morex frontend + YouTube service + 3-widget weather) into
+`feat/morex-backend` and verified the whole stack end to end (API, then the real frontend in a headless
+browser: no console errors, no failing requests, all widget kinds rendering). Fixed a signup problem found
+in use: an unconfirmed account used to block its email address forever; it is now replaced on retry (2 min
+cooldown against mail spam) and purged after 24 h. The mailer now treats a refused recipient as a failure,
+adds a plain-text part, and logs what the SMTP server answered. Documented why confirmation links only work
+for the machine running the server unless `APP_URL` is public (TROUBLESHOOTING.md).
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |

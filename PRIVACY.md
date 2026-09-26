@@ -7,7 +7,7 @@ want the technical detail behind any of this (hashing, encryption), see
 
 ## What we collect
 
-- **Email** — to identify your account and send you the confirmation link when you sign up.
+- **Email** — to identify your account and send you the confirmation link when you sign up. If you never confirm, the unconfirmed account (email, name, password hash) is deleted automatically after 24 hours.
 - **First and last name** — required at sign-up, shown in the dashboard so it feels like *your*
   dashboard rather than an anonymous session.
 - **Password** — never stored as-is. It's run through a one-way hash (scrypt) before it ever touches the

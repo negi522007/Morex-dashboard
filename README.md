@@ -29,7 +29,8 @@ automatically at a user-defined interval.
 | Market data | No | ✅ Done | `exchange_rate` (base, quote, days — fiat pairs like EUR→USD via ECB, crypto via CoinGecko; returns its history), `price_history` (asset, days, currency) |
 | GitHub | OAuth 2.0 | ✅ Done | `recent_commits` (repo, number), `open_issues` (repo, number), `repo_stats` (repo), `daily_changes` (repo, hours — stand-up of the last hours) |
 | World clock | No | ✅ Done | `world_clock` (homeTimezone, cities) — pure timezone math, no external API |
-| Weather | No | ✅ Done | `forecast` (city) — Open-Meteo, no key |
+| Weather | No | ✅ Done | `current_weather`, `daily_forecast`, `hourly_forecast` (city, unit, days/hours) — Open-Meteo, no key |
+| YouTube | Server API key (`YOUTUBE_API_KEY`) | ✅ Done | `channel_stats`, `latest_videos`, `trending`, `video_stats` |
 | Calendar | No (secret iCal URL) | ✅ Done | `upcoming_events` (url, days, number) — Google Calendar's secret iCal address or any `.ics` |
 | My Epitech | Optional ("Connect with My Epitech", OIDC) | ✅ Done* | `planning` (calendarToken), `profile` — *login needs Epitech staff to declare the app, see API.md |
 | Custom API | No | ✅ Done | `json_value`, `json_list` — any public JSON API, chosen with a URL + path |

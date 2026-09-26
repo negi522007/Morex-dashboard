@@ -35,7 +35,9 @@ interface GithubEmail {
   verified: boolean;
 }
 
-const EMAIL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+export const EMAIL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+// How long to wait before an unconfirmed address may sign up again.
+const RESIGNUP_COOLDOWN_MS = 2 * 60 * 1000;
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 // The mockup's own option sets (mockups.html's [data-theme]/T dictionaries) —
@@ -103,7 +105,20 @@ export class AuthService {
   async register(email: string, password: string, firstName: string, lastName: string) {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
-      throw new ConflictException('An account with this email already exists');
+      // A signup that was never confirmed can't be used to log in, so it must not
+      // lock the address: the real owner may retry (e.g. the first mail never
+      // arrived). The old, unconfirmed row is replaced. The short cooldown stops
+      // this from being used to spam someone's inbox with confirmation mails.
+      const unconfirmed = existing.emailVerified === false && !existing.isBanned;
+      if (!unconfirmed) {
+        throw new ConflictException('An account with this email already exists');
+      }
+      if (Date.now() - new Date(existing.createdAt).getTime() < RESIGNUP_COOLDOWN_MS) {
+        throw new ConflictException(
+          'A confirmation email was just sent to this address — check your inbox (and spam), or try again in a few minutes',
+        );
+      }
+      await this.prisma.user.delete({ where: { id: existing.id } });
     }
 
     const passwordHash = await hashPassword(password);

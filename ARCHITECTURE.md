@@ -19,7 +19,8 @@ list), see [README.md](./README.md).
       /rss           # done
       /market-data   # done
       /github        # done (+ a repos endpoint feeding the frontend's repo picker)
-      /weather       # done
+      /weather       # done: current_weather, daily_forecast, hourly_forecast
+      /youtube       # done: needs YOUTUBE_API_KEY (server key, public data)
       /worldclock    # done
       /calendar      # done: any .ics feed (Google Calendar secret iCal address)
       /epitech       # done: planning (calendar token) + identity card (OIDC profile)

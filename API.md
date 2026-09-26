@@ -72,11 +72,13 @@ Public. Body:
 ```
 `firstName`/`lastName` are **required**. Editable later via `PATCH /auth/me` (see below).
 
+**Unconfirmed signups don't lock the address.** If the same email registers again while its previous signup was never confirmed (older than 2 minutes), the old unconfirmed account is replaced by the new one and a fresh confirmation mail is sent (the old link stops working). Unconfirmed accounts are also deleted automatically 24 h after creation, when their link expires. Confirmed accounts are never replaced. So the register form can simply be retried; no special "resend" flow is needed.
+
 | Status | When |
 |---|---|
 | `201` | Created. Body: `{ id, email, firstName, lastName, isAdmin }`. A confirmation email was sent — the account can't log in yet. |
 | `400` | Invalid email format, password under 8 characters, or missing `firstName`/`lastName`. |
-| `409` | An account with this email already exists. |
+| `409` | A confirmed account with this email already exists — **or** an unconfirmed signup for it was created less than 2 minutes ago (message: "A confirmation email was just sent…"; show it as-is, and suggest checking spam). |
 | `503` | The confirmation email failed to send — the account was **not** created (safe to retry). |
 
 ### `GET /auth/confirm?token=...`
@@ -280,7 +282,17 @@ List the current user's widget instances (for rendering the dashboard).
 | **new** `epitech/profile` | `{ login, name, email, campus, promotion, cursus, groups[] }` — no params; needs a linked My Epitech account (`needsAccount`, see below). Private. |
 | **new** `custom_api/json_value` | `{ label, unit, value, fetchedAt }` — params `url` (**secret**), `path` (e.g. `data.items[0].price`), `label`, `unit`. Public JSON APIs only (no auth headers are ever sent). Numeric values feed history and alerts. |
 | **new** `custom_api/json_list` | `{ items: [{ title, subtitle }], fetchedAt }` — params `url` (**secret**), `path` (to an array), `titleField`, `subtitleField`, `number`. |
-| `weather/forecast` | `{ city, country, temperature, weatherCode, days: [{ date, weatherCode, min, max }] }` — `city` param, geocoded and forecast through Open-Meteo (no key); `days` is the next five days; `weatherCode` is a WMO code |
+| `weather/current_weather` | `{ city, country, unit, temperature, feelsLike, humidity, windKmh, condition, isDay, high, low }` — params `city` (required), `unit` (`celsius` default \| `fahrenheit`). Open-Meteo, no key. |
+| `weather/daily_forecast` | `{ city, country, unit, now: { temperature, condition }, days: [{ date, condition, min, max, rainChance }] }` — params `city`, `days` (default 5, max 16), `unit`. `days` are the days *after* today. |
+| `weather/hourly_forecast` | `{ city, country, unit, hours: [{ time, temperature, condition, rainChance }] }` — params `city`, `hours` (default 12, max 48), `unit`. `time` is local to the city. |
+| `youtube/channel_stats` | `{ title, handle, avatar, subscribers, views, videos, url }` — param `channel` (`@handle`, channel id `UC…` or channel URL). `subscribers` is `null` when the owner hides it. |
+| `youtube/latest_videos` | `[video]` — params `channel`, `number` (default 5, max 25) |
+| `youtube/trending` | `[video]` — params `country` (2 letters, e.g. `FR`), `number` |
+| `youtube/video_stats` | `video` — param `video` (id or any youtube.com / youtu.be link) |
+
+`condition` (weather) is one of `clear`, `partly_cloudy`, `cloudy`, `fog`, `drizzle`, `rain`, `snow`, `thunderstorm` — map each to an icon + translated label; the old raw `weatherCode` is gone. A `video` is `{ id, title, channel, thumbnail, publishedAt, views, likes, comments, url }` (counts are numbers, `null` if hidden). **YouTube needs `YOUTUBE_API_KEY` on the server** (`.env`); without it the widgets can be created but stay empty (`cachedData: null`, reason in the server log). The daily YouTube quota is shared by all users, so keep refresh rates reasonable (≥ 5 min).
+
+> **Breaking change since the first weather version:** `weather/forecast` no longer exists (creating it returns `400 Unknown widget`). Widgets already stored under that name simply stop refreshing; delete and recreate them as `current_weather` / `daily_forecast`.
 | `worldclock/world_clock` | `{ home, cities: [...] }` — `homeTimezone` and comma-separated `cities` params, IANA names |
 `lastRefreshedAt`/`cachedData` are `null` until the scheduler's first tick after creation (up to 15s).
 
@@ -308,7 +320,7 @@ the user's `language`. Shapes (`insight.kind`):
 |---|---|---|
 | `rss_digest` | `rss/article_list` | `items: [{ link, image, summary, whyItMatters, topics[], readingMinutes, language }]` — match to `cachedData` rows by `link`; `image` = the article's `og:image` (or feed image); `summary` is a short recap translated into the user's language. |
 | `summary` | any widget without a specific one | `{ headline, detail, tone: "good"\|"neutral"\|"warning" }` |
-| `weather_advice` | `weather/forecast` | `{ advice, outfit }` |
+| `weather_advice` | `weather/current_weather`, `weather/daily_forecast` | `{ advice, outfit }` |
 | `standup` | `github/daily_changes` | `{ summary, highlights[] }` (empty when no commits) |
 
 Images are hot-linked from the article's site (your browser loads them); use `referrerpolicy="no-referrer"`
@@ -346,7 +358,7 @@ for the set) are both optional, as are `aiEnabled` (default `false`) and `shared
 ### `PATCH /widgets/:id`
 
 Reconfigure *and* move share this one endpoint — send whichever of `config`, `refreshRateSeconds`,
-`position`, `title`, `decoration`, `aiEnabled`, `shared` changed (at least one required). Omitted fields are left untouched.
+`position`, `title`, `decoration`, `aiEnabled`, `shared` changed (at least one required). Omitted fields are left untouched. Changing `config` makes the widget refresh on the next scheduler tick (≤ 15 s) instead of waiting for its full refresh rate — poll `GET /widgets` shortly after.
 
 ```json
 { "config": { "link": "https://hnrss.org/frontpage", "number": 1 }, "position": { "x": 2, "y": 3, "w": 4, "h": 2 }, "title": "Renamed", "decoration": "none" }
@@ -369,7 +381,7 @@ The widget's main number over time, sampled by the server on refresh (at most on
 { "widgetId": "uuid", "supported": true, "days": 7, "points": [{ "at": "2026-09-25T10:00:00.000Z", "value": 1.17 }] }
 ```
 `supported: false` (and `points: []`) when the widget has no numeric value. Numeric widgets:
-`exchange_rate` (rate), `price_history` (latest price), `weather/forecast` (temperature), `github/repo_stats`
+`exchange_rate` (rate), `price_history` (latest price), `weather/current_weather` and `weather/daily_forecast` (temperature), `youtube/channel_stats` (subscribers), `youtube/video_stats` (views), `github/repo_stats`
 (stars), `github/daily_changes` (commit count), `custom_api/json_value` (when numeric). `days` 1–90,
 `points` 2–1000 (long series are thinned evenly, last point kept). A brand-new widget has few points.
 
@@ -632,7 +644,7 @@ backend; only the wiring is left on the frontend side.
 | Widget order and size | `position` (opaque JSON) |
 | Exchange-rate graph, min/max, change | `cachedData.history / min / max / changePct` |
 | Bitcoin coin card and chart | `market_data/price_history` (a series of `{ timestamp, price }`) |
-| Weather card (now + next 5 days) | `weather/forecast`, param `city` |
+| Weather card (now + next days, by the hour) | `weather/current_weather`, `weather/daily_forecast`, `weather/hourly_forecast`, param `city` |
 | World clock timeline | `worldclock/world_clock`, params `homeTimezone`, `cities` (the shape only needs the zone names — pins can be computed in the browser) |
 | Terminal GitHub card | `github/recent_commits` → `[{ sha, message, author, date }]` |
 

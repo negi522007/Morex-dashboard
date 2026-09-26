@@ -54,6 +54,25 @@ describe('AuthService', () => {
       expect(prisma.user.create).not.toHaveBeenCalled();
     });
 
+    it('replaces an unconfirmed signup older than the cooldown so the real owner can retry', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'old', emailVerified: false, isBanned: false, createdAt: new Date(Date.now() - 10 * 60_000) });
+      prisma.user.create.mockResolvedValue({ id: 'user-2', email: 'new@example.com' });
+      await service.register('new@example.com', 'password123', 'Ada', 'Lovelace');
+      expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'old' } });
+      expect(prisma.user.create).toHaveBeenCalled();
+      expect(mail.sendConfirmationEmail).toHaveBeenCalled();
+    });
+
+    it('makes a very recent unconfirmed signup wait (no mail spam), and never replaces a confirmed or banned account', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'old', emailVerified: false, isBanned: false, createdAt: new Date() });
+      await expect(service.register('a@example.com', 'password123', 'A', 'B')).rejects.toThrow(/just sent/);
+      prisma.user.findUnique.mockResolvedValue({ id: 'v', emailVerified: true, createdAt: new Date(0) });
+      await expect(service.register('a@example.com', 'password123', 'A', 'B')).rejects.toThrow(/already exists/);
+      prisma.user.findUnique.mockResolvedValue({ id: 'b', emailVerified: false, isBanned: true, createdAt: new Date(0) });
+      await expect(service.register('a@example.com', 'password123', 'A', 'B')).rejects.toThrow(/already exists/);
+      expect(prisma.user.delete).not.toHaveBeenCalled();
+    });
+
     it('creates the user, issues a token, and sends the confirmation email', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue({
