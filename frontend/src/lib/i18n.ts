@@ -23,7 +23,7 @@ export const T = {
     currentPw: 'Mot de passe actuel', newPw: 'Nouveau mot de passe', pwPh: 'Au moins 8 caractères',
     pfData: 'Mes données', pfDataSub: 'Récupère une copie de tes données ou supprime définitivement ton compte',
     export: 'Télécharger mes données', deleteAcc: 'Supprimer mon compte', soon: 'bientôt', cancel: 'Annuler',
-    morning: 'Bonjour', evening: 'Bonsoir', navDash: 'Dashboard', navProfile: 'Profil', navSettings: 'Paramètres',
+    morning: 'Bonjour', evening: 'Bonsoir', navDash: 'Mon dashboard', navProfile: 'Mon profil', navSettings: 'Paramètres',
     search: 'Rechercher un widget ou un service…', resWidgets: 'Tes widgets', resServices: 'Services', add: 'Ajouter',
     theme: 'Thème',
     wStyle: 'Widgets', skGlass: 'Verre', skNeon: 'Néon', skPastel: 'Pastel', skMinimal: 'Minimal', skHolo: 'Holographique',
@@ -52,7 +52,7 @@ export const T = {
     currentPw: 'Current password', newPw: 'New password', pwPh: 'At least 8 characters',
     pfData: 'My data', pfDataSub: 'Get a copy of your data or permanently delete your account',
     export: 'Download my data', deleteAcc: 'Delete my account', soon: 'soon', cancel: 'Cancel',
-    morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', navDash: 'Dashboard', navProfile: 'Profile', navSettings: 'Settings',
+    morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening', navDash: 'My dashboard', navProfile: 'My profile', navSettings: 'Settings',
     search: 'Search a widget or a service…', resWidgets: 'Your widgets', resServices: 'Services', add: 'Add',
     theme: 'Theme',
     wStyle: 'Widgets', skGlass: 'Glass', skNeon: 'Neon', skPastel: 'Pastel', skMinimal: 'Minimal', skHolo: 'Holographic',
@@ -81,7 +81,7 @@ export const T = {
     currentPw: 'Contraseña actual', newPw: 'Nueva contraseña', pwPh: 'Al menos 8 caracteres',
     pfData: 'Mis datos', pfDataSub: 'Descarga una copia de tus datos o elimina tu cuenta definitivamente',
     export: 'Descargar mis datos', deleteAcc: 'Eliminar mi cuenta', soon: 'pronto', cancel: 'Cancelar',
-    morning: 'Buenos días', afternoon: 'Buenas tardes', evening: 'Buenas noches', navDash: 'Panel', navProfile: 'Perfil', navSettings: 'Ajustes',
+    morning: 'Buenos días', afternoon: 'Buenas tardes', evening: 'Buenas noches', navDash: 'Mi panel', navProfile: 'Mi perfil', navSettings: 'Ajustes',
     search: 'Buscar un widget o un servicio…', resWidgets: 'Tus widgets', resServices: 'Servicios', add: 'Añadir',
     theme: 'Tema',
     wStyle: 'Widgets', skGlass: 'Cristal', skNeon: 'Neón', skPastel: 'Pastel', skMinimal: 'Minimal', skHolo: 'Holográfico',
@@ -115,7 +115,7 @@ export const W = {
     needsGithub: 'Ce widget lit tes dépôts GitHub : connecte d’abord ton compte', connectGithub: 'Connecter GitHub',
     needsEpitech: 'Ce widget lit ton profil My Epitech : relie d’abord ton compte', connectEpitech: 'Relier My Epitech',
     removed: (x: string) => `« ${x} » supprimé`, undo: 'Annuler', secretKept: 'Laisse vide pour garder la valeur actuelle', settings: 'Réglages',
-    unknownZone: (x: string) => `Ville inconnue : ${x}. Écris une ville (Paris, New York…) ou un fuseau (Europe/Paris)`, aiLabel: 'Analyse par l’IA', aiHint: 'Ajoute un résumé ou un conseil écrit par l’IA', saveError: 'Impossible d’enregistrer', noParams: 'Aucun réglage : ce widget utilise ton compte lié',
+    helpBot: 'Assistant Morex', helpBotSub: 'Répond à partir de l’aide · FR / EN / ES', helpHello: 'Salut ! Je suis l’assistant Morex ✨ Pose-moi une question sur ton dashboard, ou choisis un sujet :', helpAsk: 'Pose ta question…', yourCity: 'Ta ville', citiesToShow: 'Villes à afficher', change: 'changer', searchCity: 'Cherche ta ville…', addCity: 'Ajoute une ville, un pays…', noPlace: 'Aucun lieu trouvé', zoneWord: 'fuseau', countryWord: 'pays', accounts: 'Comptes connectés', accountsSub: 'Relie tes comptes pour les widgets et pour te connecter plus vite', linked: 'Connecté', notLinked: 'Pas connecté', link: 'Connecter', unlink: 'Déconnecter', notReady: 'Pas encore disponible sur ce serveur', steamStatus: { online: 'En ligne', offline: 'Hors ligne', busy: 'Occupé', away: 'Absent', snooze: 'Endormi', looking_to_trade: 'Cherche un échange', looking_to_play: 'Cherche à jouer' } as Record<string, string>, playing: 'Joue à', since: 'depuis', last2w: '2 dernières semaines', this2w: 'ces 2 semaines', noRecent: 'Aucun jeu ces 2 dernières semaines', hTotal: (h: string) => `${h} h au total`, bioTitle: 'Ma petite bio ✿', bioSub: 'Quelques mots pour dire qui tu es', bioPh: 'Il était une fois…', stickers: 'Stickers', writing: 'Style d’écriture', colour: 'Couleur', preview: 'Aperçu', saveBio: 'Enregistrer ma bio', fonts: ['Moderne', 'Manuscrite', 'Élégante', 'Fun'], aiName: 'Morex IA', aiSub: 'Ton assistant ✨', aiHello: (n: string) => `Salut${n ? ' ' + n : ''} ! Qu’est-ce que je peux faire pour toi ?`, aiActWidgets: 'Crée-moi des widgets', aiActBrief: 'Mon brief du jour', aiActHelp: 'J’ai une question', aiTellMe: 'Dis-moi ce que tu veux suivre, par exemple : « le bitcoin et la météo à Cotonou »', aiAskAway: 'Vas-y, pose ta question 🙂', aiPhWidgets: 'Ex : le bitcoin et la météo à Cotonou', aiHere: 'Voilà ce que je te propose :', aiAdd: 'Ajouter', aiAdded: 'Ajouté', aiRetry: 'Réessayer', aiNothing: 'Je n’ai pas trouvé de widget pour ça. Essaie avec d’autres mots.', aiNoBrief: 'Pas encore de brief : active l’analyse par l’IA sur au moins un widget (✎), puis réessaie.', aiOff: 'L’IA n’est pas encore configurée sur ce serveur : il faut une clé (par exemple Gemini, gratuite) dans le fichier .env. En attendant, je peux répondre à tes questions sur Morex.', tapDay: 'touche pour ta journée', quoteTitle: 'Citation du jour', factTitle: 'Le savais-tu ?', tapDiscover: 'Touche pour découvrir', topics: { nature: 'Nature', space: 'Espace', science: 'Science', history: 'Histoire', tech: 'Technologie', body: 'Corps humain' } as Record<string, string>, birthDate: 'Date de naissance', birthNote: 'Sert à ton horoscope : seul ton signe est utilisé', love: 'Amour', work: 'Travail', energy: 'Énergie', fromBirth: 'Rempli d’après ta date de naissance', unknownZone: (x: string) => `Ville inconnue : ${x}. Écris une ville (Paris, New York…) ou un fuseau (Europe/Paris)`, aiLabel: 'Analyse par l’IA', aiHint: 'Ajoute un résumé ou un conseil écrit par l’IA', saveError: 'Impossible d’enregistrer', noParams: 'Aucun réglage : ce widget utilise ton compte lié',
   },
   en: {
     every: 'Every', waiting: 'Waiting for the first data…', live: 'LIVE', essential: 'In short', aiRecap: 'AI summary', readMin: 'min read',
@@ -132,7 +132,7 @@ export const W = {
     needsGithub: 'This widget reads your GitHub repositories: connect your account first', connectGithub: 'Connect GitHub',
     needsEpitech: 'This widget reads your My Epitech profile: link your account first', connectEpitech: 'Link My Epitech',
     removed: (x: string) => `“${x}” deleted`, undo: 'Undo', secretKept: 'Leave empty to keep the current value', settings: 'Settings',
-    unknownZone: (x: string) => `Unknown city: ${x}. Type a city (Paris, New York…) or a time zone (Europe/Paris)`, aiLabel: 'AI analysis', aiHint: 'Adds a summary or advice written by AI', saveError: 'Could not save', noParams: 'No settings: this widget uses your linked account',
+    helpBot: 'Morex assistant', helpBotSub: 'Answers from the help · FR / EN / ES', helpHello: 'Hi! I’m the Morex assistant ✨ Ask me anything about your dashboard, or pick a topic:', helpAsk: 'Ask your question…', yourCity: 'Your city', citiesToShow: 'Cities to show', change: 'change', searchCity: 'Search your city…', addCity: 'Add a city, a country…', noPlace: 'No place found', zoneWord: 'time zone', countryWord: 'country', accounts: 'Connected accounts', accountsSub: 'Link your accounts for widgets and a faster sign-in', linked: 'Connected', notLinked: 'Not connected', link: 'Connect', unlink: 'Disconnect', notReady: 'Not available on this server yet', steamStatus: { online: 'Online', offline: 'Offline', busy: 'Busy', away: 'Away', snooze: 'Snooze', looking_to_trade: 'Looking to trade', looking_to_play: 'Looking to play' } as Record<string, string>, playing: 'Playing', since: 'since', last2w: 'Last 2 weeks', this2w: 'these 2 weeks', noRecent: 'No games in the last 2 weeks', hTotal: (h: string) => `${h} h in total`, bioTitle: 'My little bio ✿', bioSub: 'A few words to say who you are', bioPh: 'Once upon a time…', stickers: 'Stickers', writing: 'Writing style', colour: 'Colour', preview: 'Preview', saveBio: 'Save my bio', fonts: ['Modern', 'Handwritten', 'Elegant', 'Fun'], aiName: 'Morex AI', aiSub: 'Your assistant ✨', aiHello: (n: string) => `Hi${n ? ' ' + n : ''}! What can I do for you?`, aiActWidgets: 'Make me some widgets', aiActBrief: 'My daily brief', aiActHelp: 'I have a question', aiTellMe: 'Tell me what you want to follow, for example: “bitcoin and the weather in Cotonou”', aiAskAway: 'Go ahead, ask your question 🙂', aiPhWidgets: 'E.g. bitcoin and the weather in Cotonou', aiHere: 'Here is what I suggest:', aiAdd: 'Add', aiAdded: 'Added', aiRetry: 'Try again', aiNothing: 'I could not find a widget for that. Try other words.', aiNoBrief: 'No brief yet: turn on AI analysis on at least one widget (✎), then try again.', aiOff: 'AI is not set up on this server yet: it needs a key (Gemini, for instance, is free) in the .env file. Meanwhile I can answer your questions about Morex.', tapDay: 'tap for your day', quoteTitle: 'Quote of the day', factTitle: 'Did you know?', tapDiscover: 'Tap to find out', topics: { nature: 'Nature', space: 'Space', science: 'Science', history: 'History', tech: 'Technology', body: 'Human body' } as Record<string, string>, birthDate: 'Birth date', birthNote: 'Used for your horoscope: only your sign is used', love: 'Love', work: 'Work', energy: 'Energy', fromBirth: 'Filled from your birth date', unknownZone: (x: string) => `Unknown city: ${x}. Type a city (Paris, New York…) or a time zone (Europe/Paris)`, aiLabel: 'AI analysis', aiHint: 'Adds a summary or advice written by AI', saveError: 'Could not save', noParams: 'No settings: this widget uses your linked account',
   },
   es: {
     every: 'Cada', waiting: 'Esperando los primeros datos…', live: 'EN VIVO', essential: 'Lo esencial', aiRecap: 'Resumen por IA', readMin: 'min de lectura',
@@ -149,7 +149,65 @@ export const W = {
     needsGithub: 'Este widget lee tus repositorios de GitHub: conecta tu cuenta primero', connectGithub: 'Conectar GitHub',
     needsEpitech: 'Este widget lee tu perfil de My Epitech: vincula tu cuenta primero', connectEpitech: 'Vincular My Epitech',
     removed: (x: string) => `«${x}» eliminado`, undo: 'Deshacer', secretKept: 'Déjalo vacío para mantener el valor actual', settings: 'Ajustes',
-    unknownZone: (x: string) => `Ciudad desconocida: ${x}. Escribe una ciudad (París, Nueva York…) o una zona horaria (Europe/Paris)`, aiLabel: 'Análisis por IA', aiHint: 'Añade un resumen o un consejo escrito por la IA', saveError: 'No se pudo guardar', noParams: 'Sin ajustes: este widget usa tu cuenta vinculada',
+    helpBot: 'Asistente Morex', helpBotSub: 'Responde a partir de la ayuda · FR / EN / ES', helpHello: '¡Hola! Soy el asistente de Morex ✨ Pregúntame lo que quieras sobre tu panel, o elige un tema:', helpAsk: 'Escribe tu pregunta…', yourCity: 'Tu ciudad', citiesToShow: 'Ciudades a mostrar', change: 'cambiar', searchCity: 'Busca tu ciudad…', addCity: 'Añade una ciudad, un país…', noPlace: 'Ningún lugar encontrado', zoneWord: 'zona horaria', countryWord: 'país', accounts: 'Cuentas conectadas', accountsSub: 'Vincula tus cuentas para los widgets y para entrar más rápido', linked: 'Conectada', notLinked: 'No conectada', link: 'Conectar', unlink: 'Desconectar', notReady: 'Aún no disponible en este servidor', steamStatus: { online: 'En línea', offline: 'Desconectado', busy: 'Ocupado', away: 'Ausente', snooze: 'Durmiendo', looking_to_trade: 'Busca intercambiar', looking_to_play: 'Busca jugar' } as Record<string, string>, playing: 'Jugando a', since: 'desde', last2w: 'Últimas 2 semanas', this2w: 'estas 2 semanas', noRecent: 'Ningún juego en las últimas 2 semanas', hTotal: (h: string) => `${h} h en total`, bioTitle: 'Mi pequeña bio ✿', bioSub: 'Unas palabras para decir quién eres', bioPh: 'Érase una vez…', stickers: 'Stickers', writing: 'Estilo de escritura', colour: 'Color', preview: 'Vista previa', saveBio: 'Guardar mi bio', fonts: ['Moderna', 'A mano', 'Elegante', 'Divertida'], aiName: 'Morex IA', aiSub: 'Tu asistente ✨', aiHello: (n: string) => `¡Hola${n ? ' ' + n : ''}! ¿Qué puedo hacer por ti?`, aiActWidgets: 'Créame widgets', aiActBrief: 'Mi resumen del día', aiActHelp: 'Tengo una pregunta', aiTellMe: 'Dime qué quieres seguir, por ejemplo: «el bitcoin y el tiempo en Cotonú»', aiAskAway: 'Adelante, haz tu pregunta 🙂', aiPhWidgets: 'P. ej. el bitcoin y el tiempo en Cotonú', aiHere: 'Esto es lo que te propongo:', aiAdd: 'Añadir', aiAdded: 'Añadido', aiRetry: 'Reintentar', aiNothing: 'No encontré ningún widget para eso. Prueba con otras palabras.', aiNoBrief: 'Aún no hay resumen: activa el análisis por IA en al menos un widget (✎) y vuelve a intentarlo.', aiOff: 'La IA aún no está configurada en este servidor: necesita una clave (Gemini, por ejemplo, es gratuita) en el archivo .env. Mientras tanto puedo responder a tus preguntas sobre Morex.', tapDay: 'toca para tu día', quoteTitle: 'Cita del día', factTitle: '¿Sabías que…?', tapDiscover: 'Toca para descubrirlo', topics: { nature: 'Naturaleza', space: 'Espacio', science: 'Ciencia', history: 'Historia', tech: 'Tecnología', body: 'Cuerpo humano' } as Record<string, string>, birthDate: 'Fecha de nacimiento', birthNote: 'Sirve para tu horóscopo: solo se usa tu signo', love: 'Amor', work: 'Trabajo', energy: 'Energía', fromBirth: 'Rellenado según tu fecha de nacimiento', unknownZone: (x: string) => `Ciudad desconocida: ${x}. Escribe una ciudad (París, Nueva York…) o una zona horaria (Europe/Paris)`, aiLabel: 'Análisis por IA', aiHint: 'Añade un resumen o un consejo escrito por la IA', saveError: 'No se pudo guardar', noParams: 'Sin ajustes: este widget usa tu cuenta vinculada',
   },
 }
 export type WTexts = (typeof W)['fr']
+
+// Readable labels for the backend's parameter names (the drawer and the edit modal show these, not "homeTimezone")
+export const PARAM_LABEL: Record<string, Record<Lang, string>> = {
+  link: { fr: 'Adresse du flux', en: 'Feed address', es: 'Dirección del feed' },
+  number: { fr: 'Nombre', en: 'How many', es: 'Cantidad' },
+  base: { fr: 'Cryptomonnaie', en: 'Cryptocurrency', es: 'Criptomoneda' },
+  quote: { fr: 'Devise', en: 'Currency', es: 'Moneda' },
+  days: { fr: 'Nombre de jours', en: 'Number of days', es: 'Número de días' },
+  asset: { fr: 'Cryptomonnaie', en: 'Cryptocurrency', es: 'Criptomoneda' },
+  currency: { fr: 'Devise', en: 'Currency', es: 'Moneda' },
+  repo: { fr: 'Dépôt GitHub', en: 'GitHub repository', es: 'Repositorio de GitHub' },
+  hours: { fr: 'Nombre d’heures', en: 'Number of hours', es: 'Número de horas' },
+  homeTimezone: { fr: 'Ta ville', en: 'Your city', es: 'Tu ciudad' },
+  cities: { fr: 'Villes à afficher', en: 'Cities to show', es: 'Ciudades a mostrar' },
+  city: { fr: 'Ville', en: 'City', es: 'Ciudad' },
+  unit: { fr: 'Unité', en: 'Unit', es: 'Unidad' },
+  channel: { fr: 'Chaîne', en: 'Channel', es: 'Canal' },
+  country: { fr: 'Pays', en: 'Country', es: 'País' },
+  video: { fr: 'Vidéo', en: 'Video', es: 'Vídeo' },
+  url: { fr: 'Adresse', en: 'Address', es: 'Dirección' },
+  calendarToken: { fr: 'Token du calendrier', en: 'Calendar token', es: 'Token del calendario' },
+  path: { fr: 'Chemin', en: 'Path', es: 'Ruta' },
+  label: { fr: 'Nom affiché', en: 'Displayed name', es: 'Nombre mostrado' },
+  titleField: { fr: 'Champ du titre', en: 'Title field', es: 'Campo del título' },
+  subtitleField: { fr: 'Champ du sous-titre', en: 'Subtitle field', es: 'Campo del subtítulo' },
+  sign: { fr: 'Signe', en: 'Sign', es: 'Signo' },
+  steamId: { fr: 'Profil Steam', en: 'Steam profile', es: 'Perfil de Steam' },
+}
+export const paramLabel = (name: string, lang: Lang) => PARAM_LABEL[name]?.[lang] ?? name
+
+// The backend answers in English: known messages are shown in the user's language, others as they are
+const ERRORS: [RegExp, Record<Lang, string | ((m: RegExpMatchArray) => string)>][] = [
+  [/You must connect your (\w+) account/i, { fr: (m) => `Connecte d’abord ton compte ${m[1]}`, en: (m) => `Connect your ${m[1]} account first`, es: (m) => `Conecta primero tu cuenta de ${m[1]}` }],
+  [/Current password is incorrect/i, { fr: 'Le mot de passe actuel est incorrect', en: 'The current password is incorrect', es: 'La contraseña actual es incorrecta' }],
+  [/(New )?[Pp]assword must be at least 8/, { fr: 'Le mot de passe doit faire au moins 8 caractères', en: 'The password must be at least 8 characters', es: 'La contraseña debe tener al menos 8 caracteres' }],
+  [/Invalid email or password/i, { fr: 'E-mail ou mot de passe incorrect', en: 'Incorrect email or password', es: 'Correo o contraseña incorrectos' }],
+  [/Please confirm your email/i, { fr: 'Confirme d’abord ton e-mail : regarde ta boîte de réception', en: 'Please confirm your email first: check your inbox', es: 'Confirma primero tu correo: revisa tu bandeja de entrada' }],
+  [/An account with this email already exists/i, { fr: 'Un compte existe déjà avec cet e-mail', en: 'An account with this email already exists', es: 'Ya existe una cuenta con este correo' }],
+  [/A valid email is required/i, { fr: 'Entre une adresse e-mail valide', en: 'Enter a valid email address', es: 'Introduce un correo válido' }],
+  [/(First|Last) name (is required|cannot be blank)/i, { fr: 'Le prénom et le nom sont obligatoires', en: 'First and last name are required', es: 'El nombre y el apellido son obligatorios' }],
+  [/at least 13 years old/i, { fr: 'Il faut avoir au moins 13 ans pour créer un compte', en: 'You must be at least 13 to create an account', es: 'Debes tener al menos 13 años para crear una cuenta' }],
+  [/birthDate|Date of birth/i, { fr: 'Date de naissance invalide', en: 'Invalid date of birth', es: 'Fecha de nacimiento no válida' }],
+  [/Bio must be 280/i, { fr: 'La bio fait 280 caractères maximum', en: 'The bio is limited to 280 characters', es: 'La bio tiene un máximo de 280 caracteres' }],
+  [/Missing required parameter "(\w+)"/, { fr: (m) => `Remplis le champ « ${paramLabel(m[1], 'fr')} »`, en: (m) => `Fill in “${paramLabel(m[1], 'en')}”`, es: (m) => `Rellena «${paramLabel(m[1], 'es')}»` }],
+  [/Parameter "(\w+)" must be an integer/, { fr: (m) => `« ${paramLabel(m[1], 'fr')} » doit être un nombre entier`, en: (m) => `“${paramLabel(m[1], 'en')}” must be a whole number`, es: (m) => `«${paramLabel(m[1], 'es')}» debe ser un número entero` }],
+  [/refreshRateSeconds/, { fr: 'Fréquence de mise à jour trop rapide', en: 'Refresh rate too fast', es: 'Frecuencia de actualización demasiado rápida' }],
+  [/No photo uploaded|jpeg\/png\/webp\/gif/i, { fr: 'Choisis une image JPEG, PNG, WebP ou GIF de moins de 5 Mo', en: 'Pick a JPEG, PNG, WebP or GIF image under 5 MB', es: 'Elige una imagen JPEG, PNG, WebP o GIF de menos de 5 MB' }],
+  [/only way to log in|no password/i, { fr: 'Impossible : c’est ta seule façon de te connecter. Choisis d’abord un mot de passe', en: 'Not possible: it is your only way to sign in. Set a password first', es: 'No es posible: es tu única forma de entrar. Elige primero una contraseña' }],
+  [/suspended/i, { fr: 'Ce compte est suspendu', en: 'This account is suspended', es: 'Esta cuenta está suspendida' }],
+  [/Failed to fetch|NetworkError|Request failed \(HTTP 5\d\d\)/i, { fr: 'Le serveur ne répond pas, réessaie dans un instant', en: 'The server is not answering, try again in a moment', es: 'El servidor no responde, inténtalo en un momento' }],
+]
+export function translateError(message: string, lang: Lang): string {
+  for (const [re, t] of ERRORS) {
+    const m = message.match(re)
+    if (m) { const v = t[lang]; return typeof v === 'function' ? v(m) : v }
+  }
+  return message
+}
