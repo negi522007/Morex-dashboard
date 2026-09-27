@@ -2,17 +2,19 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { LANGS, W, type Lang } from '../lib/i18n'
+import { setAuthLang } from '../lib/authLang'
 import { entryFor, type CatalogEntry } from '../lib/catalog'
 import type { AboutResponse, User, WidgetInstance } from '../lib/types'
 import { Hero, SearchBar, Sidebar, Toolbar } from '../components/morex/Chrome'
 import { WidgetGrid } from '../components/morex/WidgetGrid'
+import { AiBubble } from '../components/morex/AiBubble'
 import { Drawer } from '../components/morex/Drawer'
-import { AvatarModal, EditWidgetModal, HelpModal, JournalModal, LogoutModal, ProfileModal } from '../components/morex/Modals'
+import { AvatarModal, BioModal, EditWidgetModal, HelpModal, JournalModal, LogoutModal, ProfileModal } from '../components/morex/Modals'
 import '../styles/morex.css'
 
 // The widgets' data is refreshed server-side by the Timer; the page just re-reads GET /widgets.
 const POLL_INTERVAL_MS = 15_000
-type ModalName = 'profile' | 'avatar' | 'journal' | 'help' | 'logout'
+type ModalName = 'profile' | 'avatar' | 'journal' | 'help' | 'logout' | 'bio'
 
 const byOrder = (a: WidgetInstance, b: WidgetInstance) =>
   (a.position?.order ?? Number.MAX_SAFE_INTEGER) - (b.position?.order ?? Number.MAX_SAFE_INTEGER) || a.createdAt.localeCompare(b.createdAt)
@@ -67,7 +69,8 @@ export function DashboardPage() {
   useEffect(() => { document.body.dataset.wskin = skin }, [skin])
   useEffect(() => { document.body.classList.toggle('editing', editing) }, [editing])
   useEffect(() => { document.body.classList.toggle('dw-open', drawer.open) }, [drawer.open])
-  useEffect(() => { document.documentElement.lang = lang }, [lang])
+  // Also remembered for the login page, so logging out keeps the same language
+  useEffect(() => { document.documentElement.lang = lang; if (user) setAuthLang(lang) }, [lang, user])
 
   // Leave edit mode with Escape or a click outside the cards
   useEffect(() => {
@@ -157,7 +160,7 @@ export function DashboardPage() {
         <Sidebar lang={lang} onToggle={() => setCollapsed((c) => !c)} onProfile={() => setModal('profile')} onHelp={() => setModal('help')} onLogout={() => setModal('logout')} />
         <main>
           <Toolbar user={user} lang={lang} theme={theme} skin={skin} onLang={(l) => savePrefs({ language: l })} onTheme={(t) => savePrefs({ theme: t })} onSkin={(s) => savePrefs({ widgetSkin: s })} onOpen={setModal} />
-          <Hero user={user} lang={lang} onAvatar={() => setModal('avatar')} onProfile={() => setModal('profile')} onJournal={() => setModal('journal')} />
+          <Hero user={user} lang={lang} onAvatar={() => setModal('avatar')} onBio={() => setModal('bio')} onJournal={() => setModal('journal')} />
           <SearchBar lang={lang} widgets={visible} onGoWidget={goToWidget} onAdd={(e) => setDrawer({ open: true, preset: e })} />
           <WidgetGrid widgets={visible} lang={lang} editing={editing} setEditing={setEditing} landing={landing}
             onAdd={() => setDrawer({ open: true, preset: null })} onDelete={removeWithUndo} onEdit={setEditWidget}
@@ -165,6 +168,8 @@ export function DashboardPage() {
             onReorder={reorder} onResize={resize} />
         </main>
       </div>
+
+      <AiBubble user={user} lang={lang} onCreate={create} />
 
       <Drawer open={drawer.open} lang={lang} about={about} user={user} preset={drawer.preset} onClose={() => setDrawer({ open: false, preset: null })} onCreate={create} />
 
@@ -183,6 +188,7 @@ export function DashboardPage() {
         <ProfileModal user={user} lang={lang} theme={theme} onClose={() => setModal(null)} onSaved={setUser}
           onLang={(l) => savePrefs({ language: l })} onTheme={(t) => savePrefs({ theme: t })} onAvatar={() => setModal('avatar')} />
       )}
+      {modal === 'bio' && <BioModal user={user} lang={lang} onClose={() => setModal(null)} onSaved={setUser} />}
       {modal === 'avatar' && <AvatarModal user={user} lang={lang} onClose={() => setModal(null)} onSaved={setUser} />}
     </>
   )
