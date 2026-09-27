@@ -55,4 +55,9 @@ describe('WorldclockProvider', () => {
     expect(cities).toMatchObject({ optionsUrl: '/services/worldclock/places', multiple: true });
     expect(widget.params.find((p) => p.name === 'homeTimezone')?.optionsUrl).toBe('/services/worldclock/places');
   });
+  it('gives each city its country code for a flag, and keeps a typed name as the label', async () => {
+    const d: any = await provider.widgets[0].fetchData({ homeTimezone: 'Cotonou', cities: 'Paris, Asia/Tokyo' });
+    expect(d.home).toMatchObject({ timezone: 'Africa/Porto-Novo', label: 'Cotonou', iso2: 'BJ' });
+    expect(d.cities.map((c: any) => [c.label, c.iso2])).toEqual([['Paris', 'FR'], ['Tokyo', 'JP']]);
+  });
 });

@@ -11,6 +11,7 @@ export interface Place {
   label: string; // "Le Caire, Égypte"
   kind: 'city' | 'country' | 'zone';
   country: string | null;
+  iso2: string | null; // "FR" — lets the client show the country flag
   offset: string; // "UTC+2"
 }
 
@@ -174,7 +175,7 @@ export function searchPlaces(query: string, lang: PlaceLang = 'en', limit = 8): 
     } else {
       label = e.primary;
     }
-    out.push({ value: e.zone, label, kind: e.kind, country, offset: offsetOf(e.zone) });
+    out.push({ value: e.zone, label, kind: e.kind, country, iso2: e.iso2, offset: offsetOf(e.zone) });
     if (out.length >= max) break;
   }
   return out;
@@ -188,6 +189,14 @@ const isZone = (tz: string) => {
     return false;
   }
 };
+
+// Country code of a place, for its flag: the entry matching the typed name in that zone, else the zone's country.
+export function iso2Of(typed: string, zone: string): string | null {
+  const q = fold(String(typed ?? ''));
+  const target = EXONYMS[q] ? fold(EXONYMS[q]) : q;
+  const inZone = entries().filter((e) => e.zone === zone && e.kind !== 'zone' && e.iso2);
+  return (inZone.find((e) => e.names.includes(target)) ?? inZone.sort((a, b) => b.pop - a.pop)[0])?.iso2 ?? null;
+}
 
 // What a user typed → an IANA zone, or null. An exact zone is kept; otherwise the best match must
 // be an exact name match (so "Par" does not silently become Paris).

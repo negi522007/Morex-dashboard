@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { resolveZone } from './places.util';
+import { iso2Of, resolveZone } from './places.util';
 import { ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
 
 interface ZonedNow {
@@ -75,20 +75,21 @@ const worldClock: WidgetDefinition = {
       const zone = resolveZone(typed);
       if (!zone) throw new ServiceFetchError('worldclock', 'world_clock', `Unknown place "${typed}"`);
       // A typed name ("Cotonou") is kept as the label; a raw zone id is prettified.
-      return { timeZone: zone, label: zone === typed ? labelFor(zone) : typed };
+      return { timeZone: zone, label: zone === typed ? labelFor(zone) : typed, iso2: iso2Of(typed, zone) };
     };
 
     const now = new Date();
     const homePlace = resolve(homeTimezone);
     const home = zonedNow(now, homePlace.timeZone, 'world_clock');
 
-    const cities = cityInputs.map(resolve).map(({ timeZone, label }) => {
+    const cities = cityInputs.map(resolve).map(({ timeZone, label, iso2 }) => {
       const z = zonedNow(now, timeZone, 'world_clock');
       const hoursDiff = Math.round(((z.epochMinutes - home.epochMinutes) / 60) * 2) / 2;
       const dayOffset = z.dateKey === home.dateKey ? 0 : z.dateKey > home.dateKey ? 1 : -1;
       return {
         timezone: timeZone,
         label,
+        iso2,
         hour: z.hour,
         minute: z.minute,
         isDay: z.hour >= 6 && z.hour < 18,
@@ -98,7 +99,7 @@ const worldClock: WidgetDefinition = {
     });
 
     return {
-      home: { timezone: homePlace.timeZone, hour: home.hour, minute: home.minute, isDay: home.hour >= 6 && home.hour < 18 },
+      home: { timezone: homePlace.timeZone, label: homePlace.label, iso2: homePlace.iso2, hour: home.hour, minute: home.minute, isDay: home.hour >= 6 && home.hour < 18 },
       cities,
     };
   },
