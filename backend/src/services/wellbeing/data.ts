@@ -112,3 +112,69 @@ export const DISCLAIMER: L3 = [
   'Pour le plaisir uniquement — pas un conseil.',
   'Solo por entretenimiento — no es un consejo.',
 ];
+
+// Richer horoscope: three areas rated 2–5 stars, each with a sentence matching its rating ([en, fr, es]).
+// Same rules as the rest of the horoscope: gentle, for fun, no health or money predictions.
+export type HoroArea = 'love' | 'work' | 'energy';
+export type HoroLevel = 'calm' | 'good' | 'great';
+export const HORO_AREAS: Record<HoroArea, Record<HoroLevel, L3[]>> = {
+  love: {
+    calm: [
+      ['A quiet day for the heart; small attentions count.', 'Journée tranquille côté cœur ; les petites attentions comptent.', 'Día tranquilo para el corazón; los pequeños detalles cuentan.'],
+      ['Give people a little space; they will come back warmer.', 'Laisse un peu d’espace aux autres ; ils reviendront plus chaleureux.', 'Da un poco de espacio a los demás; volverán con más calidez.'],
+      ['Be patient with a misunderstanding; it clears up soon.', 'Sois patient(e) avec un malentendu ; il se dissipe vite.', 'Ten paciencia con un malentendido; se aclara pronto.'],
+    ],
+    good: [
+      ['A kind message will be well received.', 'Un message gentil sera bien reçu.', 'Un mensaje amable será bien recibido.'],
+      ['Sharing a laugh brings you closer to someone.', 'Un fou rire partagé te rapproche de quelqu’un.', 'Compartir una risa te acerca a alguien.'],
+      ['Say what you appreciate out loud today.', 'Dis à voix haute ce que tu apprécies aujourd’hui.', 'Di en voz alta lo que aprecias hoy.'],
+    ],
+    great: [
+      ['Your warmth draws people in today.', 'Ta chaleur attire les autres aujourd’hui.', 'Tu calidez atrae a los demás hoy.'],
+      ['A sweet moment is waiting for you; stay open.', 'Un joli moment t’attend ; reste ouvert(e).', 'Te espera un momento bonito; mantente abierto/a.'],
+      ['Great day to plan something fun with someone you love.', 'Super journée pour prévoir un moment sympa avec quelqu’un que tu aimes.', 'Gran día para planear algo divertido con alguien que quieres.'],
+    ],
+  },
+  work: {
+    calm: [
+      ['Go step by step; finishing one task is enough.', 'Avance pas à pas ; finir une seule tâche suffit.', 'Ve paso a paso; terminar una tarea es suficiente.'],
+      ['Review before you rush; details matter today.', 'Relis avant de foncer ; les détails comptent aujourd’hui.', 'Revisa antes de correr; hoy los detalles importan.'],
+      ['Ask for help on the tricky part; it saves time.', 'Demande de l’aide sur la partie difficile ; tu gagneras du temps.', 'Pide ayuda con la parte difícil; ahorrarás tiempo.'],
+    ],
+    good: [
+      ['Your ideas are clear; write them down.', 'Tes idées sont claires ; note-les.', 'Tus ideas están claras; apúntalas.'],
+      ['Teamwork flows well today.', 'Le travail en équipe se passe bien aujourd’hui.', 'El trabajo en equipo fluye hoy.'],
+      ['A steady effort pays off by the evening.', 'Un effort régulier paie avant ce soir.', 'Un esfuerzo constante da frutos antes de la noche.'],
+    ],
+    great: [
+      ['You are in the zone: tackle the big project.', 'Tu es dans ta zone : attaque le gros projet.', 'Estás en tu mejor momento: ataca el gran proyecto.'],
+      ['Your work gets noticed today.', 'Ton travail se fait remarquer aujourd’hui.', 'Tu trabajo se hace notar hoy.'],
+      ['Perfect day to learn something new and use it right away.', 'Journée parfaite pour apprendre un truc nouveau et t’en servir tout de suite.', 'Día perfecto para aprender algo nuevo y usarlo enseguida.'],
+    ],
+  },
+  energy: {
+    calm: [
+      ['Take it slow and drink some water.', 'Vas-y doucement et pense à boire de l’eau.', 'Tómatelo con calma y bebe agua.'],
+      ['A short walk will recharge you.', 'Une petite marche te rechargera.', 'Un paseo corto te recargará.'],
+      ['Go to bed a little earlier tonight.', 'Couche-toi un peu plus tôt ce soir.', 'Acuéstate un poco antes esta noche.'],
+    ],
+    good: [
+      ['Good balance today; keep a steady rhythm.', 'Bon équilibre aujourd’hui ; garde un rythme régulier.', 'Buen equilibrio hoy; mantén un ritmo constante.'],
+      ['Music will boost your mood.', 'De la musique va booster ton humeur.', 'La música mejorará tu ánimo.'],
+      ['Stretch between two tasks; you will feel lighter.', 'Étire-toi entre deux tâches ; tu te sentiras plus léger/légère.', 'Estírate entre dos tareas; te sentirás más ligero/a.'],
+    ],
+    great: [
+      ['You are full of energy: move, dance, go outside.', 'Tu débordes d’énergie : bouge, danse, sors prendre l’air.', 'Rebosas energía: muévete, baila, sal a tomar el aire.'],
+      ['Your good mood is contagious today.', 'Ta bonne humeur est contagieuse aujourd’hui.', 'Tu buen humor es contagioso hoy.'],
+      ['Great day for sport or a new challenge.', 'Super journée pour le sport ou un nouveau défi.', 'Gran día para el deporte o un nuevo reto.'],
+    ],
+  },
+};
+
+export const LUCKY_COLORS: { hex: string; name: L3 }[] = [
+  { hex: '#ef4444', name: ['Red', 'Rouge', 'Rojo'] }, { hex: '#f97316', name: ['Orange', 'Orange', 'Naranja'] },
+  { hex: '#facc15', name: ['Yellow', 'Jaune', 'Amarillo'] }, { hex: '#22c55e', name: ['Green', 'Vert', 'Verde'] },
+  { hex: '#14b8a6', name: ['Turquoise', 'Turquoise', 'Turquesa'] }, { hex: '#3b82f6', name: ['Blue', 'Bleu', 'Azul'] },
+  { hex: '#8b5cf6', name: ['Purple', 'Violet', 'Violeta'] }, { hex: '#ec4899', name: ['Pink', 'Rose', 'Rosa'] },
+  { hex: '#f5f5f4', name: ['White', 'Blanc', 'Blanco'] }, { hex: '#d4af37', name: ['Gold', 'Doré', 'Dorado'] },
+];

@@ -1,6 +1,6 @@
 import { ZODIAC_SIGNS } from '../../common/birth-date.util';
 import { ServiceFetchError } from '../service-provider.interface';
-import { DAY_THEME, FACTS, QUOTES, SIGN_INFO, SIGN_TRAIT } from './data';
+import { DAY_THEME, FACTS, HORO_AREAS, QUOTES, SIGN_INFO, SIGN_TRAIT } from './data';
 import { WellbeingController } from './wellbeing.controller';
 import { WellbeingProvider } from './wellbeing.provider';
 
@@ -49,6 +49,24 @@ describe('WellbeingProvider', () => {
     expect(a.text.en).toContain(SIGN_TRAIT.aries[0]);
     expect(a.disclaimer.en).toMatch(/entertainment/i);
     expect(a.text.en).not.toBe(p.text.en);
+  });
+
+  it('horoscope rates love, work and energy (2–5 stars, sentence matching the rating) and gives a lucky number and colour, stable within the day', async () => {
+    const a: any = await w('horoscope').fetchData({ sign: 'capricorn' });
+    const again: any = await w('horoscope').fetchData({ sign: 'capricorn' });
+    expect(again).toEqual(a);
+    for (const area of ['love', 'work', 'energy']) {
+      const { stars, text } = a.areas[area];
+      expect(stars).toBeGreaterThanOrEqual(2);
+      expect(stars).toBeLessThanOrEqual(5);
+      const level = stars <= 2 ? 'calm' : stars === 3 ? 'good' : 'great';
+      expect(HORO_AREAS[area as 'love'][level].map((t) => t[0])).toContain(text.en);
+      expect(Object.keys(text)).toEqual(['en', 'fr', 'es']);
+    }
+    expect(a.lucky.number).toBeGreaterThanOrEqual(1);
+    expect(a.lucky.number).toBeLessThanOrEqual(99);
+    expect(a.lucky.color.hex).toMatch(/^#[0-9a-f]{6}$/);
+    expect(a.lucky.color.name.fr).toBeTruthy();
   });
 
   it('horoscope enrich: asks the model with the sign and date only, caches per sign+day+language', async () => {
