@@ -44,6 +44,8 @@ interface Place {
   longitude: number;
 }
 
+const GEOCODING_LANGUAGES = ['fr', 'en', 'es'];
+
 // A city never moves, so each name is geocoded once per process.
 const placeCache = new Map<string, Place>();
 export const clearPlaceCache = () => placeCache.clear();
@@ -54,8 +56,14 @@ async function findCity(config: Record<string, string | number>, widgetName: str
   if (!name) throw new ServiceFetchError('weather', widgetName, 'Missing required "city" parameter');
   const cached = placeCache.get(name.toLowerCase());
   if (cached) return cached;
-  const data = await fetchJson(`${GEOCODING_URL}?${new URLSearchParams({ name, count: '1', language: 'en' })}`, widgetName);
-  const place = data?.results?.[0];
+  // Search the name in the three app languages and keep the most populated match: the first English
+  // result for "Londres" is a village in Argentina, while the French search finds London.
+  const lists = await Promise.all(
+    GEOCODING_LANGUAGES.map((language) =>
+      fetchJson(`${GEOCODING_URL}?${new URLSearchParams({ name, count: '10', language })}`, widgetName).then((d) => d?.results ?? []),
+    ),
+  );
+  const place = lists.flat().reduce((best: any, p: any) => (!best || (p.population ?? 0) > (best.population ?? 0) ? p : best), null);
   if (!place) throw new ServiceFetchError('weather', widgetName, `No city found for "${name}"`);
   const found = { city: place.name, country: place.country ?? null, latitude: place.latitude, longitude: place.longitude };
   placeCache.set(name.toLowerCase(), found);
