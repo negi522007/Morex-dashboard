@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex bio</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Caveat:wght@500;700&family=Playfair+Display:ital,wght@0,600;1,500&family=Pacifico&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .62), rgb(15 12 50 / .8)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 36px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .65); margin: 8px auto 26px; max-width: 860px; padding: 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; max-width: 1350px; margin: 0 auto; padding: 0 20px 60px; }
+  @media (max-width: 1150px) { .grid { grid-template-columns: 1fr; max-width: 560px; } }
+  .opt > p { margin: 12px 0 0; font-size: 13px; color: rgb(255 255 255 / .65); } .opt > p b { color: #fff; }
+  .panel { position: relative; min-height: 600px; border-radius: 28px; padding: 22px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+  .save { padding: 13px; border-radius: 999px; border: 0; background: #fff; color: #111; font: 600 14px Poppins; cursor: pointer; margin-top: auto; }
+  .count { font-size: 11px; opacity: .6; text-align: right; }
+  .emo { display: flex; flex-wrap: wrap; gap: 4px; } .emo button { width: 34px; height: 34px; border-radius: 10px; border: 0; background: rgb(255 255 255 / .1); font-size: 18px; cursor: pointer; transition: transform .15s; }
+  .emo button:hover { transform: scale(1.2) rotate(-8deg); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; } .chips button { padding: 7px 12px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .2); background: rgb(255 255 255 / .06); color: inherit; font: 12.5px Poppins; cursor: pointer; }
+  .chips button.on { background: #fff; color: #111; }
+  .sw { display: flex; gap: 8px; } .sw button { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; } .sw button.on { border-color: #fff; box-shadow: 0 0 10px rgb(255 255 255 / .6); }
+  .lbl { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .6; }
+  /* the live preview: the hello card of the dashboard */
+  .hello { position: relative; border-radius: 20px; padding: 18px; overflow: hidden; background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); }
+  .hello::after { content: ""; position: absolute; right: -60px; top: -80px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgb(99 102 241 / .5), transparent 70%); }
+  .hello .hi { font-size: 22px; font-weight: 600; position: relative; } .hello .hi span { background: linear-gradient(90deg, #fff, #818cf8 60%, #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hello .bio { position: relative; margin-top: 8px; line-height: 1.6; font-size: 14px; white-space: pre-line; }
+  .f-modern { font-family: Poppins; } .f-hand { font-family: Caveat; font-size: 20px !important; line-height: 1.3 !important; } .f-elegant { font-family: 'Playfair Display'; font-style: italic; } .f-fun { font-family: Pacifico; font-size: 15px !important; }
+  textarea { width: 100%; min-height: 120px; resize: none; outline: none; border: 0; font: inherit; color: inherit; background: none; }
+
+  /* 1 · Notebook */
+  .p1 { background: linear-gradient(160deg, #fdf2f8, #ede9fe); color: #3b2a63; }
+  .p1 h3 { margin: 0; font: 700 34px Caveat; color: #7c3aed; } .p1 .sub { font-size: 12.5px; color: #6d5a99; margin-top: -8px; }
+  .page { position: relative; padding: 18px 18px 12px 30px; border-radius: 14px; background: #fffdf8; box-shadow: 0 10px 24px -10px rgb(76 29 149 / .35); transform: rotate(-.6deg);
+    background-image: repeating-linear-gradient(transparent 0 27px, #e9e2f7 27px 28px); }
+  .page::before { content: ""; position: absolute; left: 18px; top: 0; bottom: 0; width: 2px; background: rgb(244 114 182 / .5); }
+  .tape { position: absolute; top: -10px; left: 50%; width: 90px; height: 24px; margin-left: -45px; background: rgb(244 114 182 / .45); transform: rotate(4deg); }
+  .page textarea { font: 600 22px/28px Caveat; color: #3b2a63; min-height: 140px; }
+  .p1 .emo button { background: #fff; box-shadow: 0 2px 6px rgb(0 0 0 / .08); } .p1 .chips button { border-color: #d8ccf2; background: #fff; } .p1 .chips button.on { background: #7c3aed; color: #fff; }
+  .p1 .hello { color: #fff; background: #1e1b4b; } .p1 .save { background: #7c3aed; color: #fff; }
+  .p1 .stk { position: absolute; font-size: 26px; } 
+
+  /* 2 · Cosmic bubble */
+  .p2 { background: radial-gradient(circle at 20% 10%, rgb(236 72 153 / .35), transparent 40%), radial-gradient(circle at 90% 80%, rgb(56 189 248 / .3), transparent 45%), #0b0620; border: 1px solid rgb(255 255 255 / .12); }
+  .p2 .bubble { position: relative; padding: 16px; border-radius: 22px 22px 22px 6px; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .2); }
+  .p2 .moon { width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(#fde68a calc(var(--p) * 1%), rgb(255 255 255 / .1) 0); display: grid; place-items: center; font-size: 10px; }
+  .p2 .moon span { width: 30px; height: 30px; border-radius: 50%; background: #0b0620; display: grid; place-items: center; }
+  .p2 .inspire { align-self: flex-start; padding: 9px 14px; border-radius: 999px; border: 0; background: linear-gradient(135deg, #f472b6, #818cf8); color: #fff; font: 600 13px Poppins; cursor: pointer; }
+  .p2 .stars i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: tw 2s infinite; } @keyframes tw { 50% { opacity: .2; } }
+
+  /* 3 · Workshop */
+  .p3 { background: rgb(15 23 42 / .85); border: 1px solid rgb(255 255 255 / .14); backdrop-filter: blur(20px); }
+  .p3 .tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgb(255 255 255 / .06); } .p3 .tabs button { flex: 1; padding: 8px; border-radius: 999px; border: 0; background: none; color: #fff; font: 12.5px Poppins; cursor: pointer; } .p3 .tabs button.on { background: linear-gradient(135deg, #818cf8, #38bdf8); }
+  .p3 .ed { padding: 14px; border-radius: 18px; background: rgb(255 255 255 / .06); border: 1px solid rgb(255 255 255 / .12); }
+  .p3 .tpl { display: flex; flex-direction: column; gap: 6px; } .p3 .tpl button { text-align: left; padding: 10px 12px; border-radius: 14px; border: 1px solid rgb(255 255 255 / .12); background: rgb(255 255 255 / .04); color: #fff; font: 12.5px Poppins; cursor: pointer; } .p3 .tpl button:hover { background: rgb(255 255 255 / .1); }
+</style>
+</head>
+<body>
+<h1>Ma bio, propositions</h1>
+<p class="lead">Un endroit rien que pour écrire ta bio, qui s’ouvre depuis « ✎ Modifier ma bio ». Écris, ajoute des emojis, change le style : l’aperçu en bas montre exactement ta carte d’accueil. Tout est interactif</p>
+<div class="grid" id="g"></div>
+<script>
+const START = 'Étudiante à Epitech 🚀 Je code des univers et je collectionne les couchers de soleil ✨'
+const EMOJIS = ['✨', '🌙', '🪐', '🌸', '💜', '🚀', '☕', '🎧', '📚', '🌊', '🦋', '🎨', '💻', '🌈', '⭐', '🔥']
+const FONTS = [['f-modern', 'Moderne'], ['f-hand', 'Manuscrite'], ['f-elegant', 'Élégante'], ['f-fun', 'Fun']]
+const COLORS = ['#ffffff', '#fbcfe8', '#c4b5fd', '#93c5fd', '#fde68a', '#86efac']
+const INSPIRE = ['Rêveuse le jour, codeuse la nuit 🌙💻', 'Un café, une playlist et mille idées ☕🎧✨', 'Je transforme les bugs en étoiles filantes 🌠', 'Curieuse de tout, fan de ciel étoilé 🪐', 'Petits pas, grandes orbites 🚀']
+const preview = (st) => `<div class="hello"><div class="hi">Bonjour, <span>Morayo</span></div><div class="bio ${st.font}" style="color:${st.color}">${(st.text || 'Écris quelque chose de joli…').replace(/</g, '&lt;')}</div></div>`
+const emojis = `<div class="emo">${EMOJIS.map((e) => `<button data-e="${e}">${e}</button>`).join('')}</div>`
+const fonts = (st) => `<div class="chips">${FONTS.map(([k, n]) => `<button data-f="${k}" class="${k === st.font ? 'on' : ''}">${n}</button>`).join('')}</div>`
+const colors = (st) => `<div class="sw">${COLORS.map((c) => `<button data-c="${c}" class="${c === st.color ? 'on' : ''}" style="background:${c}"></button>`).join('')}</div>`
+const insertAt = (ta, txt) => { const a = ta.selectionStart ?? ta.value.length; ta.value = (ta.value.slice(0, a) + txt + ta.value.slice(ta.selectionEnd ?? a)).slice(0, 280); ta.focus(); ta.selectionStart = ta.selectionEnd = a + txt.length }
+
+const DESIGNS = [
+  ['Carnet mignon', 'une page de carnet scotchée, écriture manuscrite, des stickers emojis à coller, des styles et couleurs, puis l’aperçu de ta carte', 'p1', (st) => `
+    <h3>Ma petite bio ✿</h3><div class="sub">Quelques mots pour dire qui tu es</div>
+    <div class="page"><span class="tape"></span><textarea maxlength="280" placeholder="Il était une fois…">${st.text}</textarea><div class="count"><span data-n>${st.text.length}</span>/280</div></div>
+    <div class="lbl">Stickers</div>${emojis}<div class="lbl">Style d’écriture</div>${fonts(st)}<div class="lbl">Couleur</div>${colors(st)}
+    <div class="lbl">Aperçu</div><div data-prev>${preview(st)}</div><button class="save">Enregistrer ma bio 💜</button>`],
+  ['Bulle cosmique', 'ta bio dans une bulle au milieu des étoiles, un bouton « Inspire-moi ✨ » qui propose des idées, et une petite lune qui se remplit avec les caractères', 'p2', (st) => `
+    <div class="stars">${Array.from({ length: 24 }, (_, i) => `<i style="left:${(i * 37) % 100}%;top:${(i * 53) % 100}%;animation-delay:-${i * .2}s"></i>`).join('')}</div>
+    <div style="display:flex;align-items:center;gap:12px;position:relative"><div class="moon" style="--p:${st.text.length / 2.8}"><span data-n>${st.text.length}</span></div><div><b>Raconte-toi</b><div style="font-size:12px;opacity:.7">280 caractères maximum</div></div></div>
+    <div class="bubble"><textarea maxlength="280" placeholder="Qui es-tu dans ton univers ?">${st.text}</textarea></div>
+    <button class="inspire" data-inspire>✨ Inspire-moi</button>${emojis}<div class="lbl">Style</div>${fonts(st)}${colors(st)}
+    <div class="lbl">Aperçu</div><div data-prev>${preview(st)}</div><button class="save">Enregistrer</button>`],
+  ['Atelier', 'trois onglets : Écrire, Décorer (emojis, styles, couleurs) et Idées (bios toutes prêtes à personnaliser), avec l’aperçu toujours visible', 'p3', (st) => `
+    <div class="tabs"><button data-tab="w" class="${st.tab === 'w' ? 'on' : ''}">✎ Écrire</button><button data-tab="d" class="${st.tab === 'd' ? 'on' : ''}">🎨 Décorer</button><button data-tab="i" class="${st.tab === 'i' ? 'on' : ''}">💡 Idées</button></div>
+    <div class="ed">${st.tab === 'w' ? `<textarea maxlength="280" placeholder="Écris ta bio…">${st.text}</textarea><div class="count"><span data-n>${st.text.length}</span>/280</div>`
+      : st.tab === 'd' ? `<div class="lbl" style="margin-bottom:8px">Emojis</div>${emojis}<div class="lbl" style="margin:12px 0 8px">Style</div>${fonts(st)}<div class="lbl" style="margin:12px 0 8px">Couleur</div>${colors(st)}`
+      : `<div class="tpl">${INSPIRE.map((t) => `<button data-tpl="${t}">${t}</button>`).join('')}</div>`}</div>
+    <div class="lbl">Aperçu en direct</div><div data-prev>${preview(st)}</div><button class="save">Enregistrer</button>`],
+]
+document.getElementById('g').innerHTML = DESIGNS.map(([n, d, cls], i) => `<div class="opt"><div class="panel ${cls}" data-i="${i}"></div><p><b>${i + 1} · ${n}</b> : ${d}</p></div>`).join('')
+document.querySelectorAll('.panel').forEach((panel) => {
+  const tpl = DESIGNS[+panel.dataset.i][3], st = { text: START, font: panel.classList.contains('p1') ? 'f-hand' : 'f-modern', color: '#ffffff', tab: 'w' }
+  const draw = () => { panel.innerHTML = tpl(st) }
+  const refresh = () => { panel.querySelector('[data-prev]').innerHTML = preview(st); panel.querySelectorAll('[data-n]').forEach((n) => (n.textContent = st.text.length)); const m = panel.querySelector('.moon'); if (m) m.style.setProperty('--p', st.text.length / 2.8) }
+  panel.addEventListener('input', (e) => { if (e.target.tagName === 'TEXTAREA') { st.text = e.target.value; refresh() } })
+  panel.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return
+    const ta = panel.querySelector('textarea')
+    if (b.dataset.e) { if (ta) { insertAt(ta, b.dataset.e); st.text = ta.value } else st.text = (st.text + b.dataset.e).slice(0, 280); refresh() }
+    if (b.dataset.f) { st.font = b.dataset.f; draw() }
+    if (b.dataset.c) { st.color = b.dataset.c; draw() }
+    if (b.dataset.tab) { st.tab = b.dataset.tab; draw() }
+    if (b.dataset.tpl) { st.text = b.dataset.tpl; st.tab = 'w'; draw() }
+    if ('inspire' in b.dataset) { st.text = INSPIRE[Math.floor(Math.random() * INSPIRE.length)]; draw() }
+    if (b.classList.contains('save')) { b.textContent = '✓ Enregistré'; setTimeout(draw, 1200) }
+  })
+  draw()
+})
+</script>
+</body>
+</html>
