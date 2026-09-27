@@ -30,6 +30,18 @@ export const SERVICES: Record<string, { label: L3; icon: string; color: string }
   calendar: { label: { fr: 'Agenda', en: 'Calendar', es: 'Agenda' }, icon: '📅', color: '#f43f5e' },
   epitech: { label: { fr: 'My Epitech', en: 'My Epitech', es: 'My Epitech' }, icon: '🎓', color: '#0b5fff' },
   custom_api: { label: { fr: 'API perso', en: 'Custom API', es: 'API propia' }, icon: '{ }', color: '#10b981' },
+  wellbeing: { label: { fr: 'Bien-être', en: 'Well-being', es: 'Bienestar' }, icon: '✨', color: '#ec4899' },
+  steam: { label: { fr: 'Steam', en: 'Steam', es: 'Steam' }, icon: '🎮', color: '#1b2838' },
+}
+
+// The 12 signs, in the backend's order (value = what the horoscope widget expects)
+export const ZODIAC: Record<string, { glyph: string; name: L3 }> = {
+  aries: { glyph: '♈', name: { fr: 'Bélier', en: 'Aries', es: 'Aries' } }, taurus: { glyph: '♉', name: { fr: 'Taureau', en: 'Taurus', es: 'Tauro' } },
+  gemini: { glyph: '♊', name: { fr: 'Gémeaux', en: 'Gemini', es: 'Géminis' } }, cancer: { glyph: '♋', name: { fr: 'Cancer', en: 'Cancer', es: 'Cáncer' } },
+  leo: { glyph: '♌', name: { fr: 'Lion', en: 'Leo', es: 'Leo' } }, virgo: { glyph: '♍', name: { fr: 'Vierge', en: 'Virgo', es: 'Virgo' } },
+  libra: { glyph: '♎', name: { fr: 'Balance', en: 'Libra', es: 'Libra' } }, scorpio: { glyph: '♏', name: { fr: 'Scorpion', en: 'Scorpio', es: 'Escorpio' } },
+  sagittarius: { glyph: '♐', name: { fr: 'Sagittaire', en: 'Sagittarius', es: 'Sagitario' } }, capricorn: { glyph: '♑', name: { fr: 'Capricorne', en: 'Capricorn', es: 'Capricornio' } },
+  aquarius: { glyph: '♒', name: { fr: 'Verseau', en: 'Aquarius', es: 'Acuario' } }, pisces: { glyph: '♓', name: { fr: 'Poissons', en: 'Pisces', es: 'Piscis' } },
 }
 
 const repo: [L3, string] = [{ fr: 'propriétaire/nom', en: 'owner/name', es: 'propietario/nombre' }, 'facebook/react']
@@ -37,6 +49,7 @@ const channel: [L3, string] = [{ fr: 'Le @ ou le lien d’une chaîne', en: 'A c
 const city = (ex: string): [L3, string] => [{ fr: 'Une ville', en: 'A city', es: 'Una ciudad' }, ex]
 const unit: [L3, string] = [{ fr: 'celsius ou fahrenheit', en: 'celsius or fahrenheit', es: 'celsius o fahrenheit' }, 'celsius']
 const count = (fr: string, en: string, es: string, ex: string): [L3, string] => [{ fr, en, es }, ex]
+const steamHint: [L3, string] = [{ fr: 'Lien du profil, pseudo personnalisé ou numéro Steam (profil public)', en: 'Profile link, custom name or Steam number (public profile)', es: 'Enlace del perfil, nombre personalizado o número de Steam (perfil público)' }, 'https://steamcommunity.com/id/…']
 const secretUrl = (fr: string, en: string, es: string, ex: string): [L3, string] => [{ fr, en, es }, ex]
 
 export const CATALOG: CatalogEntry[] = [
@@ -83,6 +96,14 @@ export const CATALOG: CatalogEntry[] = [
     hints: { calendarToken: [{ fr: 'Token de « My Epitech > Calendrier », gardé secret', en: 'Token from “My Epitech > Calendar”, kept secret', es: 'Token de «My Epitech > Calendario», guardado en secreto' }, ''],
       days: count('Sur combien de jours', 'Over how many days', 'En cuántos días', '14'), number: count('Nombre d’activités', 'Number of activities', 'Número de actividades', '8') } },
   { kind: 'epi-prof', service: 'epitech', widget: 'profile', needs: 'epitech', name: { fr: 'Mon profil', en: 'My profile', es: 'Mi perfil' }, hints: {} },
+  { kind: 'steam-prof', service: 'steam', widget: 'profile', name: { fr: 'Profil Steam', en: 'Steam profile', es: 'Perfil de Steam' }, hints: { steamId: steamHint } },
+  { kind: 'steam-recent', service: 'steam', widget: 'recent_games', name: { fr: 'Jeux récents', en: 'Recent games', es: 'Juegos recientes' },
+    hints: { steamId: steamHint, number: count('Nombre de jeux (10 max)', 'Number of games (10 max)', 'Número de juegos (10 máx.)', '4') } },
+  { kind: 'steam-lib', service: 'steam', widget: 'library_stats', name: { fr: 'Ma bibliothèque', en: 'My library', es: 'Mi biblioteca' }, hints: { steamId: steamHint } },
+  { kind: 'quote', service: 'wellbeing', widget: 'daily_quote', name: { fr: 'Citation du jour', en: 'Quote of the day', es: 'Cita del día' }, hints: {} },
+  { kind: 'fact', service: 'wellbeing', widget: 'did_you_know', name: { fr: 'Le savais-tu ?', en: 'Did you know?', es: '¿Sabías que…?' }, hints: {} },
+  { kind: 'horo', service: 'wellbeing', widget: 'horoscope', ai: true, name: { fr: 'Horoscope', en: 'Horoscope', es: 'Horóscopo' },
+    hints: { sign: [{ fr: 'Ton signe, rempli d’après ta date de naissance', en: 'Your sign, filled from your birth date', es: 'Tu signo, rellenado según tu fecha de nacimiento' }, 'capricorn'] } },
   { kind: 'api-value', service: 'custom_api', widget: 'json_value', name: { fr: 'Une valeur', en: 'One value', es: 'Un valor' },
     hints: { url: secretUrl('Adresse d’une API JSON publique, gardée secrète', 'A public JSON API address, kept secret', 'Dirección de una API JSON pública, guardada en secreto', 'http://api.open-notify.org/astros.json'),
       path: [{ fr: 'Chemin du champ, ex. data.items[0].price', en: 'Path to the field, e.g. data.items[0].price', es: 'Ruta del campo, p. ej. data.items[0].price' }, 'number'],
