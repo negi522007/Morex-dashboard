@@ -44,3 +44,6 @@ export const hostOf = (url: unknown) => {
     return ''
   }
 }
+
+// "FR" → 🇫🇷 (two regional indicator letters)
+export const flagOf = (iso2: string) => String.fromCodePoint(...[...iso2.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65))
