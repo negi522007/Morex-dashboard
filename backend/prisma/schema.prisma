@@ -26,6 +26,9 @@ model User {
   // Profile/preferences (Morex dashboard UI) — all optional/defaulted so
   // existing accounts don't need a backfill.
   bio             String?
+  // Optional date of birth (day precision, no time zone). Collected at sign-up and used only to
+  // compute the zodiac sign for the well-being page; never sent anywhere, never shown to others.
+  birthDate       DateTime? @db.Date
   theme           String  @default("galaxy")
   language        String  @default("en")
   widgetSkin      String  @default("glass")
@@ -220,6 +223,14 @@ model AiUsage {
 model ContentDigest {
   key       String   @id
   payload   Json
+  createdAt DateTime @default(now())
+}
+
+// Addresses whose owner clicked "this wasn't me" on a confirmation email: sign-ups with a password are
+// refused for a while, so nobody can keep mailing them.
+model BlockedEmail {
+  email     String   @id
+  until     DateTime
   createdAt DateTime @default(now())
 }
 

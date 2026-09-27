@@ -13,6 +13,7 @@ import { AlertsModule } from './alerts/alerts.module';
 import { ShareModule } from './share/share.module';
 import { BriefModule } from './brief/brief.module';
 import { AssistantModule } from './assistant/assistant.module';
+import { HelpdeskModule } from './helpdesk/helpdesk.module';
 import { AiModule } from './ai/ai.module';
 import { InsightsModule } from './insights/insights.module';
 
@@ -34,6 +35,7 @@ import { InsightsModule } from './insights/insights.module';
     ShareModule,
     BriefModule,
     AssistantModule,
+    HelpdeskModule,
   ],
 })
 export class AppModule {}

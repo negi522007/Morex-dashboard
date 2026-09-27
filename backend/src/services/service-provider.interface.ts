@@ -10,6 +10,8 @@ export interface WidgetParam {
   // at /services/github/repos. Absent means "plain text/number input",
   // same as before this field existed.
   optionsUrl?: string;
+  // The value is a comma-separated list: render a multi-select (each picked item's `value` joined by commas).
+  multiple?: boolean;
   // The value is a credential in disguise (a private calendar URL, an API
   // key inside a URL...). It is encrypted at rest and NEVER returned by the
   // API: reads show SECRET_MASK instead. Render it as a password field; to

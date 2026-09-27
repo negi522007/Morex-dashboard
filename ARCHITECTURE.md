@@ -19,7 +19,8 @@ list), see [README.md](./README.md).
       /rss           # done
       /market-data   # done
       /github        # done (+ a repos endpoint feeding the frontend's repo picker)
-      /weather       # done
+      /weather       # done: current_weather, daily_forecast, hourly_forecast
+      /youtube       # done: needs YOUTUBE_API_KEY (server key, public data)
       /worldclock    # done
       /calendar      # done: any .ics feed (Google Calendar secret iCal address)
       /epitech       # done: planning (calendar token) + identity card (OIDC profile)
@@ -685,4 +686,40 @@ to parallel CPU-intensive work — accepted because the actual workload is I/O-b
 case where the event loop excels; to be revisited only if heavy processing appears later.
 
 *Validated by the team: Morayo reviewed and agreed with this stack and architecture after filling their
+
+### The other layers (each compared against at least two alternatives)
+
+**Database** — PostgreSQL, MySQL, MongoDB.
+
+| Criterion | PostgreSQL | MySQL | MongoDB |
+|---|---|---|---|
+| Relations (user → sessions, accounts, widgets…) with foreign keys and cascades | Native, strict | Native | Manual (documents) |
+| JSON columns for the parts that really are free-form (`config`, `position`, `cachedData`, `insight`) | `jsonb`, indexable | `JSON`, weaker tooling | Native |
+| Atomic upserts / uniqueness (daily AI counter, one share link per user) | Yes | Yes | Yes |
+| Raw SQL for the scheduler's "which widgets are due" query | Yes | Yes | Aggregation pipeline |
+| Official Docker image, Prisma support | Yes | Yes | Yes (different Prisma engine) |
+
+Chosen: **PostgreSQL** — the data is relational (ownership, cascading deletes on account removal), and it
+still stores the free-form widget data as `jsonb`, so nothing needs a second database.
+
+**ORM / data access** — Prisma, TypeORM, plain SQL (`pg`).
+
+| Criterion | Prisma | TypeORM | Plain `pg` |
+|---|---|---|---|
+| Types generated from the schema (a wrong field name fails at compile time) | Yes | Partly (decorators) | No |
+| Migrations kept in the repo and applied by `prisma migrate deploy` at container start | Built in | Built in | Manual tooling |
+| Escape hatch to raw SQL (used once, in the scheduler) | `$queryRaw` | Query builder | Native |
+| Boilerplate | Lowest | Medium | Highest |
+
+Chosen: **Prisma** — schema as the single source of truth, generated types, and migrations that the Docker
+entrypoint applies automatically.
+
+**Web app delivery** — Vite dev server + nginx (built files), Next.js, Create React App. The app is a
+client-side single-page app behind an authenticated API (no SEO or server rendering need), so **Vite**
+(fast dev, static build) served by **nginx**, which also forwards API routes so the browser talks to one
+origin and the session cookie needs no CORS setup. Next.js would add a second server for no benefit here;
+Create React App is no longer maintained.
+
+**Auth** — server-side sessions vs JWT: see [Why sessions instead of JWT](#why-sessions-instead-of-jwt).
+
 own matrix independently.*

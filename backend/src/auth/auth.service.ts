@@ -16,6 +16,7 @@ import { MailService } from '../mail/mail.service';
 import { hashPassword, verifyPassword } from './password.util';
 import { encryptToken } from '../common/token-encryption.util';
 import { UPLOADS_DIR } from '../common/uploads.util';
+import { Zodiac, parseBirthDate, toIsoDate, zodiacOf } from '../common/birth-date.util';
 
 interface GithubTokenResponse {
   access_token?: string;
@@ -35,7 +36,11 @@ interface GithubEmail {
   verified: boolean;
 }
 
-const EMAIL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+export const EMAIL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+// How long an address that said "not me" stays closed to password sign-ups.
+const REJECT_BLOCK_MS = 24 * 60 * 60 * 1000;
+// How long to wait before an unconfirmed address may sign up again.
+const RESIGNUP_COOLDOWN_MS = 2 * 60 * 1000;
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 // The mockup's own option sets (mockups.html's [data-theme]/T dictionaries) —
@@ -58,6 +63,15 @@ export interface PublicUser {
   widgetSkin: string;
   avatarConfig: unknown;
   avatarPhotoUrl: string | null;
+  // "YYYY-MM-DD" or null; the sign is derived from it (see the well-being page).
+  birthDate: string | null;
+  zodiac: Zodiac | null;
+}
+
+// "ada.lovelace@gmail.com" → "a***@gmail.com": enough to recognise it, not enough to leak it to whoever holds the link.
+export function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  return `${local.slice(0, 1)}***@${domain}`;
 }
 
 function toPublicUser(user: {
@@ -73,6 +87,7 @@ function toPublicUser(user: {
   widgetSkin: string;
   avatarConfig: unknown;
   avatarPhotoPath: string | null;
+  birthDate?: Date | null;
 }): PublicUser {
   return {
     id: user.id,
@@ -87,6 +102,8 @@ function toPublicUser(user: {
     widgetSkin: user.widgetSkin,
     avatarConfig: user.avatarConfig,
     avatarPhotoUrl: user.avatarPhotoPath,
+    birthDate: user.birthDate ? toIsoDate(user.birthDate) : null,
+    zodiac: user.birthDate ? zodiacOf(user.birthDate) : null,
   };
 }
 
@@ -100,10 +117,29 @@ export class AuthService {
 
   // firstName/lastName are required — enforced in AuthController, not here,
   // consistent with how email/password validation is also controller-side.
-  async register(email: string, password: string, firstName: string, lastName: string) {
+  async register(email: string, password: string, firstName: string, lastName: string, birthDate?: Date | null, lang: 'en' | 'fr' | 'es' = 'en') {
+    const blocked = await this.prisma.blockedEmail.findUnique({ where: { email } });
+    if (blocked && blocked.until > new Date()) {
+      throw new ConflictException(
+        'This address recently asked not to receive sign-up emails. Try again later, or sign in with GitHub / My Epitech',
+      );
+    }
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
-      throw new ConflictException('An account with this email already exists');
+      // A signup that was never confirmed can't be used to log in, so it must not
+      // lock the address: the real owner may retry (e.g. the first mail never
+      // arrived). The old, unconfirmed row is replaced. The short cooldown stops
+      // this from being used to spam someone's inbox with confirmation mails.
+      const unconfirmed = existing.emailVerified === false && !existing.isBanned;
+      if (!unconfirmed) {
+        throw new ConflictException('An account with this email already exists');
+      }
+      if (Date.now() - new Date(existing.createdAt).getTime() < RESIGNUP_COOLDOWN_MS) {
+        throw new ConflictException(
+          'A confirmation email was just sent to this address — check your inbox (and spam), or try again in a few minutes',
+        );
+      }
+      await this.prisma.user.delete({ where: { id: existing.id } });
     }
 
     const passwordHash = await hashPassword(password);
@@ -117,6 +153,7 @@ export class AuthService {
         passwordHash,
         firstName,
         lastName,
+        birthDate: birthDate ?? null,
         isAdmin: adminEmails.includes(email.toLowerCase()),
       },
     });
@@ -132,7 +169,7 @@ export class AuthService {
 
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:8080';
     try {
-      await this.mail.sendConfirmationEmail(email, `${appUrl}/auth/confirm?token=${token}`);
+      await this.mail.sendConfirmationEmail(email, `${appUrl}/auth/confirm?token=${token}`, lang);
     } catch (err) {
       // Don't leave an unconfirmable, unretryable account behind if the
       // email never went out — the cascade delete also removes the token.
@@ -141,6 +178,22 @@ export class AuthService {
     }
 
     return toPublicUser(user);
+  }
+
+  // The link in the email opens a page that *asks* (it must not act on a plain GET: mail scanners
+  // and link previews open links automatically). These are the three calls behind that page.
+  private async findPending(token: string) {
+    const record = await this.prisma.emailVerificationToken.findUnique({ where: { token }, include: { user: true } });
+    return record && !record.user.emailVerified ? record : null;
+  }
+
+  // Shows who the account is for without changing anything ("is this you?").
+  async previewConfirmation(token: string): Promise<{ email: string; firstName: string | null; expiresAt: Date }> {
+    const record = await this.findPending(token);
+    if (!record || record.expiresAt < new Date()) {
+      throw new UnauthorizedException('Invalid or expired confirmation link');
+    }
+    return { email: maskEmail(record.user.email), firstName: record.user.firstName, expiresAt: record.expiresAt };
   }
 
   async confirmEmail(token: string): Promise<void> {
@@ -152,6 +205,21 @@ export class AuthService {
     await this.prisma.$transaction([
       this.prisma.user.update({ where: { id: record.userId }, data: { emailVerified: true } }),
       this.prisma.emailVerificationToken.delete({ where: { token } }),
+    ]);
+  }
+
+  // "This wasn't me": someone used this address. The pending account is deleted (nothing was ever
+  // active) and the address is blocked from password sign-ups for a day so it can't be mailed again.
+  async rejectConfirmation(token: string): Promise<void> {
+    const record = await this.findPending(token);
+    if (!record) throw new UnauthorizedException('Invalid or expired confirmation link');
+    await this.prisma.$transaction([
+      this.prisma.user.delete({ where: { id: record.userId } }),
+      this.prisma.blockedEmail.upsert({
+        where: { email: record.user.email },
+        create: { email: record.user.email, until: new Date(Date.now() + REJECT_BLOCK_MS) },
+        update: { until: new Date(Date.now() + REJECT_BLOCK_MS) },
+      }),
     ]);
   }
 
@@ -410,6 +478,7 @@ export class AuthService {
       language?: string;
       widgetSkin?: string;
       avatarConfig?: unknown;
+      birthDate?: string | null;
     },
   ): Promise<PublicUser> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -426,6 +495,7 @@ export class AuthService {
       language?: string;
       widgetSkin?: string;
       avatarConfig?: any;
+      birthDate?: Date | null;
     } = {};
 
     if (updates.firstName !== undefined) {
@@ -462,6 +532,9 @@ export class AuthService {
     }
     if (updates.avatarConfig !== undefined) {
       data.avatarConfig = updates.avatarConfig;
+    }
+    if (updates.birthDate !== undefined) {
+      data.birthDate = updates.birthDate === null || updates.birthDate === '' ? null : parseBirthDate(updates.birthDate);
     }
 
     let killOtherSessions = false;

@@ -105,6 +105,43 @@ value history, and a read-only share link. Credential-like widget params are enc
 Epitech credits/XP (not exposed by the OIDC scopes; the only workaround is users pasting their session
 token, refused for security). The frontend was not touched.
 
+**Sept 26** — Merged Morayo's `feat/youtube` (Morex frontend + YouTube service + 3-widget weather) into
+`feat/morex-backend` and verified the whole stack end to end (API, then the real frontend in a headless
+browser: no console errors, no failing requests, all widget kinds rendering). Fixed a signup problem found
+in use: an unconfirmed account used to block its email address forever; it is now replaced on retry (2 min
+cooldown against mail spam) and purged after 24 h. The mailer now treats a refused recipient as a failure,
+adds a plain-text part, and logs what the SMTP server answered. Documented why confirmation links only work
+for the machine running the server unless `APP_URL` is public (TROUBLESHOOTING.md).
+
+**Sept 26 (defense checklist)** — Went through the school's defense checklist against the running app.
+Fixed: `docker compose up --build` now starts everything (the web app was missing from compose — it is
+built and served by nginx, which also forwards the API routes), works with **no `.env`** (safe defaults,
+mail to Mailhog, an encryption key generated once into a dedicated volume that is not served publicly),
+and waits for the database (a fresh clone used to crash on its first migration). Verified from a copy of the
+repo without `.env`. The UI findings for Morayo are listed at the end of FRONTEND.md.
+
+**Sept 26 (later)** — Reported by a user: the world clock rejected "Égypte" and "Bangladesh" ("Unknown city").
+Cause: the form only knew city names (IANA zones are named after cities). Fix: the backend now resolves
+cities *and countries* in three languages (`city-timezones` + `countries-and-timezones` datasets), serves a
+type-ahead `GET /services/worldclock/places` for a dropdown, and the widget accepts plain names. Also added
+a **help assistant** (`/helpdesk/*`): a trilingual knowledge base of guides, every service/widget/parameter
+and the technical vocabulary, searchable without AI and answered by the AI model from those pages only when
+available (never an error: it degrades to the best page). A test fails if a widget or parameter has no help
+entry. Free AI model guidance re-checked against the providers' current docs; `AI_REASONING_EFFORT` added for
+reasoning models. Specs for every screen not yet built are in FRONTEND.md.
+
+**Sept 26 (evening)** — Feedback from a real user test, acted on: (1) the confirmation link opened a bare
+white page and confirmed on click. It now opens a styled "Is this you?" page with *Yes* and *No, it wasn't
+me* (which deletes the pending account and closes that address to sign-ups for a day), and a plain GET never
+confirms anything (mail scanners open links). The email itself is styled and trilingual. (2) The offline
+"mock" AI was refused in production so a demo can never show fake AI text; a real Gemini key is used instead.
+(3) Date of birth is collected at sign-up (validated, ≥ 13, optional on the API until the form asks for it)
+for a **Well-being widget group** (quote of the day, did you know, horoscope — Morayo's idea was a group of widgets, not a page, so it is three ordinary widgets). (4) **Steam** service added.
+(5) A **Microsoft sign-in** restricted to one organisation (tenant-checked against email spoofing) as the
+self-service alternative to My Epitech's staff-only client registration — untested against the real
+Microsoft until the app is registered. The Epitech/Microsoft/GitHub-style sign-ins now share one accounts
+service and one controller factory instead of copies.
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |
