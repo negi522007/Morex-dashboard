@@ -53,7 +53,6 @@ export function Sidebar({ lang, onToggle, onProfile, onHelp, onLogout }: {
       <nav>
         {link(I.grid, t.navDash, undefined, 'on')}
         {link(I.user, t.navProfile, onProfile)}
-        {link(I.sun, t.navSettings, onProfile)}
       </nav>
       <nav className="bottom">
         {link(I.help, t.help, onHelp)}
@@ -103,18 +102,10 @@ export function Toolbar({ user, lang, theme, skin, onLang, onTheme, onSkin, onOp
       <PillMenu id="skin" open={open} setOpen={setOpen} button={<>{I.grid}<span>{t.wStyle}</span></>}>
         {SKINS.map(([k, label, style]) => <button key={k} className={k === skin ? 'on' : ''} onClick={() => pick(() => onSkin(k))}><span className="swatch" style={style} /><span>{t[label]}</span></button>)}
       </PillMenu>
-      <div className={`pill-menu acct${open === 'acct' ? ' open' : ''}`} onClick={(e) => e.stopPropagation()}>
-        <button className="avatar" style={{ padding: 0, border: 0 }} aria-label={t.myProfile} onClick={() => setOpen(open === 'acct' ? null : 'acct')}><img src={avatarSrc(user)} alt="" /></button>
-        <div className="menu glass">
-          <div className="acct-head"><Avatar user={user} /><div><b>{displayName(user)}</b><small>{user.email}</small></div></div>
-          <button onClick={() => pick(() => onOpen('profile'))}>👤 <span>{t.myProfile}</span></button>
-          <button onClick={() => pick(() => onOpen('avatar'))}>🎨 <span>{t.changeAvatar}</span></button>
-          <button onClick={() => pick(() => onOpen('journal'))}>📖 <span>{t.journal}</span></button>
-          <button onClick={() => pick(() => onOpen('help'))}>❔ <span>{t.help}</span></button>
-          <hr />
-          <button className="danger" onClick={() => pick(() => onOpen('logout'))}>↩ <span>{t.logout}</span></button>
-        </div>
-      </div>
+      {/* The photo opens the avatar editor directly (profile, help and log out are in the sidebar) */}
+      <button className="avatar" style={{ padding: 0, border: 0 }} aria-label={t.changeAvatar} title={t.changeAvatar} onClick={() => onOpen('avatar')}>
+        <img src={avatarSrc(user)} alt="" />
+      </button>
     </div>
   )
 }
@@ -164,7 +155,7 @@ function greeting(lang: Lang) {
   return t.morning
 }
 
-export function Hero({ user, lang, onAvatar, onProfile, onJournal }: { user: User; lang: Lang; onAvatar: () => void; onProfile: () => void; onJournal: () => void }) {
+export function Hero({ user, lang, onAvatar, onBio, onJournal }: { user: User; lang: Lang; onAvatar: () => void; onBio: () => void; onJournal: () => void }) {
   const t = tr(lang), now = useNow(1000), sec = now.getSeconds(), loc = LOCALE[lang]
   return (
     <div className="hero">
@@ -175,8 +166,8 @@ export function Hero({ user, lang, onAvatar, onProfile, onJournal }: { user: Use
         <div className="txt">
           <p className="ghost-sub"><span>{now.toLocaleDateString(loc, { weekday: 'long' })}</span> · <span>{now.toLocaleDateString(loc, { month: 'long' })}</span></p>
           <h1 className="hello">{greeting(lang)}, <span className="grad">{user.firstName || displayName(user)}</span></h1>
-          <p className="bio">{user.bio || t.bio}</p>
-          <div className="chips"><button className="edit-link" onClick={onProfile}>{t.editBio}</button></div>
+          <p className={`bio ${String(user.avatarConfig?.bioFont ?? '')}`} style={{ color: user.avatarConfig?.bioColor || undefined }}>{user.bio || t.bio}</p>
+          <div className="chips"><button className="edit-link" onClick={onBio}>{t.editBio}</button></div>
         </div>
       </div>
       <div className="glass clock-card">
