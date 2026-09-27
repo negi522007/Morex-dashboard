@@ -1,10 +1,12 @@
 import { useState, type InputHTMLAttributes } from 'react'
 import { glassInputClass } from './AuthLayout'
+import { AUTH, useAuthLang } from '../lib/authLang'
 
 type PasswordInputProps = InputHTMLAttributes<HTMLInputElement>
 
 export function PasswordInput({ className = '', ...props }: PasswordInputProps) {
   const [visible, setVisible] = useState(false)
+  const a = AUTH[useAuthLang()]
 
   return (
     <div className="relative">
@@ -17,7 +19,7 @@ export function PasswordInput({ className = '', ...props }: PasswordInputProps) 
         type="button"
         onClick={() => setVisible((v) => !v)}
         tabIndex={-1}
-        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-label={visible ? a.hide : a.show}
         className="absolute inset-y-0 right-0 flex items-center px-5 text-white/80 transition hover:text-white"
       >
         {visible ? <EyeOffIcon /> : <EyeIcon />}
