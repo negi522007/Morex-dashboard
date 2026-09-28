@@ -9,12 +9,16 @@ function make(key: string | undefined = 'k') {
   const w = (n: string) => p.widgets.find((x) => x.name === n)!;
   return { p, w };
 }
-const routes = (map: Record<string, any>) =>
-  jest.spyOn(global, 'fetch').mockImplementation(async (url: any) => {
+// Re-spying on an already-mocked global.fetch throws in Jest, so a second call in the same test
+// just swaps the implementation instead of re-wrapping it.
+const routes = (map: Record<string, any>) => {
+  const impl = async (url: any) => {
     const u = String(url);
     for (const [frag, body] of Object.entries(map)) if (u.includes(frag)) return typeof body === 'function' ? body(u) : json(body);
     return json({}, 404);
-  });
+  };
+  return jest.isMockFunction(global.fetch) ? (global.fetch as jest.Mock).mockImplementation(impl) : jest.spyOn(global, 'fetch').mockImplementation(impl);
+};
 
 afterEach(() => jest.restoreAllMocks());
 
@@ -64,11 +68,12 @@ describe('SteamProvider', () => {
   });
 
   it('fails clearly without a server key, on a bad id, on an unknown name, and on a refused key', async () => {
-    await expect(make(undefined).w('profile').fetchData({ steamId: ID })).rejects.toThrow(/STEAM_API_KEY/);
+    // A default parameter only kicks in for a literally-omitted arg — `make(undefined)` would still
+    // fall back to 'k' and skip this path entirely, so the missing key is an explicit empty string.
+    await expect(make('').w('profile').fetchData({ steamId: ID })).rejects.toThrow(/STEAM_API_KEY/);
     await expect(make().w('profile').fetchData({ steamId: '!!' })).rejects.toBeInstanceOf(ServiceFetchError);
     routes({ ResolveVanityURL: { response: { success: 42 } } });
     await expect(make().w('profile').fetchData({ steamId: 'nobody' })).rejects.toThrow(/No Steam profile found/);
-    jest.restoreAllMocks();
     routes({ GetPlayerSummaries: () => json({}, 403) });
     await expect(make().w('profile').fetchData({ steamId: ID })).rejects.toThrow(/refused.*STEAM_API_KEY/);
   });

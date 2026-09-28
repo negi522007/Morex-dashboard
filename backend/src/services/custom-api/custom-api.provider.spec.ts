@@ -33,6 +33,27 @@ describe('custom_api', () => {
     await expect(list.fetchData({ url: 'https://a.test', path: 'nope', titleField: 't' })).rejects.toThrow(/not a list/);
   });
 
+  it('json_list without a path reads a list at the root of the response', async () => {
+    p.fetcher = json([{ name: 'a', n: 1 }, { name: 'b', n: 2 }]);
+    const d: any = await list.fetchData({ url: 'https://a.test', titleField: 'name', subtitleField: 'n', number: 5 });
+    expect(d.items).toEqual([{ title: 'a', subtitle: '1' }, { title: 'b', subtitle: '2' }]);
+    p.fetcher = json({ not: 'a list' });
+    await expect(list.fetchData({ url: 'https://a.test', titleField: 'x' })).rejects.toThrow(/set "path"/);
+  });
+
+  it('json_value without a path reads the whole response when it is a plain value', async () => {
+    p.fetcher = json(42);
+    const d: any = await value.fetchData({ url: 'https://a.test', label: 'Answer' });
+    expect(d).toMatchObject({ label: 'Answer', value: 42 });
+    expect(value.primaryMetric!(d)).toBe(42);
+  });
+
+  it('path is optional for both widgets, titleField stays required for the list', () => {
+    expect(value.params.find((x) => x.name === 'path')?.required).toBeFalsy();
+    expect(list.params.find((x) => x.name === 'path')?.required).toBeFalsy();
+    expect(list.params.find((x) => x.name === 'titleField')?.required).toBe(true);
+  });
+
   it('refuses private targets with the real guard', async () => {
     const real = new CustomApiProvider();
     await expect(real.widgets[0].fetchData({ url: 'http://127.0.0.1:5432/', path: 'a' })).rejects.toBeInstanceOf(ServiceFetchError);
