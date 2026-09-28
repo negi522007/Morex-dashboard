@@ -5,10 +5,15 @@ import { ServiceAuthContext, ServiceFetchError, ServiceProvider, WidgetDefinitio
 
 const FETCH_TIMEOUT_MS = 10_000;
 
+// Accepts "owner/name" as-is, or a GitHub URL someone pasted instead of picking from the dropdown
+// (https://github.com/owner/name, with or without a trailing slash/.git) — normalized to "owner/name"
+// either way, so a pasted link never silently 404s on every refresh forever.
 function parseRepo(config: Record<string, string | number>, widgetName: string): string {
-  const repo = String(config.repo ?? '');
-  if (!repo || !repo.includes('/')) {
-    throw new ServiceFetchError('github', widgetName, 'The "repo" parameter must look like "owner/name"');
+  const raw = String(config.repo ?? '').trim();
+  const url = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s]+\/[^/\s]+?)(?:\.git)?\/?$/i.exec(raw);
+  const repo = url ? url[1] : raw;
+  if (!repo || !/^[^/\s]+\/[^/\s]+$/.test(repo)) {
+    throw new ServiceFetchError('github', widgetName, 'The "repo" parameter must look like "owner/name" (a GitHub URL also works)');
   }
   return repo;
 }

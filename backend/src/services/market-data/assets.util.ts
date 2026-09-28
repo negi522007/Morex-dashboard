@@ -43,6 +43,14 @@ function scoreCoin(q: string, id: string, symbol: string, name: string): number 
   return null;
 }
 
+// Turns a loosely typed name ("Ether", "Doge") into the CoinGecko id ("ethereum", "dogecoin") the market
+// widgets actually need, for a config that was free-typed instead of picked from the suggestions. `null`
+// when nothing matches (including when the input is already a valid, unknown-to-search id).
+export async function resolveCryptoId(nameOrId: string): Promise<string | null> {
+  const hit = await searchAssets(nameOrId, 'crypto', 1);
+  return hit[0]?.value ?? null;
+}
+
 export async function searchAssets(query: string, kind: AssetKind = 'all', limit = 10): Promise<AssetSuggestion[]> {
   const q = query.trim().toLowerCase();
   const max = Math.min(Math.max(Math.floor(limit) || 10, 1), 25);

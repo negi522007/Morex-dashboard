@@ -136,4 +136,48 @@ describe('MarketDataProvider', () => {
       expect(historyCalls).toHaveLength(1);
     });
   });
+
+
+  describe('self-healing a free-typed crypto name', () => {
+    // A widget saved with "Ether" (a display name) instead of the CoinGecko id "ethereum" — the id an
+    // autocomplete pick would have given. Both widgets should resolve it once and retry, so the widget
+    // works on the very next refresh with no need to re-save the config.
+    const router = (map: Record<string, any>) =>
+      jest.fn().mockImplementation((url: string) => {
+        const u = String(url);
+        for (const [frag, body] of Object.entries(map)) if (u.includes(frag)) return Promise.resolve(typeof body === 'function' ? body() : body);
+        return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+      });
+    const coinsList = { ok: true, json: () => Promise.resolve([{ id: 'ethereum', symbol: 'eth', name: 'Ether' }, { id: 'bitcoin', symbol: 'btc', name: 'Bitcoin' }]) };
+
+    it('price_history: retries once with the resolved id after CoinGecko 404s the unknown one, and gives up cleanly if nothing matches', async () => {
+      global.fetch = router({
+        'coins/list': coinsList,
+        'coins/ethereum/market_chart': { ok: true, json: () => Promise.resolve({ prices: [[1, 4]] }) },
+        // Unmatched fragments (the initial "ether" attempt) fall through to the router's 404 default,
+        // matching CoinGecko's real behaviour for an id it doesn't know.
+      });
+      const result = (await priceHistory.fetchData({ asset: 'Ether', currency: 'usd' })) as any;
+      expect(result).toEqual([{ timestamp: new Date(1).toISOString(), price: 4 }]);
+      const urls = (global.fetch as jest.Mock).mock.calls.map((c) => String(c[0]));
+      expect(urls.some((u) => u.includes('coins/ether/market_chart'))).toBe(true); // the failed first attempt
+      expect(urls.some((u) => u.includes('coins/ethereum/market_chart'))).toBe(true); // the resolved retry
+
+      global.fetch = router({ 'coins/list': coinsList });
+      await expect(priceHistory.fetchData({ asset: 'not-a-real-coin-xyz', currency: 'usd' })).rejects.toThrow(/check the asset id/);
+    });
+
+    it('exchange_rate: same self-healing on the crypto leg, without touching a fiat/fiat pair', async () => {
+      global.fetch = router({
+        'coins/list': coinsList,
+        // CoinGecko's simple/price silently omits an id it doesn't know (200, no matching key) rather than 404ing.
+        'simple/price?ids=ether&': { ok: true, json: () => Promise.resolve({}) },
+        'simple/price?ids=ethereum': { ok: true, json: () => Promise.resolve({ ethereum: { usd: 3000 } }) },
+        'coins/ethereum/market_chart': { ok: true, json: () => Promise.resolve({ prices: [[1, 2999]] }) },
+      });
+      const result = (await exchangeRate.fetchData({ base: 'Ether', quote: 'usd', days: 7 })) as any;
+      expect(result.rate).toBe(3000);
+      expect(result.base).toBe('ethereum');
+    });
+  });
 });
