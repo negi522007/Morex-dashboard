@@ -120,6 +120,18 @@ While `cachedData` is still `null` (new widget, or the service failed and nothin
 card shows "Waiting for the first data…". After a change that needs a new fetch (new widget, new config,
 AI switched on), the page re-reads `/widgets` a few times over the next ~20 s so it appears quickly.
 
+**New field (Sept 28): `lastError`.** Every row now also carries `lastError` (`string | null`) — the exact
+reason the last refresh failed (`"GitHub API returned HTTP 404"`, `"No articles found at this address —
+check it is a real RSS/Atom feed link"`, `"github is not connected anymore — connect it again to resume
+this widget"`…), `null` once a refresh succeeds. Two cases, don't collapse them into the same message:
+- `cachedData: null` **and** `lastError` set → this widget has *never* worked. Show `lastError` itself
+  instead of "Waiting for the first data…" — that placeholder used to stay forever with no explanation,
+  which is exactly the confusing case this field fixes.
+- `cachedData` has a real value **and** `lastError` is set → the widget worked before and is showing
+  **stale-but-real** data on purpose (the backend never wipes good data just because one refresh failed).
+  Keep rendering `cachedData` normally, and add a small non-blocking note (e.g. a little ⚠ near the
+  refresh countdown) with `lastError` — don't replace the card's content.
+
 **Secrets** (calendar URL, custom API URL, Epitech token): the backend never sends them back, it answers
 `"********"`. The forms show those fields empty; leaving one empty keeps the stored value.
 
@@ -290,6 +302,10 @@ The audience is not technical. Three entry points, all backed by `/helpdesk/*` (
 Also: in the **empty dashboard** and on any card that stays empty, add a link "Why is my widget empty?" that
 opens entry `guide-empty-widget`.
 
+**Gap found testing (Sept 28):** add a "New conversation" / clear-history control to the chat panel (e.g. a
+small icon in the panel header). Since history lives only in component state, this is just resetting that
+array to `[]` (back to the suggested-questions view) — no endpoint involved, nothing to call.
+
 ### 3. Daily brief card
 
 Small card at the top of the dashboard (only when `GET /ai/status` says `available`). `GET /brief`:
@@ -342,6 +358,16 @@ assistant can ask a clarifying question before it has enough to act. Build it as
   without the click, still.
 - States: a typing indicator while waiting, `400` (too long / empty) as an inline error, `available: false`
   → hide the panel entirely.
+- Same as the helpdesk chat: add a "New conversation" control that resets `messages` to `[]`. Nothing to
+  call — the whole thread lives in component state, never persisted.
+
+**Gap found testing (Sept 28):** `missingSecrets` isn't read anywhere in the frontend yet. Right now, opening
+a suggestion whose widget needs a secret (e.g. `custom_api`'s `url`, which may carry an API key so it's
+never sent back by the AI) shows the form with everything *else* pre-filled (title, unit…) and the secret
+field silently empty behind a generic placeholder — while the card above it already shows a convincing
+live preview. Nothing tells the user that field specifically still needs typing. Use `missingSecrets` to
+highlight those exact field(s) with a short hint ("the AI can't see this, paste yours") instead of leaving
+it looking like just another optional field.
 
 ## Confirmation page, birth date, well-being widgets, Microsoft (specs — backend done)
 

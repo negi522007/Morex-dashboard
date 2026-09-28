@@ -203,7 +203,11 @@ to GitHub's consent screen.
 
 ### `DELETE /auth/github`
 
-🔒 Session required. Unlinks the current user's GitHub account.
+🔒 Session required. Unlinks the current user's GitHub account. Also revokes the grant on GitHub's own
+side (`DELETE /applications/{client_id}/grant`), best-effort — a failure there never blocks the local
+unlink. Without this, GitHub still considered the app authorized for that account, so the next "Connect
+GitHub" click skipped the consent screen and silently reused the same account instead of letting the
+user pick a different one.
 
 | Status | When |
 |---|---|
@@ -275,6 +279,7 @@ List the current user's widget instances (for rendering the dashboard).
   "decoration": null,
   "lastRefreshedAt": "2026-09-17T22:32:49.701Z",
   "cachedData": [{ "title": "...", "link": "...", "publishedAt": "...", "image": null, "summary": null, "feedTitle": "..." }],
+  "lastError": null,
   "aiEnabled": false,
   "insight": null,
   "insightAt": null,
@@ -310,7 +315,15 @@ List the current user's widget instances (for rendering the dashboard).
 
 > **Breaking change since the first weather version:** `weather/forecast` no longer exists (creating it returns `400 Unknown widget`). Widgets already stored under that name simply stop refreshing; delete and recreate them as `current_weather` / `daily_forecast`.
 | `worldclock/world_clock` | `{ home, cities: [...] }` — `homeTimezone` and comma-separated `cities` params, IANA names |
-`lastRefreshedAt`/`cachedData` are `null` until the scheduler's first tick after creation (up to 15s).
+`lastRefreshedAt`/`cachedData` are `null` until the scheduler's first tick after creation (up to 5s).
+
+`lastError` is the exact reason the *last* refresh failed (e.g. `"GitHub API returned HTTP 404"`,
+`"No articles found at this address — check it is a real RSS/Atom feed link"`,
+`"github is not connected anymore — connect it again to resume this widget"`), or `null` once a refresh
+succeeds. `cachedData` keeps the last known-good value while `lastError` is set (stale data, not wiped) —
+show both: the stale content plus a small error note, instead of an indefinite "waiting for data" state.
+A widget that has never once succeeded has `cachedData: null` and `lastError` set — render the error, not
+a generic empty/loading placeholder.
 
 #### Secret parameters (`secret: true` in `/about.json`)
 

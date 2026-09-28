@@ -4,10 +4,26 @@ Practical guide for working on this repo day to day — not the "why" (see
 [ARCHITECTURE.md](./ARCHITECTURE.md)), not "what does the API look like" (see [API.md](./API.md)), just
 "how do I actually make a change."
 
+## After `git pull`: rebuild, don't just restart
+
+`docker compose up -d` (or `restart`) reuses the image already built on your machine — it does **not**
+notice that the source changed. If you `git pull` and only run that, you're still running yesterday's
+code with today's code sitting unused on disk (real bug hit while building this: a fix looked "not
+applied" for several minutes because of exactly this). After every pull that touches `backend/` or
+`frontend/`, rebuild explicitly:
+
+```bash
+docker compose up -d --build
+```
+
+This also applies any new Prisma migration automatically (`docker-entrypoint.sh` runs it on container
+start) — no separate manual migration step for the Docker path.
+
 ## Local development without rebuilding the Docker image every time
 
-`docker compose up` rebuilds/restarts the whole server on every change, which is slow while actively
-coding. Instead, run only the dependencies in Docker and the server directly on your machine:
+Re-running `docker compose up -d --build` after every single edit while actively coding is slow (a full
+image rebuild each time). Instead, run only the dependencies in Docker and the server directly on your
+machine:
 
 ```bash
 docker compose up -d db mailhog
