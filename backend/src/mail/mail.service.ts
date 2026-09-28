@@ -2,11 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
+// "A little note from Morex": a warm, handwritten-notebook email (same look as the app's bio notebook).
+// `hello` gets the first name when we have it.
 const CONFIRM_MAIL = {
-  en: { subject: 'Confirm your Morex account', hello: 'Welcome to Morex!', body: 'Someone used this address to create an account. Open the link below and tell us whether it was you. Nothing is activated until you do. The link is valid for 24 hours.', button: 'Review and confirm', ignore: 'Wasn\u2019t you? Open the link and choose \u201cNo, it wasn\u2019t me\u201d, or simply ignore this email. Without your confirmation the account is never activated, and it is deleted after 24 hours.' },
-  fr: { subject: 'Confirmez votre compte Morex', hello: 'Bienvenue sur Morex\u00a0!', body: 'Quelqu\u2019un a utilis\u00e9 cette adresse pour cr\u00e9er un compte. Ouvrez le lien ci-dessous et dites-nous si c\u2019\u00e9tait bien vous. Rien n\u2019est activ\u00e9 avant. Le lien est valable 24\u00a0heures.', button: 'V\u00e9rifier et confirmer', ignore: 'Ce n\u2019\u00e9tait pas vous\u00a0? Ouvrez le lien et choisissez \u00ab\u00a0Non, ce n\u2019\u00e9tait pas moi\u00a0\u00bb, ou ignorez simplement cet email. Sans votre confirmation, le compte n\u2019est jamais activ\u00e9 et il est supprim\u00e9 apr\u00e8s 24\u00a0heures.' },
-  es: { subject: 'Confirma tu cuenta de Morex', hello: '\u00a1Bienvenido a Morex!', body: 'Alguien ha usado esta direcci\u00f3n para crear una cuenta. Abre el enlace de abajo y dinos si fuiste t\u00fa. No se activa nada antes. El enlace vale 24 horas.', button: 'Revisar y confirmar', ignore: '\u00bfNo fuiste t\u00fa? Abre el enlace y elige \u00abNo, no fui yo\u00bb, o simplemente ignora este email. Sin tu confirmaci\u00f3n, la cuenta nunca se activa y se elimina tras 24 horas.' },
+  en: { subject: 'A little note from Morex \u{1F48C}', hello: (n: string) => (n ? `Hi ${n}!` : 'Hi there!'), body: 'Your Morex universe is waiting for you. Just click below to tell us it\u2019s really you, and we\u2019ll open the doors.', button: 'Yes, it\u2019s me', ignore: 'Not you? No worries, simply ignore this message: nothing is activated, and the pending account is deleted after 24 hours. You can also open the link and choose \u201cNo, it wasn\u2019t me\u201d.', valid: 'The link is valid for 24 hours.' },
+  fr: { subject: 'Un petit mot de Morex \u{1F48C}', hello: (n: string) => (n ? `Coucou ${n}\u00a0!` : 'Coucou\u00a0!'), body: 'Ton univers Morex t\u2019attend. Clique juste ici pour nous dire que c\u2019est bien toi, et on ouvre les portes.', button: 'Oui, c\u2019est moi', ignore: 'Pas toi\u00a0? Aucun souci, ignore simplement ce message\u00a0: rien n\u2019est activ\u00e9, et le compte en attente est supprim\u00e9 apr\u00e8s 24\u00a0heures. Tu peux aussi ouvrir le lien et choisir \u00ab\u00a0Non, ce n\u2019\u00e9tait pas moi\u00a0\u00bb.', valid: 'Le lien est valable 24\u00a0heures.' },
+  es: { subject: 'Una notita de Morex \u{1F48C}', hello: (n: string) => (n ? `\u00a1Hola ${n}!` : '\u00a1Hola!'), body: 'Tu universo Morex te espera. Haz clic aqu\u00ed para decirnos que eres t\u00fa, y abrimos las puertas.', button: 'S\u00ed, soy yo', ignore: '\u00bfNo fuiste t\u00fa? Tranquilo, simplemente ignora este mensaje: no se activa nada, y la cuenta pendiente se elimina tras 24 horas. Tambi\u00e9n puedes abrir el enlace y elegir \u00abNo, no fui yo\u00bb.', valid: 'El enlace vale 24 horas.' },
 } as const;
+const escHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
 
 // The eye/orbit mark from the app's own logo (frontend/public/logo.svg), inlined so it renders with no
 // external image request (many mail clients block remote images until the user allows them).
@@ -54,31 +57,33 @@ export class MailService {
     this.logger.log(`Mail "${message.subject}" accepted by the SMTP server (${info.response})`);
   }
 
-  async sendConfirmationEmail(to: string, confirmUrl: string, lang: 'en' | 'fr' | 'es' = 'en'): Promise<void> {
+  async sendConfirmationEmail(to: string, confirmUrl: string, lang: 'en' | 'fr' | 'es' = 'en', firstName?: string | null): Promise<void> {
     const t = CONFIRM_MAIL[lang];
+    const hello = t.hello((firstName ?? '').trim());
     // Both a text and an HTML part: HTML-only mail from a personal Gmail account is far more likely
-    // to be filed as spam. The link only opens a page that asks "is this you?" — it confirms nothing by itself.
+    // to be filed as spam. The link only opens a page that asks "is this you?", it confirms nothing by itself.
     await this.deliver({
       to,
       subject: t.subject,
-      text: `${t.hello}\n\n${t.body}\n${confirmUrl}\n\n${t.ignore}`,
-      // The app's own colours (Morex: slate-950 background, indigo/sky accent, a white pill button) and
-      // its logo, inlined below. Kept deliberately simple (no backdrop-filter, no web font, no CSS gradient
-      // text) because those either don't render or actively break in Outlook/older mail clients; a solid
-      // dark card with a solid white button degrades safely everywhere.
-      html: `<body style="margin:0;padding:32px 16px;background-color:#020617;font-family:'Poppins',Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%">
+      text: `${hello}\n\n${t.body}\n${confirmUrl}\n\n${t.valid}\n${t.ignore}`,
+      // "A little note": a cream notebook page with a pink tape strip, handwriting-style title and a violet
+      // pill button (the app's bio notebook). Kept mail-client safe: tables, solid colours (the ruled lines are
+      // a bonus background-image that simply disappears where unsupported), no backdrop-filter, no gradient
+      // text, and a handwriting font list that falls back to a normal cursive/sans font.
+      html: `<body style="margin:0;padding:32px 16px;background-color:#f3eefc;font-family:'Poppins',Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%">
 <table role="presentation" width="100%" style="max-width:480px;margin:0 auto;border-collapse:collapse">
-<tr><td style="background-color:#11162e;border:1px solid #2a3158;border-radius:24px;padding:36px 32px;color:#eef0ff;hyphens:none;word-break:normal">
-<div style="text-align:center;margin-bottom:18px">${LOGO_SVG}</div>
-<div style="text-align:center;letter-spacing:.16em;font-size:12px;text-transform:uppercase;color:#a5b4fc;font-weight:700">Morex</div>
-<h1 style="font-size:24px;margin:16px 0 10px;text-align:center;color:#fff">${t.hello}</h1>
-<p style="line-height:1.6;color:#c9cdf2;font-size:15px">${t.body}</p>
-<table role="presentation" style="margin:28px auto"><tr><td style="border-radius:999px;background-color:#ffffff">
-<a href="${confirmUrl}" style="display:inline-block;padding:15px 28px;font-weight:600;font-size:15px;color:#1e1b4b;text-decoration:none;border-radius:999px">${t.button}</a>
+<tr><td style="text-align:center;padding-bottom:14px"><span style="display:inline-block">${LOGO_SVG}</span><div style="letter-spacing:.16em;font-size:12px;text-transform:uppercase;color:#7c3aed;font-weight:700;margin-top:4px">Morex</div></td></tr>
+<tr><td style="text-align:center;height:22px"><span style="display:inline-block;width:92px;height:22px;background-color:#f9a8d4;opacity:.8;border-radius:3px"></span></td></tr>
+<tr><td style="background-color:#fffdf8;background-image:repeating-linear-gradient(transparent 0 27px,#efe8fb 27px 28px);border-radius:18px;padding:30px 28px;color:#3b2a63;text-align:center;border:1px solid #e9e2f7;hyphens:none;word-break:normal">
+<h1 style="font-family:'Caveat','Segoe Script','Bradley Hand','Comic Sans MS',cursive;font-size:34px;line-height:1.2;margin:4px 0 12px;color:#7c3aed;font-weight:700">${escHtml(hello)}</h1>
+<p style="line-height:1.7;font-size:15px;margin:0">${t.body}</p>
+<table role="presentation" style="margin:26px auto 18px"><tr><td style="border-radius:999px;background-color:#7c3aed">
+<a href="${confirmUrl}" style="display:inline-block;padding:14px 30px;font-weight:600;font-size:15px;color:#ffffff;text-decoration:none;border-radius:999px">${t.button}</a>
 </td></tr></table>
-<p style="font-size:13px;color:#9aa1cf;line-height:1.5">${t.ignore}</p>
-<p style="font-size:12px;color:#6b73a8;word-break:break-all">${confirmUrl}</p>
+<p style="font-size:13px;color:#6d5a99;line-height:1.55;margin:0 0 8px">${t.valid}</p>
+<p style="font-size:13px;color:#6d5a99;line-height:1.55;margin:0">${t.ignore}</p>
 </td></tr>
+<tr><td style="padding:14px 8px 0;text-align:center;font-size:11.5px;color:#8a80a6;word-break:break-all">${confirmUrl}</td></tr>
 </table>
 </body>`,
     });

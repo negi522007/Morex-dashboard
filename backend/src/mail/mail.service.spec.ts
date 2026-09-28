@@ -21,14 +21,25 @@ describe('MailService.sendConfirmationEmail', () => {
     }
   });
 
-  it('matches the app’s own branding: the inlined logo, the Morex wordmark, and a white pill button', async () => {
+  it('matches the app’s own branding: the inlined logo, the Morex wordmark, and a violet pill button', async () => {
     const { svc, sendMail } = make();
     await svc.sendConfirmationEmail('to@test.dev', 'https://x/y?token=abc', 'en');
     const { html, subject } = sendMail.mock.calls[0][0];
     expect(subject).toContain('Morex');
     expect(html).toContain('aria-label="Morex"');
-    expect(html).toContain('background-color:#ffffff');
+    expect(html).toContain('background-color:#7c3aed');
     expect(html).toContain('https://x/y?token=abc');
+  });
+
+  it('greets by first name when known, escaped, and stays friendly without one', async () => {
+    const { svc, sendMail } = make();
+    await svc.sendConfirmationEmail('to@test.dev', 'https://x/y', 'fr', 'Asake');
+    expect(sendMail.mock.calls[0][0].html).toContain('Coucou Asake');
+    expect(sendMail.mock.calls[0][0].text).toContain('Coucou Asake');
+    await svc.sendConfirmationEmail('to@test.dev', 'https://x/y', 'en', '<b>x</b>');
+    expect(sendMail.mock.calls[1][0].html).toContain('Hi &lt;b&gt;x&lt;/b&gt;!');
+    await svc.sendConfirmationEmail('to@test.dev', 'https://x/y', 'es');
+    expect(sendMail.mock.calls[2][0].html).toContain('¡Hola!');
   });
 
   it('avoids CSS that commonly breaks in mail clients (no backdrop-filter, no background-clip text), and disables auto-hyphenation', async () => {
