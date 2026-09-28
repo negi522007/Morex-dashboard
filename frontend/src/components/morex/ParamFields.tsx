@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { api } from '../../lib/api'
 import { paramLabel, W, type Lang } from '../../lib/i18n'
 import { ZODIAC, type CatalogEntry } from '../../lib/catalog'
-import { flagOf } from '../../lib/format'
+import { compact, flagOf } from '../../lib/format'
 import type { User, WidgetParam } from '../../lib/types'
 
 // The settings form of a widget, with a friendly control for each setting instead of a raw text field:
@@ -195,6 +195,32 @@ function CountryPicker({ value, onChange, lang }: { value: string; onChange: (v:
   )
 }
 
+// Type-ahead for the "channel" field: only from 3 characters, and a long debounce — the backend's
+// /services/youtube/channels endpoint spends real, shared YouTube quota per new search (see its comment).
+// The field stays a plain input the whole time: pasting a full link or @handle directly still works.
+function ChannelPicker({ value, onChange, lang }: { value: string; onChange: (v: string) => void; lang: Lang }) {
+  const found = useSuggest<{ value: string; label: string; subscribers: number | null }>(
+    (s) => (s.trim().length >= 3 && !/^(https?:\/\/|@)/i.test(s.trim()) ? `/services/youtube/channels?q=${encodeURIComponent(s.trim())}&limit=8` : null),
+    value,
+    600,
+  )
+  return (
+    <>
+      <input className="pf-in" value={value} placeholder="@Squeezie" onChange={(e) => onChange(e.target.value)} />
+      <small>{T.channelHint[lang]}</small>
+      {found.length > 0 && (
+        <List>
+          {found.map((c) => (
+            <div key={c.value} role="option" aria-selected={c.value === value} className={c.value === value ? 'on' : ''} onClick={() => onChange(c.value)}>
+              {c.label}{c.subscribers != null && <small> · {compact(c.subscribers, lang)} {W[lang].subscribers}</small>}
+            </div>
+          ))}
+        </List>
+      )}
+    </>
+  )
+}
+
 const youtubeId = (s: string) => s.match(/(?:youtu\.be\/|v=|\/shorts\/|\/embed\/)([\w-]{11})/)?.[1] ?? (/^[\w-]{11}$/.test(s.trim()) ? s.trim() : null)
 
 function CalendarField({ value, onChange, lang, editing }: { value: string; onChange: (v: string) => void; lang: Lang; editing: boolean }) {
@@ -274,6 +300,7 @@ export function ParamFields({ entry, params, cfg, setCfg, lang, user, editing = 
     if (entry.service === 'github' && p.name === 'repo') return <RepoPicker value={v} onChange={onChange} lang={lang} linked={user.githubLinked} />
     if (entry.service === 'weather' && p.name === 'city') return <CityField value={v} onChange={onChange} lang={lang} />
     if (w === 'trending' && p.name === 'country') return <CountryPicker value={v} onChange={onChange} lang={lang} />
+    if (entry.service === 'youtube' && p.name === 'channel') return <ChannelPicker value={v} onChange={onChange} lang={lang} />
     if (w === 'upcoming_events' && p.name === 'url') return <CalendarField value={v} onChange={onChange} lang={lang} editing={editing} />
     if (entry.service === 'custom_api' && p.name === 'path') return <JsonExplorer url={cfg.url ?? ''} pick={w === 'json_list' ? 'list' : 'value'} value={v} onChange={onChange} lang={lang} />
     if (entry.service === 'custom_api' && (p.name === 'titleField' || p.name === 'subtitleField')) return <JsonExplorer url={cfg.url ?? ''} listPath={cfg.path} pick="field" value={v} onChange={onChange} lang={lang} />
@@ -301,9 +328,8 @@ export function ParamFields({ entry, params, cfg, setCfg, lang, user, editing = 
       <>
         <input className="pf-in" type={p.type === 'integer' ? 'number' : p.secret ? 'password' : 'text'} value={v} autoComplete="off"
           placeholder={p.secret && editing ? '••••••••' : ex} onChange={(e) => onChange(e.target.value)} />
-        {p.name === 'channel' && <small>{T.channelHint[lang]}</small>}
         {p.secret && editing && <small>{T.secretKept[lang]}</small>}
-        {!p.secret && !editing && entry.hints[p.name] && p.name !== 'channel' && <small>{entry.hints[p.name][0][lang]}{ex ? `, ${W[lang].eg} ${ex}` : ''}</small>}
+        {!p.secret && !editing && entry.hints[p.name] && <small>{entry.hints[p.name][0][lang]}{ex ? `, ${W[lang].eg} ${ex}` : ''}</small>}
       </>
     )
   }
