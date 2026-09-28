@@ -15,7 +15,7 @@ describe('renderConfirmPage', () => {
 
   it('offers useful next steps after both answers, in the requested language', () => {
     const fr = renderConfirmPage({ ...base, lang: 'fr', pending: { email: 'a***@b.c', firstName: null } });
-    expect(fr).toContain('Votre compte est confirmé');
+    expect(fr).toContain('Ton compte est confirmé');
     expect(fr).toContain('http://localhost:5173/login');
     expect(fr).toContain('Aucun compte n’a été créé');
     expect(fr).toContain('24 heures');
@@ -25,7 +25,7 @@ describe('renderConfirmPage', () => {
 
   it('shows a helpful page (with a way forward) for an invalid or expired link, without any buttons that act', () => {
     const html = renderConfirmPage({ ...base, lang: 'en', pending: null });
-    expect(html).toContain('This link doesn’t work');
+    expect(html).toContain('this link has faded');
     expect(html).toContain('http://localhost:5173/register');
     expect(html).not.toContain('/auth/confirm/reject');
   });
@@ -37,7 +37,7 @@ describe('renderConfirmPage', () => {
     expect(html).not.toContain('alert(1)</script>');
   });
 
-  it('never uses an em dash in the copy, and matches the app’s own branding (logo, Morex wordmark, white pill button)', () => {
+  it('never uses an em dash in the copy, and matches the confirmation email (logo, Morex wordmark, the note with its violet button)', () => {
     for (const lang of ['en', 'fr', 'es'] as const) {
       const html = renderConfirmPage({ ...base, lang, pending: { email: 'a***@b.c', firstName: 'Ada' } });
       expect(html).not.toContain('—');
@@ -45,13 +45,20 @@ describe('renderConfirmPage', () => {
     const html = renderConfirmPage({ ...base, lang: 'en', pending: { email: 'a***@b.c', firstName: null } });
     expect(html).toContain('aria-label="Morex"');
     expect(html).toContain('>Morex</div>');
-    expect(html).toContain('.primary{background:#fff');
+    expect(html).toContain('.primary{background:#7c3aed');
+    expect(html).toContain('Caveat');
   });
 
   it('no longer calls well-being a page (it is a widget group)', () => {
     const html = renderConfirmPage({ ...base, lang: 'en', pending: { email: 'a***@b.c', firstName: null } });
     expect(html).not.toMatch(/well-being page/i);
     expect(html).toContain('horoscope widget');
+  });
+
+  it('greets the person by first name, like the email', () => {
+    expect(renderConfirmPage({ ...base, lang: 'fr', pending: { email: 'a***@b.c', firstName: 'Ada' } })).toContain('Coucou Ada\u00a0!');
+    expect(renderConfirmPage({ ...base, lang: 'es', pending: { email: 'a***@b.c', firstName: 'Ada' } })).toContain('¡Hola Ada!');
+    expect(renderConfirmPage({ ...base, lang: 'en', pending: { email: 'a***@b.c', firstName: null } })).toContain('<h1>Hi!</h1>');
   });
 
   it('picks the language from Accept-Language, defaulting to English', () => {
