@@ -146,6 +146,30 @@ describe('ask', () => {
     expect(completeJson).not.toHaveBeenCalled();
   });
 
+  it('replies warmly to a bare greeting instead of "not found in the help", in the right language', async () => {
+    const { svc, completeJson } = make();
+    const fr = await svc.ask('u', { question: 'bonjour' }, 'fr');
+    expect(fr.answer).not.toMatch(/trouvé/);
+    expect(fr.related.map((x) => x.id)).toEqual(['guide-getting-started', 'guide-add-widget', 'guide-empty-widget']);
+    const en = await svc.ask('u', { question: 'hello' }, 'en');
+    expect(en.answer).toMatch(/Hi!/);
+    expect(completeJson).not.toHaveBeenCalled();
+  });
+
+  it('treats small talk as small talk even mid-conversation, instead of gluing it to the previous question', async () => {
+    // Regression: "je t'aime" (clicked from an AI follow-up chip after a GitHub question) used to be
+    // treated as a short follow-up and combined with the previous question, so the search matched the
+    // GitHub glossary entry purely on the *previous* message's own words — an unrelated, confusing answer.
+    const { svc, completeJson } = make();
+    const r = await svc.ask('u', {
+      question: "je t'aime",
+      history: [{ role: 'user', content: 'what is a github repo' }, { role: 'assistant', content: '...' }],
+    }, 'fr');
+    expect(r.answer).toMatch(/Salut/);
+    expect(r.sources).toEqual([]);
+    expect(completeJson).not.toHaveBeenCalled();
+  });
+
   it('clips the history, keeps only valid roles, and uses the last question for short follow-ups', async () => {
     const { svc, completeJson } = make();
     const history = [

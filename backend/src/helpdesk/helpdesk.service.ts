@@ -45,6 +45,19 @@ const FALLBACK: Record<Lang, string> = {
   fr: 'Je n’ai pas trouvé ça dans l’aide. Essaie d’autres mots, ou commence par l’un de ces sujets.',
   es: 'No he encontrado eso en la ayuda. Prueba con otras palabras, o empieza por uno de estos temas.',
 };
+// Plain small talk (greetings, thanks, "I love you"...) scores zero keyword matches — nothing in the
+// docs contains it — so without this it either fell straight into FALLBACK ("not found", which reads
+// as broken for a greeting) or, worse, got silently glued to the *previous* question by the short-follow-
+// up logic below and answered with unrelated documentation. Caught this once "je t'aime" (clicked from an
+// AI-generated follow-up chip) got answered with the GitHub glossary entry, just because the conversation
+// happened to be about GitHub before that. This check runs first and unconditionally (not just on the
+// first message) so mid-conversation small talk never reaches that logic at all.
+const SMALL_TALK = /^[\s!.,?]*(bonjour|bonsoir|salut+|coucou|hello+|hi|hey+|hola|buenas( (dias|tardes|noches))?|merci+|thanks?( you)?|gracias|(je )?t'?aime|i love (you|this|it)|te (amo|quiero)|(c'est )?(cool|top|nickel|genial|sympa)|ok(ay)?|d'accord|lol|mdr|haha+|ptdr)[\s!.,?]*$/i;
+const SMALL_TALK_REPLY: Record<Lang, string> = {
+  en: 'Hi! I can help with the dashboard, services and widgets. What do you need — pick a topic below or just ask.',
+  fr: 'Salut ! Je peux t’aider sur le dashboard, les services et les widgets. Choisis un sujet ci-dessous, ou pose ta question.',
+  es: '¡Hola! Puedo ayudarte con el dashboard, los servicios y los widgets. Elige un tema abajo, o pregunta lo que quieras.',
+};
 const STARTERS = ['guide-getting-started', 'guide-add-widget', 'guide-empty-widget'];
 
 export function asLang(v: unknown): Lang | null {
@@ -134,6 +147,13 @@ export class HelpdeskService {
       widget: typeof body.context?.widget === 'string' ? body.context.widget.slice(0, 40) : undefined,
     };
 
+    const starters = () => STARTERS.map((id) => this.byId.get(id)!).map((e) => ({ id: e.id, title: e.title[idx(lang)] }));
+    // Checked first and regardless of history: small talk must never reach the short-follow-up logic
+    // below, which would otherwise glue it to whatever the previous question happened to be about.
+    if (SMALL_TALK.test(question)) {
+      return { mode: 'search', language: lang, answer: SMALL_TALK_REPLY[lang], sources: [], followUps: [], related: starters() };
+    }
+
     // A short follow-up ("and for YouTube?") only makes sense with the previous question.
     const lastUser = [...history].reverse().find((m) => m.role === 'user')?.content ?? '';
     const shortQ = question.split(' ').filter((t) => !STOPWORDS.has(fold(t))).length < 3;
@@ -143,10 +163,7 @@ export class HelpdeskService {
     const relatedOf = (h?: PublicEntry) => h?.related ?? [];
 
     if (hits.length === 0) {
-      return {
-        mode: 'search', language: lang, answer: FALLBACK[lang], sources: [], followUps: [],
-        related: STARTERS.map((id) => this.byId.get(id)!).map((e) => ({ id: e.id, title: e.title[idx(lang)] })),
-      };
+      return { mode: 'search', language: lang, answer: FALLBACK[lang], sources: [], followUps: [], related: starters() };
     }
 
     const searchMode = (): AskResult => ({
