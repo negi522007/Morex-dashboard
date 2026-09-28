@@ -12,9 +12,9 @@ export class AssistantController {
   constructor(private readonly assistant: AssistantService) {}
 
   @Post('widgets')
-  @ApiOperation({ summary: 'Describe what you want to follow; get validated widget drafts (nothing is created)' })
-  @ApiBody({ schema: { example: { prompt: 'follow the bitcoin price and tech news' } } })
-  suggest(@CurrentUser() user: { id: string }, @Body() body: { prompt?: string }) {
-    return this.assistant.suggest(user.id, body?.prompt);
+  @ApiOperation({ summary: 'Chat to build widgets: send a message (and the conversation so far); get a reply and, once the assistant has enough, validated drafts (nothing is created)' })
+  @ApiBody({ schema: { example: { prompt: 'I want to follow some cool stuff', history: [{ role: 'assistant', content: 'What kind of content are you into?' }] } } })
+  suggest(@CurrentUser() user: { id: string }, @Body() body: { prompt?: string; history?: unknown }) {
+    return this.assistant.suggest(user.id, body);
   }
 }

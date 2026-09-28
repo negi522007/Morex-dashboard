@@ -5,8 +5,9 @@ import { SERVICE_PROVIDERS } from '../services/service-providers.token';
 import type { ServiceProvider } from '../services/service-provider.interface';
 import { WidgetsService } from '../widgets/widgets.service';
 
-const MAX_PROMPT = 500;
+const MAX_MESSAGE = 500;
 const MAX_SUGGESTIONS = 4;
+const MAX_HISTORY = 8;
 
 interface Draft {
   serviceName?: string;
@@ -15,17 +16,38 @@ interface Draft {
   config?: Record<string, unknown>;
   reason?: string;
 }
+interface ChatTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+interface ChatBody {
+  prompt?: unknown;
+  history?: unknown;
+}
 
-// Offline stand-in (AI_PROVIDER=mock) so the feature can be developed without a key.
-function mockDrafts(prompt: string): { suggestions: Draft[] } {
+// Offline stand-in (AI_PROVIDER=mock) so the feature can be developed without a key. A short, vague
+// message gets a clarifying question instead of a guess — the same behaviour the real model is told to have.
+function mockChat(prompt: string): { reply: string; suggestions: Draft[] } {
   const p = prompt.toLowerCase();
   if (/bitcoin|btc|crypto/.test(p)) {
-    return { suggestions: [{ serviceName: 'market_data', widgetName: 'price_history', title: 'Bitcoin', config: { asset: 'bitcoin', days: 7 }, reason: 'Bitcoin price over the last week' }] };
+    return {
+      reply: "Sure — here's a widget for that.",
+      suggestions: [{ serviceName: 'market_data', widgetName: 'price_history', title: 'Bitcoin', config: { asset: 'bitcoin', days: 7 }, reason: 'Bitcoin price over the last week' }],
+    };
   }
   if (/m[ée]t[ée]o|weather|temps/.test(p)) {
-    return { suggestions: [{ serviceName: 'weather', widgetName: 'daily_forecast', title: 'Weather', config: { city: 'Paris', days: 5 }, reason: 'Current weather and the next days' }] };
+    return {
+      reply: 'Got it, adding a weather card.',
+      suggestions: [{ serviceName: 'weather', widgetName: 'daily_forecast', title: 'Weather', config: { city: 'Paris', days: 5 }, reason: 'Current weather and the next days' }],
+    };
   }
-  return { suggestions: [{ serviceName: 'rss', widgetName: 'article_list', title: 'Hacker News', config: { link: 'https://hnrss.org/frontpage', number: 5 }, reason: 'Top tech stories' }] };
+  if (/news|actu|noticias|article/.test(p)) {
+    return {
+      reply: 'Here you go.',
+      suggestions: [{ serviceName: 'rss', widgetName: 'article_list', title: 'Hacker News', config: { link: 'https://hnrss.org/frontpage', number: 5 }, reason: 'Top tech stories' }],
+    };
+  }
+  return { reply: "What would you like to follow — news, a market, GitHub, the weather somewhere? Tell me a bit more.", suggestions: [] };
 }
 
 @Injectable()
@@ -48,29 +70,44 @@ export class AssistantService {
     );
   }
 
-  // Suggests widgets from a sentence. It never creates anything: every draft was
-  // already validated with the exact rules of POST /widgets, so once the user
-  // confirms, the frontend can post it as-is.
-  async suggest(userId: string, rawPrompt: unknown) {
-    const prompt = typeof rawPrompt === 'string' ? rawPrompt.trim() : '';
+  private cleanHistory(raw: unknown): ChatTurn[] {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((m): m is ChatTurn => Boolean(m) && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      .slice(-MAX_HISTORY)
+      .map((m) => ({ role: m.role, content: clip(m.content, 500) }));
+  }
+
+  // A real back-and-forth, not a one-shot command: the model can ask a clarifying question (`reply`
+  // only, empty `suggestions`) before it has enough to act, and keeps the thread via `history`. It
+  // never creates anything itself — every draft was already validated with the exact rules of
+  // POST /widgets, so once the user confirms one, the frontend can post it as-is.
+  async suggest(userId: string, body: ChatBody) {
+    const prompt = typeof body?.prompt === 'string' ? body.prompt.trim() : '';
     if (!prompt) throw new BadRequestException('prompt is required');
-    if (prompt.length > MAX_PROMPT) throw new BadRequestException(`prompt is limited to ${MAX_PROMPT} characters`);
-    if (!this.ai.available) return { available: false, suggestions: [] };
+    if (prompt.length > MAX_MESSAGE) throw new BadRequestException(`prompt is limited to ${MAX_MESSAGE} characters`);
+    const history = this.cleanHistory(body?.history);
+    if (!this.ai.available) return { available: false, reply: '', suggestions: [] };
 
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { language: true } });
     const language = user?.language ?? 'en';
 
-    let out: { suggestions?: Draft[] };
+    let out: { reply?: string; suggestions?: Draft[] };
     try {
       out = await this.ai.forUser(userId).completeJson({
         system:
-          `You configure dashboard widgets from a user's request, and write titles and reasons in ${languageName(language)}. ${UNTRUSTED_RULES} ` +
-          `Pick at most ${MAX_SUGGESTIONS} widgets from the catalog only (exact serviceName/widgetName/param names). ` +
+          `You are a friendly assistant chatting with the user to build dashboard widgets from the catalog below, ` +
+          `writing every "reply"/"title"/"reason" in ${languageName(language)}. ${UNTRUSTED_RULES} ` +
+          'This is a CONVERSATION, not a one-shot command: if the request is vague or you are missing a needed setting ' +
+          '(e.g. which city, which repo, which channel), ask ONE short clarifying question in "reply" and leave ' +
+          '"suggestions" empty — do not invent a placeholder value. Once you have enough, "reply" is a short, ' +
+          'natural acknowledgement (not a report) and "suggestions" holds the widgets, picked from the catalog only ' +
+          `(exact serviceName/widgetName/param names), at most ${MAX_SUGGESTIONS}. ` +
           'Never invent secrets, API keys or private URLs: omit any param you do not know. ' +
-          'Schema: {"suggestions":[{"serviceName": string, "widgetName": string, "title": string (max 40 chars), "config": object, "reason": string (max 120 chars)}]}.',
-        user: `Catalog: ${JSON.stringify(this.catalog())}\n<data>${prompt}</data>`,
+          'Schema: {"reply": string (max 220 chars), "suggestions":[{"serviceName": string, "widgetName": string, "title": string (max 40 chars), "config": object, "reason": string (max 120 chars)}]}.',
+        user: `Catalog: ${JSON.stringify(this.catalog())}\n${history.length ? `<history>${JSON.stringify(history)}</history>\n` : ''}<data>${prompt}</data>`,
         maxTokens: 900,
-        mock: mockDrafts(prompt),
+        mock: mockChat(prompt),
       });
     } catch (err) {
       if (err instanceof AiUnavailableError) {
@@ -108,6 +145,6 @@ export class AssistantService {
         missingSecrets: secretNames.filter((s) => !(s in config)),
       });
     }
-    return { available: true, suggestions };
+    return { available: true, reply: clip(out.reply ?? '', 260), suggestions };
   }
 }

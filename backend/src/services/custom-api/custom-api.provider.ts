@@ -36,7 +36,7 @@ export class CustomApiProvider implements ServiceProvider {
         params: [
           { name: 'url', type: 'string', required: true, secret: true },
           // Optional: empty means "the response itself is the value" (e.g. an API that just answers 42).
-          { name: 'path', type: 'string' },
+          { name: 'path', type: 'string', optionsUrl: '/services/custom_api/inspect', dependsOn: ['url'] },
           { name: 'label', type: 'string' },
           { name: 'unit', type: 'string' },
         ],
@@ -59,9 +59,9 @@ export class CustomApiProvider implements ServiceProvider {
         params: [
           { name: 'url', type: 'string', required: true, secret: true },
           // Optional: empty means "the response itself is the list" (an answer that starts with [ ).
-          { name: 'path', type: 'string' },
-          { name: 'titleField', type: 'string', required: true },
-          { name: 'subtitleField', type: 'string' },
+          { name: 'path', type: 'string', optionsUrl: '/services/custom_api/inspect', dependsOn: ['url'] },
+          { name: 'titleField', type: 'string', required: true, optionsUrl: '/services/custom_api/inspect', dependsOn: ['url', 'path'] },
+          { name: 'subtitleField', type: 'string', optionsUrl: '/services/custom_api/inspect', dependsOn: ['url', 'path'] },
           { name: 'number', type: 'integer' },
         ],
         fetchData: async (config) => {

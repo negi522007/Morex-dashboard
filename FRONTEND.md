@@ -217,25 +217,45 @@ and viewing anyone's widgets or journal (the admin API never exposes private con
 Each block: what the user sees, which calls, and the states to handle (loading, empty, error — the same
 standard as the rest of the app). Order = suggested priority for the defense demo.
 
-### 1. World clock: dropdown of cities and countries (fixes "Unknown city: Égypte")
+### 1. World clock dropdown — done ✅, now generalize it (new ask, Sept 28)
 
-**Why the error happens.** The form converts what is typed into a time-zone with `lib/timezones.ts`, which only
-knows a short alias list and the *city* part of IANA zone names (`Africa/Cairo` → "Cairo"). Countries
-("Égypte", "Bangladesh") are not zones, so they are rejected. The backend can now resolve them itself.
+`CityPicker.tsx` (type-ahead, arrow keys, flags, chips) already fixes the "Unknown city: Égypte" report —
+nice work. **New ask: every field that has an `optionsUrl` in `/about.json` should get the same treatment,
+across all services and widgets** — not just the world clock. The backend now offers real suggestions for:
 
-**Build.** For the `homeTimezone` and `cities` params (both carry `optionsUrl:
-"/services/worldclock/places"`, `cities` also `multiple: true` in `/about.json`) render a **type-ahead
-dropdown** instead of a free-text field:
-- On focus with nothing typed: `GET /services/worldclock/places?lang=<ui language>` → the biggest cities.
-- While typing (debounce ~200 ms): `GET …/places?q=<text>&lang=<ui language>` → list of
-  `{ value, label, kind, country, offset }`. Show `label`, the country, and `offset` (e.g. "UTC+1") on the
-  right; a small icon for `kind` (city / country / zone).
-- `homeTimezone`: single choice. `cities`: multi-select rendered as removable chips; submit the chosen
-  `value`s joined by commas. Keep each chip's `label` for display in the form only — the stored value is the
-  IANA zone.
-- Empty result → "No place found"; request failure → keep the typed text and show the error.
-- Delete the client-side `toTimeZones()` validation in `catalog.ts` (or only use it as an offline fallback):
-  the server now accepts plain names too, so typing "Cotonou, Égypte" and submitting still works.
+| Service.field | `optionsUrl` | Notes |
+|---|---|---|
+| `weather.city` (all 3 widgets) | `/services/weather/cities` | live geocoder results |
+| `market_data.base` | `…/assets?kind=all` | currencies + crypto |
+| `market_data.quote`, `price_history.currency` | `…/assets?kind=fiat` | currencies only |
+| `price_history.asset` | `…/assets?kind=crypto` | crypto only |
+| `youtube.country` (trending) | `/services/youtube/countries` | closed list — exact match only |
+| `rss.link` | `/services/rss/feeds` | a *starting point*, not exhaustive — free text still works |
+| `custom_api.path` (both widgets) | `/services/custom_api/inspect` | `dependsOn: ["url"]` — see below |
+| `custom_api.titleField`/`subtitleField` | `/services/custom_api/inspect` | `dependsOn: ["url","path"]` |
+| `worldclock.homeTimezone`/`cities` | `/services/worldclock/places` | done |
+| `wellbeing.horoscope.sign` | `/services/wellbeing/signs` | done (closed list) |
+| `github.repo` (all widgets) | `/services/github/repos` | done, pre-existing |
+
+Shapes and exact query params are in API.md → *Services* (each one documented individually, plus the
+general contract). **Please generalize `CityPicker.tsx` into a shared `<OptionsField>` (or similar) driven
+by the param's own metadata from `/about.json`** — `optionsUrl`, `multiple`, and the new **`dependsOn`**
+(see next paragraph) — instead of one hardcoded picker per field. Concretely: the widget-form renderer
+already loops over a widget's `params` to build inputs; wherever a param has `optionsUrl`, render the
+picker component with `optionsUrl` (plus any built-in query string it already has, e.g.
+`?kind=crypto` — append to it, don't replace it) instead of a plain `<input>`. Most fields stay an editable
+combobox (typing something not in the list still works, like today); `worldclock`, `wellbeing.sign`,
+`youtube.country` and `github.repo` are the only ones that should behave as a **closed** dropdown (exact
+value only) — keep the visual style but disable free typing.
+
+**`dependsOn` (new field on `WidgetParam`)**: a field whose suggestions need the *current value of another
+field in the same form* — right now only `custom_api.path` (needs `url`) and `titleField`/`subtitleField`
+(need `url` **and** `path`). When rendering such a field, append each dependency's current form value as a
+query param named after it (`&url=<typed url>&path=<typed path>`); don't call the endpoint at all until
+every listed dependency is non-empty (show the field as a normal disabled/plain input meanwhile, with a
+hint like "fill in the API address first"). This is what turns the `custom_api` widgets from "paste a URL
+and guess a JSON path" into "paste a URL, then pick from what's actually in the response" — a big UX win,
+worth doing even if the others wait.
 
 ### 2. Help assistant ("helpdesk") — explain the app, the services and the technical words
 
@@ -304,14 +324,24 @@ disabled with an explanation for private widgets — calendar/Epitech — the AP
 cards from `widgets[]` with the same components (no edit controls), shows `owner.firstName`, applies `theme`
 and `widgetSkin`, and a "This link is not available" page on `404`.
 
-### 7. Add widgets by describing them (assistant)
+### 7. Add widgets by describing them (assistant) — now a real chat, not one-shot (new ask, Sept 28)
 
-In the add-widget drawer, above the catalog: "Describe what you want to follow" + button (only when AI is
-`available`). `POST /assistant/widgets { prompt }` → `suggestions[]`: show each as a card (title, `reason`,
-preview with the existing widget preview) with an **Add** button that posts the draft to `POST /widgets`
-(`serviceName, widgetName, config, refreshRateSeconds, title`). If `needsAccount` is set, show "connect
-<service> first" instead; if `missingSecrets` is non-empty, open the normal form pre-filled so the user types
-those. Nothing is created without the click.
+`POST /assistant/widgets` changed from "one message in, suggestions out" to an actual back-and-forth: the
+assistant can ask a clarifying question before it has enough to act. Build it as a **small chat panel**
+(in the add-widget drawer, above the catalog; shown only when AI is `available`), not a single input+button:
+
+- Keep the conversation in component state: `messages: { role: 'user'|'assistant'; content: string }[]`.
+- On send: `POST /assistant/widgets { prompt: <what the user typed>, history: <messages so far> }`.
+- Always append the response's `reply` as an assistant bubble — **even when `suggestions` is empty**; that's
+  the assistant asking a follow-up (e.g. "What kind of content are you into?"), not a failure. Then let the
+  user reply again in the same thread.
+- When `suggestions[]` is non-empty, render each as a card under that bubble (title, `reason`, the existing
+  widget preview) with an **Add** button → `POST /widgets` (`serviceName, widgetName, config,
+  refreshRateSeconds, title`) — unchanged from before. `needsAccount` → "connect `<service>` first";
+  non-empty `missingSecrets` → open the normal form pre-filled so the user types those. Nothing is created
+  without the click, still.
+- States: a typing indicator while waiting, `400` (too long / empty) as an inline error, `available: false`
+  → hide the panel entirely.
 
 ## Confirmation page, birth date, well-being widgets, Steam, Microsoft (specs — backend done)
 
