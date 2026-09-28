@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { LOCALE, W, tr, type Lang } from '../../lib/i18n'
-import { CURRENCY, ago, compact, hostOf, initials, num, useNow } from '../../lib/format'
+import { CURRENCY, ago, compact, flagOf, hostOf, initials, num, useNow } from '../../lib/format'
+import { ZODIAC } from '../../lib/catalog'
 
 // One component per card design of the mockup. Each receives what the backend stored for the
 // widget: `data` = cachedData (the service's answer), `insight` = the AI enrichment (or null).
@@ -262,7 +263,7 @@ export function WorldView({ data, lang, title }: ViewProps) {
   const home = String(obj(d.home).timezone ?? '')
   const me = home ? zoned(now, home) : null
   // The backend gives the zones and a snapshot of their time; the card keeps ticking from those zones
-  const rows = me ? [{ tz: home, label: labelOf(home), isMe: true }, ...arr(d.cities).map((c) => ({ tz: String(c.timezone), label: String(c.label ?? labelOf(c.timezone)), isMe: false }))]
+  const rows = me ? [{ tz: home, label: String(obj(d.home).label ?? labelOf(home)), iso2: obj(d.home).iso2 as string | undefined, isMe: true }, ...arr(d.cities).map((c) => ({ tz: String(c.timezone), label: String(c.label ?? labelOf(c.timezone)), iso2: c.iso2 as string | undefined, isMe: false }))]
     .map((r) => {
       const c = zoned(now, r.tz)
       if (!c) return null
@@ -291,7 +292,7 @@ export function WorldView({ data, lang, title }: ViewProps) {
         {!rows.length && <Waiting lang={lang} />}
         {rows.map((r, i) => (
           <div key={r.tz} className={`wl-pin ${i % 2 ? 'down' : 'up'}${r.isMe ? ' me' : ''}`} style={{ left: `${at[i]}%` }}>
-            <div className="lbl" style={shift[i] ? { position: 'relative', left: `${shift[i]}cqw` } : undefined}>{r.isMe ? '📍' : FLAGS[r.tz] ?? '🌐'} {r.label}<br /><b>{r.hm}</b> {r.isDay ? '☀️' : '🌙'}
+            <div className="lbl" style={shift[i] ? { position: 'relative', left: `${shift[i]}cqw` } : undefined}>{r.isMe ? '📍' : r.iso2 ? flagOf(r.iso2) : FLAGS[r.tz] ?? '🌐'} {r.label}<br /><b>{r.hm}</b> {r.isDay ? '☀️' : '🌙'}
               <small style={{ display: 'block', color: 'rgb(255 255 255 / .55)', fontSize: 10 }}>{r.off}{r.day ? ` · ${r.day}` : ''}</small></div>
             <div className="stem" /><div className="dot" />
           </div>
@@ -570,11 +571,152 @@ export function VideoView({ data, lang, title, footer }: ViewProps) {
   )
 }
 
+// ---------- Steam: player card, recent games "featured", library podium ----------
+const SteamLogo = () => (
+  <svg viewBox="0 0 24 24" style={{ width: 20, height: 20 }} fill="#c7d5e0"><path d="M12 2a10 10 0 0 0-9.96 9.08l5.36 2.22a2.83 2.83 0 0 1 1.6-.5h.16l2.38-3.45v-.05a3.77 3.77 0 1 1 3.77 3.77h-.09l-3.4 2.43v.13a2.83 2.83 0 0 1-5.6.57L2.4 14.66A10 10 0 1 0 12 2Zm-3.75 15.2-1.23-.51a2.13 2.13 0 1 0 1.17-2.93l1.27.53a1.57 1.57 0 1 1-1.2 2.91Zm9.2-7.9a2.51 2.51 0 1 0-2.5 2.52 2.51 2.51 0 0 0 2.5-2.51Zm-4.39 0a1.89 1.89 0 1 1 1.89 1.89 1.89 1.89 0 0 1-1.89-1.89Z" /></svg>
+)
+const hours = (m: unknown, lang: Lang) => Math.round(Number(m ?? 0) / 60).toLocaleString(LOCALE[lang])
+export function SteamProfView({ data, lang }: ViewProps) {
+  const P = obj(data), w = W[lang]
+  if (!P.name) return <Waiting lang={lang} />
+  const online = P.status !== 'offline'
+  return (
+    <a className="st-prof" href={P.url} target="_blank" rel="noopener noreferrer">
+      <div className={`st-ring${online ? '' : ' off'}`}>{P.avatar && <img src={P.avatar} alt="" referrerPolicy="no-referrer" />}{P.level != null && <span className="st-lvl">{P.level}</span>}</div>
+      <div className="st-name">{P.name}</div>
+      <div className="w-sub">{w.steamStatus[P.status] ?? P.status}{P.country ? ` · ${flagOf(P.country)}` : ''}{P.memberSince ? ` · ${w.since} ${new Date(P.memberSince).getFullYear()}` : ''}</div>
+      {P.currentGame && <div className="st-playing"><span className="st-dot" />{w.playing} {P.currentGame}</div>}
+    </a>
+  )
+}
+export function SteamRecentView({ data, lang, title }: ViewProps) {
+  const G = arr(data), w = W[lang], top = G[0]
+  return (
+    <>
+      <Head icon={<SteamLogo />} iconClass="st-ico" title={title || (lang === 'fr' ? 'Jeux récents' : lang === 'es' ? 'Juegos recientes' : 'Recent games')} sub={w.last2w} />
+      {data == null ? <Waiting lang={lang} /> : !top ? <div className="muted" style={{ margin: 'auto', fontSize: 13 }}>{w.noRecent}</div> : (
+        <>
+          <a className="st-feat" href={top.url} target="_blank" rel="noopener noreferrer"><img src={top.header} alt="" referrerPolicy="no-referrer" />
+            <span className="st-cap"><b>{top.name}</b><span>🔥 {hours(top.minutesLast2Weeks, lang)} h {w.this2w}</span></span></a>
+          {G.length > 1 && <div className="st-thumbs">{G.slice(1, 4).map((g) => (
+            <a key={g.appId} href={g.url} target="_blank" rel="noopener noreferrer" title={g.name}><img src={g.header} alt="" referrerPolicy="no-referrer" /><small>{hours(g.minutesLast2Weeks, lang)} h</small></a>
+          ))}</div>}
+        </>
+      )}
+    </>
+  )
+}
+export function SteamLibView({ data, lang, title }: ViewProps) {
+  const L = obj(data), w = W[lang], top = arr(L.topGames)
+  // Podium order: 2nd, 1st, 3rd
+  const podium = [top[1], top[0], top[2]].map((g, i) => g && { g, h: [70, 96, 54][i], medal: ['🥈', '🥇', '🥉'][i], color: ['#c0c7d0', '#e5b54a', '#cd7f32'][i] })
+  return (
+    <>
+      <Head icon={<SteamLogo />} iconClass="st-ico" title={title || (lang === 'fr' ? 'Ma bibliothèque' : lang === 'es' ? 'Mi biblioteca' : 'My library')} sub={L.totalHours != null ? w.hTotal(Number(L.totalHours).toLocaleString(LOCALE[lang])) : undefined} />
+      {!top.length ? <Waiting lang={lang} /> : (
+        <div className="st-pod">
+          {podium.map((p, i) => p && (
+            <a key={i} href={p.g.url} target="_blank" rel="noopener noreferrer"><img src={p.g.header} alt="" referrerPolicy="no-referrer" /><small>{p.g.name}</small><b>{hours(p.g.minutesTotal, lang)} h</b>
+              <span className="st-step" style={{ height: p.h, background: `linear-gradient(${p.color}, rgb(255 255 255 / .05))` }}>{p.medal}</span></a>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
+// ---------- Well-being: quote typed like on a typewriter ----------
+export function QuoteView({ data, lang, title }: ViewProps) {
+  const Q = obj(data), w = W[lang], full = String(obj(Q.text)[lang] ?? '')
+  const [n, setN] = useState(0)
+  // Types the quote once, letter by letter, then the cursor keeps blinking
+  useEffect(() => {
+    setN(0)
+    if (!full) return
+    const id = setInterval(() => setN((k) => (k >= full.length ? (clearInterval(id), k) : k + 1)), 55)
+    return () => clearInterval(id)
+  }, [full])
+  const date = Q.date ? new Date(`${Q.date}T12:00`).toLocaleDateString(LOCALE[lang], { weekday: 'long', day: 'numeric', month: 'long' }) : ''
+  return (
+    <>
+      <Head icon="⌨" title={title || w.quoteTitle} sub={date} />
+      {!full ? <Waiting lang={lang} /> : (
+        <>
+          <div className="tw-text">{full.slice(0, n)}</div>
+          <div className="tw-by">— {Q.author}</div>
+        </>
+      )}
+    </>
+  )
+}
+
+// ---------- Well-being: "did you know?" card that turns over to show the fact ----------
+const TOPIC_ICON: Record<string, string> = { nature: '🌿', space: '🔭', science: '🧪', history: '🏛️', tech: '💻', body: '🫀' }
+export function FactView({ data, lang, title }: ViewProps) {
+  const F = obj(data), w = W[lang], [open, setOpen] = useState(false), text = obj(F.text)[lang]
+  if (!text) return <Waiting lang={lang} />
+  return (
+    <div className={`fact${open ? ' open' : ''}`} role="button" tabIndex={0} aria-pressed={open}
+      onClick={() => setOpen((o) => !o)} onKeyDown={(e) => e.key === 'Enter' && setOpen((o) => !o)}>
+      <div className="fact-in">
+        <div className="fact-face fact-front"><span className="bulb">💡</span><b>{title || w.factTitle}</b><small>{w.tapDiscover}</small></div>
+        <div className="fact-face fact-back"><span className="chip">{TOPIC_ICON[F.topic] ?? '💡'} {w.topics[F.topic] ?? F.topic}</span><p>{text}</p></div>
+      </div>
+    </div>
+  )
+}
+
+// ---------- Well-being: horoscope as a nebula card; tap it to turn it over and see the day in detail ----------
+const AREAS: [string, string, 'love' | 'work' | 'energy'][] = [['❤', '#f472b6', 'love'], ['✎', '#38bdf8', 'work'], ['✺', '#fde047', 'energy']]
+export function HoroView({ data, insight, lang }: ViewProps) {
+  const H = obj(data), w = W[lang], [back, setBack] = useState(false)
+  const sign = ZODIAC[String(H.sign)]
+  if (!sign) return <Waiting lang={lang} />
+  // With AI switched on, its freshly written text replaces the library sentence
+  const ai = obj(insight)
+  const msg = ai.source === 'ai' && ai.text ? String(ai.text) : obj(H.text)[lang]
+  const dust = Array.from({ length: 22 }, (_, i) => <i key={i} style={{ left: `${(i * 43) % 100}%`, top: `${60 + ((i * 17) % 40)}%`, animationDelay: `-${(i * 0.7).toFixed(1)}s`, animationDuration: `${7 + (i % 5)}s` }} />)
+  return (
+    <div className={`horo${back ? ' open' : ''}`} role="button" tabIndex={0} aria-pressed={back}
+      onClick={() => setBack((b) => !b)} onKeyDown={(e) => e.key === 'Enter' && setBack((b) => !b)}>
+      <div className="horo-in">
+        <div className="horo-face horo-front">
+          <div className="horo-dust" aria-hidden="true">{dust}</div>
+          <div className="horo-glyph">{sign.glyph}{'︎'}</div>
+          <div className="horo-name">{sign.name[lang]}</div>
+          <div className="horo-msg">{msg}</div>
+          <div className="horo-tap">✦ {w.tapDay}</div>
+        </div>
+        <div className="horo-face horo-back">
+          <h4>{w.today}</h4>
+          {AREAS.map(([ic, color, k]) => {
+            const a = obj(obj(H.areas)[k])
+            return a.stars ? (
+              <div key={k} className="horo-row">
+                <div className="o" style={{ '--c': color, '--p': a.stars * 20 } as React.CSSProperties}>{ic}</div>
+                <div><b>{w[k]}</b><span>{obj(a.text)[lang]}</span></div>
+              </div>
+            ) : null
+          })}
+          {H.lucky && (
+            <div className="horo-charms">
+              <span>✦ {H.lucky.number}</span>
+              <span><i style={{ background: H.lucky.color.hex, color: H.lucky.color.hex }} />{obj(H.lucky.color.name)[lang]}</span>
+            </div>
+          )}
+          <div className="horo-disc">{obj(H.disclaimer)[lang]}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // kind (data-kind of the mockup) → component, and whether the design has a footer / extra class
 export const VIEWS: Record<string, { View: (p: ViewProps) => ReactNode; foot?: boolean; cls?: string }> = {
   rss: { View: RssView }, fx: { View: FxView }, price: { View: PriceView },
   gh: { View: TermView, cls: 'term-card' }, 'gh-issues': { View: IssuesView, foot: true }, 'gh-stats': { View: StatsView }, 'gh-daily': { View: DailyView },
   world: { View: WorldView }, weather: { View: WeekView }, 'wx-now': { View: NowView, foot: true }, 'wx-hours': { View: HoursView, foot: true },
   cal: { View: CalView }, 'epi-plan': { View: PlanView }, 'epi-prof': { View: ProfView }, 'api-value': { View: ValueView }, 'api-list': { View: ListView },
+  horo: { View: HoroView }, 'steam-prof': { View: SteamProfView }, 'steam-recent': { View: SteamRecentView }, 'steam-lib': { View: SteamLibView }, quote: { View: QuoteView }, fact: { View: FactView },
   'yt-channel': { View: ChannelView, foot: true }, 'yt-latest': { View: LatestView, foot: true }, 'yt-trend': { View: TrendView, foot: true }, 'yt-video': { View: VideoView, foot: true },
 }

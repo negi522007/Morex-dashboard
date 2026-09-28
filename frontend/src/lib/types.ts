@@ -80,6 +80,10 @@ export interface User {
   avatarPhotoUrl: string | null
   githubLinked: boolean
   epitech: EpitechProfile | null
+  microsoft: { name: string | null; email: string; tenant: string } | null
+  // "YYYY-MM-DD", and the zodiac sign the backend computes from it (both null when unknown)
+  birthDate: string | null
+  zodiac: string | null
 }
 
 export interface JournalEntry {

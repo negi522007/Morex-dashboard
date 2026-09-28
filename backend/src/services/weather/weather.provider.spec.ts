@@ -5,7 +5,13 @@ function jsonResponse(body: unknown, status = 200) {
   return { ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) } as unknown as Response;
 }
 const COTONOU = { results: [{ name: 'Cotonou', country: 'Benin', latitude: 6.36, longitude: 2.41 }] }
-const forecastUrl = () => new URL((global.fetch as jest.Mock).mock.calls[1][0])
+// Answers by URL: every geocoding call gets `geo` (one call per language), forecast calls get the next answer
+function mockApi(geo: unknown, ...forecasts: unknown[]) {
+  global.fetch = jest.fn((url: string) =>
+    Promise.resolve(jsonResponse(String(url).includes('geocoding-api') ? geo : forecasts.length > 1 ? forecasts.shift() : forecasts[0])),
+  ) as any;
+}
+const forecastUrl = () => new URL((global.fetch as jest.Mock).mock.calls.map((c) => String(c[0])).filter((u) => !u.includes('geocoding-api')).at(-1)!)
 
 describe('WeatherProvider', () => {
   const provider = new WeatherProvider();
@@ -33,15 +39,13 @@ describe('WeatherProvider', () => {
   });
 
   it('current_weather finds the city, then asks for its current weather', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce(jsonResponse(COTONOU))
-      .mockResolvedValueOnce(
-        jsonResponse({
+    mockApi(
+      COTONOU,
+        ({
           current: { temperature_2m: 28.4, apparent_temperature: 31.6, relative_humidity_2m: 70, wind_speed_10m: 15.2, weather_code: 2, is_day: 1 },
           daily: { temperature_2m_max: [30.7], temperature_2m_min: [24.1] },
         }),
-      ) as any;
+    );
 
     const result = await widget('current_weather').fetchData({ city: 'Cotonou' });
 
@@ -54,7 +58,7 @@ describe('WeatherProvider', () => {
   });
 
   it('passes the unit through and rejects an unknown one', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce(jsonResponse(COTONOU)).mockResolvedValueOnce(jsonResponse({ current: {}, daily: {} })) as any;
+    mockApi(COTONOU, { current: {}, daily: {} });
     await widget('current_weather').fetchData({ city: 'Cotonou', unit: 'Fahrenheit' });
     expect(forecastUrl().searchParams.get('temperature_unit')).toBe('fahrenheit');
     await expect(widget('current_weather').fetchData({ city: 'Cotonou', unit: 'kelvin' })).rejects.toThrow(/Unknown unit "kelvin"/);
@@ -72,11 +76,9 @@ describe('WeatherProvider', () => {
   });
 
   it('daily_forecast skips today, returns the next N days, and caps N at 16', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce(jsonResponse(COTONOU))
-      .mockResolvedValueOnce(
-        jsonResponse({
+    mockApi(
+      COTONOU,
+        ({
           current: { temperature_2m: 29, weather_code: 0 },
           daily: {
             time: ['2026-09-25', '2026-09-26', '2026-09-27'],
@@ -86,7 +88,7 @@ describe('WeatherProvider', () => {
             precipitation_probability_max: [5, 80, 20],
           },
         }),
-      ) as any;
+    );
 
     const result = (await widget('daily_forecast').fetchData({ city: 'Cotonou', days: 2 })) as any;
 
@@ -98,18 +100,13 @@ describe('WeatherProvider', () => {
     expect(forecastUrl().searchParams.get('forecast_days')).toBe('3');
 
     clearPlaceCache()
-    global.fetch = jest.fn().mockResolvedValueOnce(jsonResponse(COTONOU)).mockResolvedValueOnce(jsonResponse({ daily: {} })) as any;
+    mockApi(COTONOU, { daily: {} });
     await widget('daily_forecast').fetchData({ city: 'Cotonou', days: 99 });
     expect(forecastUrl().searchParams.get('forecast_days')).toBe('17');
   });
 
   it('hourly_forecast returns one entry per hour, 12 by default', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValueOnce(jsonResponse(COTONOU))
-      .mockResolvedValueOnce(
-        jsonResponse({ hourly: { time: ['2026-09-25T12:00'], temperature_2m: [29.6], weather_code: [80], precipitation_probability: [60] } }),
-      ) as any;
+    mockApi(COTONOU, { hourly: { time: ['2026-09-25T12:00'], temperature_2m: [29.6], weather_code: [80], precipitation_probability: [60] } });
 
     const result = (await widget('hourly_forecast').fetchData({ city: 'Cotonou' })) as any;
 
@@ -118,11 +115,24 @@ describe('WeatherProvider', () => {
   });
 
   it('geocodes a city only once, then reuses its coordinates', async () => {
-    global.fetch = jest.fn().mockResolvedValueOnce(jsonResponse(COTONOU)).mockResolvedValue(jsonResponse({ current: {}, daily: {} })) as any;
+    mockApi(COTONOU, { current: {}, daily: {} });
     await widget('current_weather').fetchData({ city: 'Cotonou' });
     await widget('current_weather').fetchData({ city: 'cotonou' });
     const geocodeCalls = (global.fetch as jest.Mock).mock.calls.filter((c) => String(c[0]).includes('geocoding-api'));
-    expect(geocodeCalls).toHaveLength(1);
+    expect(geocodeCalls).toHaveLength(3); // fr, en, es for the first call, none for the second
+  });
+
+  it('keeps the most populated city among the languages (Londres is London, not the Argentine village)', async () => {
+    global.fetch = jest.fn((url: string) => {
+      const u = new URL(url);
+      if (!u.hostname.startsWith('geocoding')) return Promise.resolve(jsonResponse({ current: {}, daily: {} }));
+      const argentina = { name: 'Londres', country: 'Argentina', latitude: -27.7, longitude: -67.1, population: 2627 };
+      const london = { name: 'Londres', country: 'Royaume-Uni', latitude: 51.5, longitude: -0.12, population: 8961989 };
+      return Promise.resolve(jsonResponse({ results: u.searchParams.get('language') === 'fr' ? [london, argentina] : [argentina] }));
+    }) as any;
+    const result = (await widget('current_weather').fetchData({ city: 'Londres' })) as any;
+    expect(result.country).toBe('Royaume-Uni');
+    expect(forecastUrl().searchParams.get('latitude')).toBe('51.5');
   });
 
   it('exposes the temperature as the primary metric (history and alerts)', () => {

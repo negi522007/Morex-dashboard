@@ -3,14 +3,22 @@ import { Link } from 'react-router-dom'
 import { apiFetch, ApiError } from '../lib/api'
 import { PasswordInput } from '../components/PasswordInput'
 import { AuthLayout, glassInputClass, glassLabelClass } from '../components/AuthLayout'
+import { AUTH, useAuthLang } from '../lib/authLang'
+import { translateError } from '../lib/i18n'
+import { SsoButtons } from '../components/SsoButtons'
 
 export function RegisterPage() {
+  const lang = useAuthLang(), a = AUTH[lang]
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  // The backend refuses accounts for people under 13: the date picker stops there too
+  const today = new Date()
+  const latestBirthDate = new Date(Date.UTC(today.getFullYear() - 13, today.getMonth(), today.getDate())).toISOString().slice(0, 10)
   const [error, setError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
 
@@ -19,7 +27,7 @@ export function RegisterPage() {
     setError(null)
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError(a.mismatch)
       return
     }
 
@@ -27,16 +35,19 @@ export function RegisterPage() {
     try {
       await apiFetch('/auth/register', {
         method: 'POST',
+        // The confirmation email is written in this language
+        headers: { 'Accept-Language': lang },
         body: JSON.stringify({
           email,
           password,
           firstName: firstName.trim(),
           lastName: lastName.trim(),
+          birthDate,
         }),
       })
       setSubmitted(true)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong')
+      setError(err instanceof ApiError ? translateError(err.message, lang) : a.wrong)
     } finally {
       setLoading(false)
     }
@@ -44,18 +55,17 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      title={submitted ? 'Check your inbox' : 'Sign up'}
-      subtitle={submitted ? undefined : 'Create your account and start exploring'}
-      switchPrompt="Already a member?"
-      switchLabel="Sign in"
+      title={submitted ? a.inbox : a.signUp}
+      subtitle={submitted ? undefined : a.signUpSub}
+      switchPrompt={a.member}
+      switchLabel={a.signIn}
       switchTo="/login"
     >
       {submitted ? (
         <p className="text-base leading-relaxed text-white/80">
-          We sent a confirmation link to <strong className="text-white">{email}</strong>. Click it to activate
-          your account, then{' '}
+          {a.sent} <strong className="text-white">{email}</strong>. {a.sentEnd}{' '}
           <Link to="/login" className="font-medium text-sky-300 hover:underline">
-            log in
+            {a.goLogin}
           </Link>
           .
         </p>
@@ -64,7 +74,7 @@ export function RegisterPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="firstName" className={glassLabelClass}>
-                First name
+                {a.firstName}
               </label>
               <input
                 id="firstName"
@@ -78,7 +88,7 @@ export function RegisterPage() {
             </div>
             <div>
               <label htmlFor="lastName" className={glassLabelClass}>
-                Last name
+                {a.lastName}
               </label>
               <input
                 id="lastName"
@@ -92,9 +102,25 @@ export function RegisterPage() {
             </div>
           </div>
 
+
+          <div>
+            <label htmlFor="birthDate" className={glassLabelClass}>
+              {a.birth}
+            </label>
+            <input
+              id="birthDate"
+              type="date"
+              required
+              value={birthDate}
+              max={latestBirthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className={`${glassInputClass} [color-scheme:dark]`}
+            />
+            <p className="mt-1.5 ml-4 text-xs text-white/50">{a.birthNote}</p>
+          </div>
           <div>
             <label htmlFor="email" className={glassLabelClass}>
-              Email
+              {a.email}
             </label>
             <input
               id="email"
@@ -109,7 +135,7 @@ export function RegisterPage() {
 
           <div>
             <label htmlFor="password" className={glassLabelClass}>
-              Password
+              {a.password}
             </label>
             <PasswordInput
               id="password"
@@ -117,13 +143,13 @@ export function RegisterPage() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
+              placeholder={a.atLeast8}
             />
           </div>
 
           <div>
             <label htmlFor="confirmPassword" className={glassLabelClass}>
-              Confirm password
+              {a.confirm}
             </label>
             <PasswordInput
               id="confirmPassword"
@@ -131,7 +157,7 @@ export function RegisterPage() {
               minLength={8}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Type it again"
+              placeholder={a.again}
             />
           </div>
 
@@ -139,9 +165,10 @@ export function RegisterPage() {
 
           <div className="pt-2">
             <button type="submit" disabled={loading} className="w-full rounded-full bg-white py-4 text-base font-semibold text-indigo-950 shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:bg-indigo-50 hover:shadow-indigo-400/40 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0">
-              {loading ? 'Creating account…' : 'Create account'}
+              {loading ? a.creating : a.createBtn}
             </button>
           </div>
+          <SsoButtons />
         </form>
       )}
     </AuthLayout>

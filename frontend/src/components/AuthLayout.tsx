@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Logo } from './Logo'
+import { AUTH, setAuthLang, useAuthLang } from '../lib/authLang'
+import { LANGS } from '../lib/i18n'
 
 // Shared classes for text inputs sitting on the frosted-glass panel.
 export const glassInputClass =
@@ -19,6 +21,8 @@ type AuthLayoutProps = {
 }
 
 export function AuthLayout({ title, subtitle, switchPrompt, switchLabel, switchTo, children }: AuthLayoutProps) {
+  const lang = useAuthLang()
+  useEffect(() => { document.documentElement.lang = lang }, [lang])
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-10 font-sans text-white">
       {/* Background: slow drift gives the scene some life */}
@@ -31,6 +35,16 @@ export function AuthLayout({ title, subtitle, switchPrompt, switchLabel, switchT
         aria-hidden
         className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-indigo-950/40 to-slate-950/60"
       />
+
+      {/* Language of the page, before logging in */}
+      <div className="absolute top-5 right-5 z-10 flex gap-1 rounded-full border border-white/15 bg-white/10 p-1 backdrop-blur-md">
+        {LANGS.map((l) => (
+          <button key={l} type="button" onClick={() => setAuthLang(l)} aria-pressed={l === lang}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${l === lang ? 'bg-white text-indigo-950' : 'text-white/80 hover:text-white'}`}>
+            {l.toUpperCase()}
+          </button>
+        ))}
+      </div>
 
       <div className="relative grid w-full max-w-6xl grid-cols-1 overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl shadow-indigo-950/60 md:min-h-[680px] md:grid-cols-[1.1fr_1fr]">
         {/* Brand side */}
@@ -46,7 +60,7 @@ export function AuthLayout({ title, subtitle, switchPrompt, switchLabel, switchT
                 Morex
               </span>
             </h1>
-            <p className="mt-4 text-2xl font-light text-white/85 md:text-3xl">Your universe, at a glance</p>
+            <p className="mt-4 text-2xl font-light text-white/85 md:text-3xl">{AUTH[lang].slogan}</p>
           </div>
 
           <Link

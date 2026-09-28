@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 import { UNTRUSTED_RULES, clip, languageName } from '../../ai/ai.service';
 import { ZODIAC_SIGNS, Zodiac } from '../../common/birth-date.util';
 import { EnrichContext, ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
-import { DAY_THEME, DISCLAIMER, FACTS, L3, QUOTES, SIGN_TRAIT } from './data';
+import { DAY_THEME, DISCLAIMER, FACTS, HORO_AREAS, HoroArea, L3, LUCKY_COLORS, QUOTES, SIGN_TRAIT } from './data';
 
 // The "Well-being" group: three small daily widgets. Everything is written once in three languages and the
 // card shows the one matching the interface language, so no widget needs to know who is looking at it.
@@ -13,10 +13,14 @@ const pickIndex = (seed: string, n: number) => parseInt(createHash('sha256').upd
 const trio = (t: L3) => ({ en: t[0], fr: t[1], es: t[2] });
 const LANG_INDEX = { en: 0, fr: 1, es: 2 } as const;
 
+type T3 = { en: string; fr: string; es: string };
 export interface HoroscopeData {
   sign: Zodiac;
   forDate: string;
-  text: { en: string; fr: string; es: string };
+  text: T3;
+  // Love / work / energy of the day, rated 2 to 5 stars, with a sentence that matches the rating
+  areas: Record<HoroArea, { stars: number; text: T3 }>;
+  lucky: { number: number; color: { hex: string; name: T3 } };
   source: 'library';
   disclaimer: { en: string; fr: string; es: string };
 }
@@ -59,7 +63,16 @@ const horoscope: WidgetDefinition = {
     const forDate = today();
     const theme = DAY_THEME[pickIndex(`${sign}|${forDate}`, DAY_THEME.length)];
     const text: L3 = [0, 1, 2].map((i) => `${SIGN_TRAIT[sign][i]} ${theme[i]}`) as L3;
-    return { sign, forDate, text: trio(text), source: 'library', disclaimer: trio(DISCLAIMER) };
+    const areas = {} as HoroscopeData['areas'];
+    for (const area of ['love', 'work', 'energy'] as HoroArea[]) {
+      const seed = `${sign}|${forDate}|${area}`;
+      const stars = 2 + pickIndex(seed, 4);
+      const pool = HORO_AREAS[area][stars <= 2 ? 'calm' : stars === 3 ? 'good' : 'great'];
+      areas[area] = { stars, text: trio(pool[pickIndex(`${seed}|text`, pool.length)]) };
+    }
+    const color = LUCKY_COLORS[pickIndex(`${sign}|${forDate}|color`, LUCKY_COLORS.length)];
+    const lucky = { number: 1 + pickIndex(`${sign}|${forDate}|number`, 99), color: { hex: color.hex, name: trio(color.name) } };
+    return { sign, forDate, text: trio(text), areas, lucky, source: 'library', disclaimer: trio(DISCLAIMER) };
   },
   async enrich(data, ctx: EnrichContext) {
     const { sign, forDate } = data as HoroscopeData;

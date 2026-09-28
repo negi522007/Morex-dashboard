@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, apiFetch } from '../../lib/api'
-import { LOCALE, W, tr, type Lang } from '../../lib/i18n'
+import { LOCALE, W, paramLabel, tr, translateError, type Lang } from '../../lib/i18n'
 import { AV_OPTIONS, DEFAULT_AVATAR, HAIR, NICE, avatarUrl, type AvatarConfig, type Gender } from '../../lib/avatar'
-import { entryFor, prepareConfig, rateLabel, REFRESH_RATES } from '../../lib/catalog'
+import { ZODIAC, entryFor, prepareConfig, rateLabel, REFRESH_RATES } from '../../lib/catalog'
 import type { AboutResponse, JournalEntry, User, WidgetInstance } from '../../lib/types'
 import { DECOS } from './Decoration'
+import { SignSelect } from './Drawer'
+import { CityPicker, fromStored, type Picked } from './CityPicker'
 import { THEMES, displayName } from './Chrome'
 
 function Modal({ onClose, className = 'glass modal', style, children }: { onClose: () => void; className?: string; style?: React.CSSProperties; children: React.ReactNode }) {
@@ -35,6 +37,17 @@ export function EditWidgetModal({ widget, about, lang, onClose, onSave }: {
   const [cfg, setCfg] = useState<Record<string, string>>(() =>
     Object.fromEntries(params.map((p) => [p.name, p.secret ? '' : String(widget.config[p.name] ?? '')])))
   const [error, setError] = useState('')
+  // World clock: edit the places with the same picker as when adding it (flags come from the card's data)
+  const isWorld = widget.widgetName === 'world_clock'
+  const cardData = (widget.cachedData ?? {}) as { home?: { iso2?: string; label?: string }; cities?: { iso2?: string; label?: string }[] }
+  const [home, setHome] = useState<Picked | null>(() => isWorld && widget.config.homeTimezone
+    ? { ...fromStored(String(widget.config.homeTimezone)), iso2: cardData.home?.iso2 ?? null, label: cardData.home?.label ?? fromStored(String(widget.config.homeTimezone)).label } : null)
+  const [cities, setCities] = useState<Picked[]>(() => isWorld
+    ? String(widget.config.cities ?? '').split(',').map((s) => s.trim()).filter(Boolean).map((s, i) => ({ ...fromStored(s), iso2: cardData.cities?.[i]?.iso2 ?? null, label: cardData.cities?.[i]?.label ?? fromStored(s).label })) : [])
+  const setWorld = (h: Picked | null, c: Picked[]) => {
+    setHome(h); setCities(c)
+    setCfg((cur) => ({ ...cur, homeTimezone: h?.stored ?? '', cities: c.map((x) => x.stored).join(', ') }))
+  }
   const rates = REFRESH_RATES.some(([s]) => s === widget.refreshRateSeconds) ? REFRESH_RATES : [[widget.refreshRateSeconds, rateLabel(widget.refreshRateSeconds)] as [number, string], ...REFRESH_RATES]
 
   async function save() {
@@ -57,7 +70,7 @@ export function EditWidgetModal({ widget, about, lang, onClose, onSave }: {
       await onSave(patch)
       onClose()
     } catch (err) {
-      setError(`${w.saveError} : ${(err as Error).message}`)
+      setError(`${w.saveError} : ${translateError((err as Error).message, lang)}`)
     }
   }
 
@@ -69,10 +82,15 @@ export function EditWidgetModal({ widget, about, lang, onClose, onSave }: {
         <select value={rate} onChange={(e) => setRate(Number(e.target.value))}>{rates.map(([s, l]) => <option key={s} value={s}>{l}</option>)}</select></label>
       {params.length > 0 && (
         <div className="field"><span>{w.settings}</span>
-          {params.map((p) => (
-            <label key={p.name} className="dw-field" style={{ margin: '4px 0 0' }}>{p.name}{p.required ? ' *' : ''}{p.secret ? ' 🔒' : ''}
-              <input type={p.type === 'integer' ? 'number' : p.secret ? 'password' : 'text'} value={cfg[p.name]} placeholder={p.secret ? '••••••••' : entry?.hints[p.name]?.[1]}
-                onChange={(e) => setCfg((c) => ({ ...c, [p.name]: e.target.value }))} />
+          {isWorld && <CityPicker lang={lang} home={home} cities={cities} onChange={setWorld} />}
+          {params.filter(() => !isWorld).map((p) => (
+            <label key={p.name} className="dw-field" style={{ margin: '4px 0 0' }}>{paramLabel(p.name, lang)}{p.required ? ' *' : ''}{p.secret ? ' 🔒' : ''}
+              {widget.widgetName === 'horoscope' && p.name === 'sign' ? (
+                <SignSelect value={cfg.sign} lang={lang} onChange={(v) => setCfg((c) => ({ ...c, sign: v }))} />
+              ) : (
+                <input type={p.type === 'integer' ? 'number' : p.secret ? 'password' : 'text'} value={cfg[p.name]} placeholder={p.secret ? '••••••••' : entry?.hints[p.name]?.[1]}
+                  onChange={(e) => setCfg((c) => ({ ...c, [p.name]: e.target.value }))} />
+              )}
               {p.secret && <small>{w.secretKept}</small>}
             </label>
           ))}
@@ -96,14 +114,69 @@ export function EditWidgetModal({ widget, about, lang, onClose, onSave }: {
 }
 
 // ---------- Help ----------
+// ---------- Help: a conversation with the help assistant (POST /helpdesk/ask) ----------
+// Without AI the backend answers with the best documentation entry; with AI it writes an answer from the docs.
+interface AskResult { mode: 'ai' | 'search'; answer: string; sources: { id: string; title: string }[]; followUps: string[]; related: { id: string; title: string }[] }
+type Turn = { role: 'user' | 'assistant'; content: string; result?: AskResult }
+const HELP_STARTERS = ['guide-add-widget', 'guide-empty-widget', 'guide-connect-accounts', 'guide-birthdate']
+
 export function HelpModal({ lang, onClose }: { lang: Lang; onClose: () => void }) {
-  const t = tr(lang)
+  const w = W[lang]
+  const [turns, setTurns] = useState<Turn[]>([])
+  const [starters, setStarters] = useState<{ id: string; title: string }[]>([])
+  const [q, setQ] = useState(''), [busy, setBusy] = useState(false)
+  const box = useRef<HTMLDivElement>(null), input = useRef<HTMLInputElement>(null)
+
+  // Starter topics come from the same documentation, in the user's language
+  useEffect(() => {
+    api.get<{ entries: { id: string; title: string }[] }>(`/helpdesk/knowledge?lang=${lang}`)
+      .then((k) => setStarters(HELP_STARTERS.map((id) => k.entries.find((e) => e.id === id)).filter((e): e is { id: string; title: string } => !!e)))
+      .catch(() => {})
+    setTimeout(() => input.current?.focus(), 100)
+  }, [lang])
+  useEffect(() => { box.current?.scrollTo({ top: box.current.scrollHeight, behavior: 'smooth' }) }, [turns, busy])
+
+  async function ask(question: string) {
+    const text = question.trim()
+    if (text.length < 2 || busy) return
+    const history = turns.slice(-6).map(({ role, content }) => ({ role, content }))
+    setTurns((t) => [...t, { role: 'user', content: text }]); setQ(''); setBusy(true)
+    try {
+      const r = await api.post<AskResult>(`/helpdesk/ask?lang=${lang}`, { question: text, history })
+      setTurns((t) => [...t, { role: 'assistant', content: r.answer, result: r }])
+    } catch (err) {
+      setTurns((t) => [...t, { role: 'assistant', content: `⚠ ${translateError((err as Error).message, lang)}` }])
+    } finally {
+      setBusy(false)
+    }
+  }
+  const chips = (items: { id?: string; title: string }[]) => (
+    <div className="chips">{items.map((s) => <button key={s.id ?? s.title} type="button" onClick={() => ask(s.title)}>{s.title}</button>)}</div>
+  )
+
   return (
-    <Modal onClose={onClose} style={{ maxWidth: 560 }}>
-      <h3>{t.helpTitle}</h3>
-      <p className="muted" style={{ margin: 0 }}>{t.helpSub}</p>
-      <div className="faq">{t.faq.map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}</div>
-      <p className="muted" style={{ margin: '18px 0 0', fontSize: 14 }}>{t.helpMore} <a href="mailto:support@morex.app" style={{ color: 'var(--a2)' }}>support@morex.app</a></p>
+    <Modal onClose={onClose} className="glass modal help-chat">
+      <div className="hc-top">
+        <div className="hc-bot"><img src="/logo.svg" alt="" /></div>
+        <div><b>{w.helpBot}</b><div className="muted" style={{ fontSize: 12 }}>{w.helpBotSub}</div></div>
+      </div>
+      <div className="hc-chat" ref={box}>
+        <div className="hc-msg it">{w.helpHello}{starters.length > 0 && <div style={{ marginTop: 10 }}>{chips(starters)}</div>}</div>
+        {turns.map((m, i) => (
+          <div key={i} className={`hc-msg ${m.role === 'user' ? 'me' : 'it'}`}>
+            {m.content}
+            {m.result && m.result.sources.length > 0 && <div className="hc-src">{m.result.sources.map((s) => <span key={s.id}>📄 {s.title}</span>)}</div>}
+            {m.result && (m.result.followUps.length > 0 || m.result.related.length > 0) && (
+              <div style={{ marginTop: 10 }}>{chips(m.result.followUps.length ? m.result.followUps.map((f) => ({ title: f })) : m.result.related)}</div>
+            )}
+          </div>
+        ))}
+        {busy && <div className="hc-msg it hc-typing"><i /><i /><i /></div>}
+      </div>
+      <form className="hc-compose" onSubmit={(e) => { e.preventDefault(); ask(q) }}>
+        <input ref={input} value={q} maxLength={400} placeholder={w.helpAsk} onChange={(e) => setQ(e.target.value)} />
+        <button className="hc-send" type="submit" disabled={busy || q.trim().length < 2} aria-label={w.helpAsk}>➤</button>
+      </form>
     </Modal>
   )
 }
@@ -124,6 +197,105 @@ export function LogoutModal({ lang, onClose, onLogout }: { lang: Lang; onClose: 
   )
 }
 
+// ---------- Bio: a cute notebook page to write it, with stickers, a writing style and a colour ----------
+// The text goes to `bio` (280 characters, checked by the server); the style and colour are kept with the
+// account in avatarConfig (bioFont, bioColor), the free-form settings object PATCH /auth/me already accepts.
+export const BIO_FONTS = ['f-modern', 'f-hand', 'f-elegant', 'f-fun'] as const
+const BIO_COLORS = ['#ffffff', '#fbcfe8', '#c4b5fd', '#93c5fd', '#fde68a', '#86efac']
+const STICKERS = ['✨', '🌙', '🪐', '🌸', '💜', '🚀', '☕', '🎧', '📚', '🌊', '🦋', '🎨', '💻', '🌈', '⭐', '🔥']
+export function BioModal({ user, lang, onClose, onSaved }: { user: User; lang: Lang; onClose: () => void; onSaved: (u: User) => void }) {
+  const w = W[lang], t = tr(lang)
+  const cfg = (user.avatarConfig ?? {}) as Record<string, string>
+  const [text, setText] = useState(user.bio ?? '')
+  const [font, setFont] = useState(cfg.bioFont && (BIO_FONTS as readonly string[]).includes(cfg.bioFont) ? cfg.bioFont : 'f-hand')
+  const [color, setColor] = useState(cfg.bioColor && BIO_COLORS.includes(cfg.bioColor) ? cfg.bioColor : '#ffffff')
+  const [error, setError] = useState(''), [busy, setBusy] = useState(false)
+  const ta = useRef<HTMLTextAreaElement>(null)
+  const stick = (e: string) => {
+    const el = ta.current, a = el?.selectionStart ?? text.length, b = el?.selectionEnd ?? a
+    const next = (text.slice(0, a) + e + text.slice(b)).slice(0, 280)
+    setText(next)
+    requestAnimationFrame(() => { el?.focus(); if (el) el.selectionStart = el.selectionEnd = a + e.length })
+  }
+  async function save() {
+    setBusy(true); setError('')
+    try {
+      const u = await api.patch<User>('/auth/me', { bio: text.trim(), avatarConfig: { ...cfg, bioFont: font, bioColor: color } })
+      onSaved({ ...user, ...u })
+      onClose()
+    } catch (err) {
+      setError(translateError((err as Error).message, lang))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Modal onClose={onClose} className="modal bio-book">
+      <h3>{w.bioTitle}</h3>
+      <div className="bb-sub">{w.bioSub}</div>
+      <div className="bb-page"><span className="bb-tape" />
+        <textarea ref={ta} maxLength={280} value={text} placeholder={w.bioPh} onChange={(e) => setText(e.target.value)} autoFocus />
+        <div className="bb-count">{text.length}/280</div>
+      </div>
+      <div className="bb-lbl">{w.stickers}</div>
+      <div className="bb-emo">{STICKERS.map((e) => <button key={e} type="button" onClick={() => stick(e)}>{e}</button>)}</div>
+      <div className="bb-lbl">{w.writing}</div>
+      <div className="bb-chips">{BIO_FONTS.map((f, i) => <button key={f} type="button" className={f === font ? 'on' : ''} onClick={() => setFont(f)}>{w.fonts[i]}</button>)}</div>
+      <div className="bb-lbl">{w.colour}</div>
+      <div className="bb-sw">{BIO_COLORS.map((c) => <button key={c} type="button" aria-label={c} className={c === color ? 'on' : ''} style={{ background: c }} onClick={() => setColor(c)} />)}</div>
+      <div className="bb-lbl">{w.preview}</div>
+      <div className="bb-prev"><div className="hi">{t.morning}, <span>{user.firstName || displayName(user)}</span></div>
+        <p className={`bio ${font}`} style={{ color }}>{text.trim() || t.bio}</p></div>
+      {error && <p style={{ color: '#be123c', fontSize: 13, margin: 0 }}>{error}</p>}
+      <button className="bb-save" onClick={save} disabled={busy}>{w.saveBio}</button>
+    </Modal>
+  )
+}
+
+// ---------- Profile: connected accounts (OAuth / OIDC, for the logged-in user) ----------
+// Connect = a top-level navigation to /auth/<provider> (the backend redirects to the provider and back);
+// Disconnect = DELETE /auth/<provider>, refused with 409 when it is the account's only way to sign in.
+function ConnectedAccounts({ user, lang, onSaved }: { user: User; lang: Lang; onSaved: (u: User) => void }) {
+  const w = W[lang]
+  const [ready, setReady] = useState<Record<string, boolean>>({ github: true })
+  const [error, setError] = useState('')
+  useEffect(() => {
+    for (const p of ['epitech', 'microsoft']) api.get<{ configured: boolean }>(`/auth/${p}/status`).then((r) => setReady((s) => ({ ...s, [p]: r.configured }))).catch(() => {})
+  }, [])
+  const rows: [string, string, React.ReactNode, string | null][] = [
+    ['github', 'GitHub', '🐙', user.githubLinked ? w.linked : null],
+    ['epitech', 'My Epitech', <span className="acc-epi">EPI</span>, user.epitech ? user.epitech.login ?? user.epitech.email ?? w.linked : null],
+    ['microsoft', 'Microsoft', <span className="acc-ms"><i /><i /><i /><i /></span>, user.microsoft ? user.microsoft.email : null],
+  ]
+  async function unlink(id: string) {
+    setError('')
+    try {
+      await api.del(`/auth/${id}`)
+      onSaved(await api.get<User>('/auth/me'))
+    } catch (err) {
+      setError(translateError((err as Error).message, lang))
+    }
+  }
+  return (
+    <section className="pf-section">
+      <h4>{w.accounts}</h4>
+      <p>{w.accountsSub}</p>
+      <div className="acc-list">
+        {rows.map(([id, name, icon, linkedAs]) => (
+          <div key={id} className="acc-row">
+            <span className="acc-ico">{icon}</span>
+            <span className="acc-t"><b>{name}</b><small className={linkedAs ? 'on' : ''}>{linkedAs ? `✓ ${linkedAs}` : ready[id] === false ? w.notReady : w.notLinked}</small></span>
+            {linkedAs ? <button type="button" className="soft" onClick={() => unlink(id)}>{w.unlink}</button>
+              : ready[id] ? <a className="soft" href={`/auth/${id}`}>{w.link}</a>
+              : <button type="button" className="soft" disabled>{w.link}</button>}
+          </div>
+        ))}
+      </div>
+      {error && <p style={{ color: '#fca5a5', fontSize: 13, margin: '10px 0 0' }}>{error}</p>}
+    </section>
+  )
+}
+
 // ---------- Profile page ----------
 export function ProfileModal({ user, lang, theme, onClose, onSaved, onLang, onTheme, onAvatar }: {
   user: User; lang: Lang; theme: string; onClose: () => void; onSaved: (u: User) => void
@@ -131,6 +303,7 @@ export function ProfileModal({ user, lang, theme, onClose, onSaved, onLang, onTh
 }) {
   const t = tr(lang) as unknown as Record<string, string>
   const [firstName, setFirst] = useState(user.firstName ?? ''), [lastName, setLast] = useState(user.lastName ?? '')
+  const [birthDate, setBirth] = useState(user.birthDate ?? '')
   const [bio, setBio] = useState(user.bio ?? ''), [currentPw, setCur] = useState(''), [newPw, setNew] = useState('')
   const [error, setError] = useState(''), [busy, setBusy] = useState(false)
   const since = new Date(user.createdAt).toLocaleDateString(LOCALE[lang], { month: 'long', year: 'numeric' })
@@ -140,6 +313,7 @@ export function ProfileModal({ user, lang, theme, onClose, onSaved, onLang, onTh
     if (firstName.trim() !== (user.firstName ?? '')) body.firstName = firstName.trim()
     if (lastName.trim() !== (user.lastName ?? '')) body.lastName = lastName.trim()
     if (bio.trim() !== (user.bio ?? '')) body.bio = bio.trim()
+    if (birthDate !== (user.birthDate ?? '')) body.birthDate = birthDate
     if (newPw) { body.currentPassword = currentPw; body.newPassword = newPw }
     if (!Object.keys(body).length) return onClose()
     setBusy(true); setError('')
@@ -148,7 +322,7 @@ export function ProfileModal({ user, lang, theme, onClose, onSaved, onLang, onTh
       onSaved({ ...user, ...updated })
       onClose()
     } catch (err) {
-      setError((err as Error).message)
+      setError(translateError((err as Error).message, lang))
     } finally {
       setBusy(false)
     }
@@ -159,7 +333,13 @@ export function ProfileModal({ user, lang, theme, onClose, onSaved, onLang, onTh
       <div className="pf-cover" />
       <div className="pf-top">
         <div className="avatar" onClick={onAvatar}><img src={user.avatarPhotoUrl || avatarUrl({ ...DEFAULT_AVATAR, ...(user.avatarConfig ?? {}) })} alt="" /><span className="cam">📷</span></div>
-        <div style={{ marginTop: 66 }}><h3>{displayName(user)}</h3><span className="muted" style={{ fontSize: 14 }}>{`${t.memberSince.replace(/\s\S+( de)? \d{4}$/, '')} ${since}`}</span></div>
+        <div style={{ marginTop: 66 }}><h3>{displayName(user)}</h3><span className="muted" style={{ fontSize: 14 }}>{`${t.memberSince.replace(/\s\S+( de)? \d{4}$/, '')} ${since}`}</span>
+          {user.birthDate && (
+            <span className="muted" style={{ display: 'block', fontSize: 14, marginTop: 2 }}>
+              🎂 {new Date(`${user.birthDate}T12:00`).toLocaleDateString(LOCALE[lang], { day: 'numeric', month: 'long', year: 'numeric' })}
+              {user.zodiac && ZODIAC[user.zodiac] ? ` · ${ZODIAC[user.zodiac].glyph}\uFE0E ${ZODIAC[user.zodiac].name[lang]}` : ''}
+            </span>
+          )}</div>
       </div>
       <div className="pf-body">
         <section className="pf-section">
@@ -169,6 +349,9 @@ export function ProfileModal({ user, lang, theme, onClose, onSaved, onLang, onTh
             <label className="field"><span>{t.lastName}</span><input value={lastName} onChange={(e) => setLast(e.target.value)} /></label>
           </div>
           <label className="field"><span>Email</span><input value={user.email} readOnly /><small>{t.emailNote}</small></label>
+          <label className="field"><span>{W[lang].birthDate}</span>
+            <input type="date" value={birthDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setBirth(e.target.value)} />
+            <small>{W[lang].birthNote}{user.zodiac && ZODIAC[user.zodiac] ? ` · ${ZODIAC[user.zodiac].glyph}\uFE0E ${ZODIAC[user.zodiac].name[lang]}` : ''}</small></label>
           <label className="field"><span>{t.bioLabel}</span><textarea maxLength={280} placeholder={t.bio} value={bio} onChange={(e) => setBio(e.target.value)} />
             <small>{bio.length}/280 · {t.bioNote}</small></label>
         </section>
@@ -181,6 +364,7 @@ export function ProfileModal({ user, lang, theme, onClose, onSaved, onLang, onTh
               <select value={theme} onChange={(e) => onTheme(e.target.value)}>{THEMES.map(([k]) => <option key={k} value={k}>{t[`th_${k}`]}</option>)}</select></label>
           </div>
         </section>
+        <ConnectedAccounts user={user} lang={lang} onSaved={onSaved} />
         <section className="pf-section">
           <h4>{t.pfSecurity}</h4>
           <p>{t.pwNote}</p>
@@ -246,13 +430,13 @@ export function AvatarModal({ user, lang, onClose, onSaved }: { user: User; lang
       } else if (usePhoto) {
         return onClose()
       } else {
-        u = await api.patch<User>('/auth/me', { avatarConfig: { ...draft, gender } })
+        u = await api.patch<User>('/auth/me', { avatarConfig: { ...(user.avatarConfig ?? {}), ...draft, gender } })
         if (user.avatarPhotoUrl) u = await apiFetch<User>('/auth/me/avatar', { method: 'DELETE' })
       }
       onSaved({ ...user, ...u })
       onClose()
     } catch (err) {
-      setError((err as Error).message)
+      setError(translateError((err as Error).message, lang))
     }
   }
 

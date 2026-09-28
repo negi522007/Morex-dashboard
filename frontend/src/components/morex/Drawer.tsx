@@ -1,17 +1,57 @@
-import { useEffect, useRef, useState } from 'react'
-import { W, type Lang } from '../../lib/i18n'
-import { CATALOG, REFRESH_RATES, SERVICES, prepareConfig, type CatalogEntry } from '../../lib/catalog'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { W, paramLabel, translateError, type Lang } from '../../lib/i18n'
+import { CATALOG, REFRESH_RATES, SERVICES, ZODIAC, prepareConfig, type CatalogEntry } from '../../lib/catalog'
 import { SAMPLES } from '../../lib/samples'
 import type { AboutResponse, User, WidgetParam } from '../../lib/types'
 import { WidgetCard } from './WidgetGrid'
+import { CityPicker, fromStored, type Picked, type Place } from './CityPicker'
+import { api } from '../../lib/api'
+
+// Grid size of each card design on the dashboard (columns × rows, same as morex.css), so a preview can be
+// drawn at its real size and then scaled down as a whole: nothing gets squashed, whatever the frame.
+const SPAN: Record<string, [number, number]> = {
+  world: [2, 2], weather: [2, 3], rss: [2, 4], gh: [2, 2], 'gh-daily': [2, 3], 'yt-latest': [2, 2], 'yt-trend': [2, 2], 'wx-hours': [2, 2],
+  'wx-now': [1, 3], 'yt-channel': [1, 3], 'yt-video': [1, 3], 'gh-issues': [1, 3], 'gh-stats': [1, 3], cal: [1, 3], 'epi-plan': [1, 3], 'epi-prof': [1, 3],
+  'api-list': [1, 3], horo: [1, 3], 'steam-prof': [1, 3], 'steam-recent': [1, 3], 'steam-lib': [1, 3],
+}
+const COL_W = 290, ROW_H = 128, GAP = 24
+function FitCard({ kind, children }: { kind: string; children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null), [scale, setScale] = useState(0.5)
+  const [c, r] = SPAN[kind] ?? [1, 2]
+  const w = c * COL_W + (c - 1) * GAP, h = r * ROW_H + (r - 1) * GAP
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    const fit = () => setScale(Math.min(el.clientWidth / w, el.clientHeight / h))
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [w, h])
+  return (
+    <div ref={box} className="fit" aria-hidden="true">
+      <div className="fit-in" style={{ width: w, height: h, transform: `translate(-50%, -50%) scale(${scale})` }}>{children}</div>
+    </div>
+  )
+}
+
+// The horoscope's `sign` is picked from the 12 signs instead of typed
+export function SignSelect({ value, lang, onChange }: { value: string; lang: Lang; onChange: (v: string) => void }) {
+  return (
+    <select className="dw-select" value={value} onChange={(e) => onChange(e.target.value)} required>
+      <option value="" disabled>—</option>
+      {Object.entries(ZODIAC).map(([k, z]) => <option key={k} value={k}>{z.glyph}{'\uFE0E'} {z.name[lang]}</option>)}
+    </select>
+  )
+}
 
 // Card filled with the snapshot data, for the drawer previews
-function SampleCard({ entry, lang, config = {} }: { entry: CatalogEntry; lang: Lang; config?: Record<string, string | number> }) {
+function SampleCard({ entry, lang, config = {}, data }: { entry: CatalogEntry; lang: Lang; config?: Record<string, string | number>; data?: unknown }) {
   const s = SAMPLES[entry.kind] ?? { data: null, config: {} }
   const typed = Object.fromEntries(Object.entries(config).filter(([, v]) => String(v).trim() !== ''))
   return (
     <WidgetCard preview lang={lang} widget={{
-      serviceName: entry.service, widgetName: entry.widget, config: { ...s.config, ...typed }, cachedData: s.data, insight: s.insight ?? null,
+      serviceName: entry.service, widgetName: entry.widget, config: { ...s.config, ...typed }, cachedData: data ?? s.data, insight: s.insight ?? null,
       title: null, decoration: null, refreshRateSeconds: 300, lastRefreshedAt: new Date().toISOString(),
     }} />
   )
@@ -40,9 +80,28 @@ export function Drawer({ open, lang, about, user, preset, onClose, onCreate }: {
     about?.server.services.find((s) => s.name === e.service)?.widgets.find((x) => x.name === e.widget)?.params ?? []
   const available = CATALOG.filter((e) => about?.server.services.some((s) => s.name === e.service && s.widgets.some((x) => x.name === e.widget)))
 
+  // World clock: the places picked in the form (and the timeline preview drawn from them)
+  const [home, setHome] = useState<Picked | null>(null), [cities, setCities] = useState<Picked[]>([])
+  const setWorld = (h: Picked | null, c: Picked[]) => {
+    setHome(h); setCities(c)
+    setCfg((cur) => ({ ...cur, homeTimezone: h?.stored ?? '', cities: c.map((x) => x.stored).join(', ') }))
+  }
+  const worldPreview = home ? { home: { timezone: home.zone || home.stored, label: home.label, iso2: home.iso2 },
+    cities: cities.filter((c) => c.zone).map((c) => ({ timezone: c.zone, label: c.label, iso2: c.iso2 })) } : undefined
+
   const pick = (e: CatalogEntry) => {
     setPicked(e); setRate(60); setError('')
-    setCfg({})
+    // The backend already knows the user's sign from their birth date: the horoscope starts with it
+    setCfg(e.widget === 'horoscope' && user.zodiac ? { sign: user.zodiac } : {})
+    if (e.widget === 'world_clock') {
+      // Your city starts as the time zone of this device
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      setWorld({ ...fromStored(tz), zone: tz }, [])
+      // …shown with its name and flag, looked up in the same place list
+      api.get<Place[]>(`/services/worldclock/places?${new URLSearchParams({ q: tz.split('/').pop()!.replace(/_/g, ' '), lang, limit: '5' })}`)
+        .then((r) => { const p = r.find((x) => x.value === tz && x.kind !== 'zone'); if (p) setWorld({ stored: tz, zone: tz, label: p.label.split(',')[0], iso2: p.iso2 }, []) })
+        .catch(() => {})
+    }
   }
   useEffect(() => {
     if (!open) return
@@ -77,7 +136,7 @@ export function Drawer({ open, lang, about, user, preset, onClose, onCreate }: {
     try {
       await onCreate(picked, prepareConfig(picked.service, picked.widget, config, lang), rate)
     } catch (err) {
-      setError((err as Error).message)
+      setError(translateError((err as Error).message, lang))
     } finally {
       setBusy(false)
     }
@@ -110,8 +169,8 @@ export function Drawer({ open, lang, about, user, preset, onClose, onCreate }: {
               {open && groups.map((g) => [
                 <div key={`g-${g}`} className="dw-group">{SERVICES[g].icon} {SERVICES[g].label[lang]}</div>,
                 ...items.filter((e) => e.service === g).map((e) => (
-                  <button key={e.kind} className={`dw-pv${e.wide ? ' wide' : ''}`} aria-label={e.name[lang]} onClick={() => pick(e)}>
-                    <div className="shrink" aria-hidden="true"><SampleCard entry={e} lang={lang} /></div>
+                  <button key={e.kind} className="dw-pv" aria-label={e.name[lang]} onClick={() => pick(e)}>
+                    <FitCard kind={e.kind}><SampleCard entry={e} lang={lang} /></FitCard>
                     <span className="dw-name">{e.name[lang]}</span>
                     <span className="dw-badge" style={{ background: SERVICES[g].color }} aria-hidden="true">{SERVICES[g].icon}</span>
                   </button>
@@ -122,16 +181,23 @@ export function Drawer({ open, lang, about, user, preset, onClose, onCreate }: {
           <div className="dw-page">
             {picked && (
               <div className="dw-cfg">
-                <div className="dw-live"><div className="frame"><SampleCard entry={picked} lang={lang} config={cfg} /></div><p>{w.livePreview}</p></div>
+                <div className="dw-live"><div className="frame"><FitCard kind={picked.kind}><SampleCard entry={picked} lang={lang} config={cfg} data={picked.widget === 'world_clock' && cities.length ? worldPreview : undefined} /></FitCard></div><p>{w.livePreview}</p></div>
                 <form onSubmit={submit}>
                   {!params.length && <p className="muted" style={{ fontSize: 13 }}>{w.noParams}</p>}
-                  {params.map((p) => {
+                  {picked.widget === 'world_clock' && <CityPicker lang={lang} home={home} cities={cities} onChange={setWorld} />}
+                  {params.filter(() => picked.widget !== 'world_clock').map((p) => {
                     const [hint, ex] = picked.hints[p.name] ?? [{ fr: '', en: '', es: '' }, '']
                     return (
-                      <label key={p.name} className="dw-field">{p.name}{p.required ? ' *' : ''}{p.secret ? ' 🔒' : ''}
-                        <input name={p.name} type={p.type === 'integer' ? 'number' : p.secret ? 'password' : 'text'} value={cfg[p.name] ?? ''} placeholder={ex}
-                          required={p.required} autoComplete="off" onChange={(e) => setCfg((c) => ({ ...c, [p.name]: e.target.value }))} />
-                        <small>{hint[lang]}{ex ? `, ${w.eg} ${ex}` : ''}</small>
+                      <label key={p.name} className="dw-field">{paramLabel(p.name, lang)}{p.required ? ' *' : ''}{p.secret ? ' 🔒' : ''}
+                        {picked.widget === 'horoscope' && p.name === 'sign' ? (
+                          <SignSelect value={cfg.sign ?? ''} lang={lang} onChange={(v) => setCfg((c) => ({ ...c, sign: v }))} />
+                        ) : (
+                          <input name={p.name} type={p.type === 'integer' ? 'number' : p.secret ? 'password' : 'text'} value={cfg[p.name] ?? ''} placeholder={ex}
+                            required={p.required} autoComplete="off" onChange={(e) => setCfg((c) => ({ ...c, [p.name]: e.target.value }))} />
+                        )}
+                        <small>{picked.widget === 'horoscope' && p.name === 'sign'
+                          ? (user.zodiac && cfg.sign === user.zodiac ? `🎂 ${w.fromBirth}` : '')
+                          : `${hint[lang]}${ex ? `, ${w.eg} ${ex}` : ''}`}</small>
                       </label>
                     )
                   })}

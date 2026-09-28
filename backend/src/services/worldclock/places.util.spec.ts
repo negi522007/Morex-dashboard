@@ -48,4 +48,8 @@ describe('resolveZone', () => {
     expect(resolveZone('Par')).toBeNull();
     expect(resolveZone('')).toBeNull();
   });
+  it('returns the ISO country code so the client can show a flag', () => {
+    const paris = searchPlaces('paris', 'fr').find((p) => p.value === 'Europe/Paris' && p.kind === 'city');
+    expect(paris?.iso2).toBe('FR');
+  });
 });
