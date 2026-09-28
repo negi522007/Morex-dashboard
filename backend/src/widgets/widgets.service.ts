@@ -162,6 +162,8 @@ export class WidgetsService {
       data.config = (hasSecrets
         ? encryptSecrets(widget.params, validated, existing.config as Record<string, unknown>, this.encryptionKey(true))
         : validated) as Prisma.InputJsonValue;
+      // New settings: refresh on the next scheduler tick instead of waiting for the full refresh rate
+      data.lastRefreshedAt = null;
     }
     if (body.refreshRateSeconds !== undefined) {
       data.refreshRateSeconds = this.validateRefreshRate(body.refreshRateSeconds);

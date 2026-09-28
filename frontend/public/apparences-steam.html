@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex Steam</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .62), rgb(15 12 50 / .8)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 36px; } h2 { text-align: center; font-weight: 500; margin: 34px 0 6px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .65); margin: 8px auto 22px; max-width: 880px; padding: 0 16px; }
+  .warn { display: inline-block; padding: 4px 12px; border-radius: 999px; background: rgb(251 191 36 / .18); color: #fde68a; font-size: 13px; }
+  .s { font-size: 11.5px; color: rgb(255 255 255 / .6); }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; max-width: 1250px; margin: 0 auto; padding: 0 20px 12px; }
+  @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+  .opt > p { margin: 10px 0 0; font-size: 13px; color: rgb(255 255 255 / .65); } .opt > p b { color: #fff; }
+  .card { position: relative; overflow: hidden; border-radius: 24px; padding: 18px; height: 340px; display: flex; flex-direction: column; gap: 10px;
+    background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); backdrop-filter: blur(22px); }
+  .head { display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
+  .ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: linear-gradient(135deg, #1b2838, #2a475e); flex: none; }
+  .ico svg { width: 20px; height: 20px; }
+  .t { font-weight: 600; font-size: 14px; }
+  .steam { background: linear-gradient(160deg, #1b2838, #171a21 70%) !important; }
+
+  /* Profile 1: player card */
+  .p1 { align-items: center; justify-content: center; text-align: center; }
+  .ring { position: relative; width: 112px; height: 112px; border-radius: 50%; padding: 4px; background: conic-gradient(#57cbde, #4c8bf5, #57cbde); animation: spin 6s linear infinite; }
+  .ring img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid #171a21; animation: spin 6s linear infinite reverse; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .lvl { position: absolute; right: -4px; bottom: 4px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13px; background: #171a21; border: 2px solid #e5b54a; color: #e5b54a; }
+  .name { font-size: 20px; font-weight: 700; margin-top: 6px; }
+  .playing { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgb(144 186 60 / .18); color: #a4d007; font-size: 12.5px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #a4d007; box-shadow: 0 0 10px #a4d007; animation: pulse 1.4s infinite; } @keyframes pulse { 50% { opacity: .3; } }
+  /* Profile 2: console screen */
+  .p2 { background: #0b0f16 !important; font-family: Orbitron, sans-serif; }
+  .p2 .scr { flex: 1; border-radius: 16px; border: 1px solid #2a475e; background: radial-gradient(circle at 50% 0%, rgb(87 203 222 / .18), transparent 60%), #0d141c; padding: 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: inset 0 0 30px rgb(0 0 0 / .8); }
+  .p2 .n { font-size: 22px; font-weight: 800; color: #66c0f4; text-shadow: 0 0 12px rgb(102 192 244 / .7); }
+  .p2 .row { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .12em; color: #8f98a0; } .p2 .row b { color: #c7d5e0; }
+  .p2 .led { display: flex; gap: 8px; align-items: center; font-size: 12px; color: #a4d007; }
+  .marquee { overflow: hidden; white-space: nowrap; border-top: 1px solid #2a475e; padding-top: 10px; font-size: 13px; color: #c7d5e0; } .marquee span { display: inline-block; padding-left: 100%; animation: mq 9s linear infinite; } @keyframes mq { to { transform: translateX(-100%); } }
+  /* Profile 3: ID badge */
+  .p3 { background: linear-gradient(145deg, #2a475e, #1b2838 60%, #0f141b) !important; }
+  .badge { flex: 1; display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-content: center; }
+  .badge img { width: 96px; height: 96px; border-radius: 18px; object-fit: cover; box-shadow: 0 10px 24px rgb(0 0 0 / .5); }
+  .badge .k { font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase; color: #8f98a0; margin-top: 4px; } .badge .v { font-size: 14px; font-weight: 600; }
+  .strip { display: flex; gap: 8px; } .strip span { flex: 1; text-align: center; padding: 8px; border-radius: 12px; background: rgb(0 0 0 / .25); font-size: 11px; color: #8f98a0; } .strip b { display: block; font-size: 16px; color: #fff; }
+
+  /* Recent 1: shelf */
+  .shelf { flex: 1; display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; }
+  .shelf a { flex: 0 0 72%; scroll-snap-align: start; border-radius: 14px; overflow: hidden; position: relative; background: #000; color: #fff; text-decoration: none; }
+  .shelf img { width: 100%; height: 100%; object-fit: cover; } .shelf .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 30px 12px 10px; background: linear-gradient(transparent, rgb(0 0 0 / .9)); }
+  .shelf .cap b { display: block; font-size: 14px; } .shelf .cap span { font-size: 11.5px; color: #a4d007; }
+  /* Recent 2: bars */
+  .bars { flex: 1; display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+  .bar { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; }
+  .bar img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; } .bar .nm { font-size: 12.5px; font-weight: 500; }
+  .bar .tr { height: 7px; border-radius: 99px; background: rgb(255 255 255 / .08); margin-top: 5px; overflow: hidden; } .bar .tr i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #4c8bf5, #57cbde); animation: grow 1.2s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes grow { from { width: 0 !important; } }
+  .bar .h { font-size: 12px; font-weight: 600; color: #66c0f4; }
+  /* Recent 3: featured */
+  .feat { position: relative; flex: 1; border-radius: 16px; overflow: hidden; } .feat img { width: 100%; height: 100%; object-fit: cover; }
+  .feat .cap { position: absolute; inset: auto 0 0 0; padding: 26px 14px 12px; background: linear-gradient(transparent, rgb(0 0 0 / .92)); } .feat .cap b { font-size: 17px; display: block; } .feat .cap span { font-size: 12px; color: #a4d007; }
+  .thumbs { display: flex; gap: 8px; } .thumbs div { flex: 1; } .thumbs img { width: 100%; height: 46px; object-fit: cover; border-radius: 8px; display: block; } .thumbs small { font-size: 10.5px; color: #8f98a0; }
+
+  /* Library 1: dashboard */
+  .big { font-size: 46px; font-weight: 800; line-height: 1; background: linear-gradient(90deg, #66c0f4, #57cbde); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .l1 .donut { display: flex; align-items: center; gap: 16px; margin-top: auto; }
+  .l1 svg.d { width: 92px; height: 92px; transform: rotate(-90deg); } .l1 .fun { font-size: 13px; color: #c7d5e0; line-height: 1.5; } .l1 .fun b { color: #fff; }
+  /* Library 2: podium */
+  .pod { flex: 1; display: flex; align-items: flex-end; gap: 8px; }
+  .pod div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+  .pod img { width: 100%; height: 44px; object-fit: cover; border-radius: 8px; } .pod .step { width: 100%; border-radius: 12px 12px 0 0; display: grid; place-items: center; font-size: 22px; font-weight: 800; }
+  .pod small { font-size: 10.5px; color: #c7d5e0; line-height: 1.25; } .pod b { font-size: 11px; color: #66c0f4; }
+  /* Library 3: stacked covers */
+  .stack { position: relative; height: 150px; margin-top: 4px; } .stack img { position: absolute; width: 58%; border-radius: 10px; box-shadow: 0 12px 24px rgb(0 0 0 / .6); transition: transform .3s; }
+  .stack img:hover { transform: translateY(-8px) scale(1.04); z-index: 9; }
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: auto; } .kpis span { padding: 8px 4px; border-radius: 12px; background: rgb(0 0 0 / .25); text-align: center; font-size: 10.5px; color: #8f98a0; } .kpis b { display: block; font-size: 17px; color: #fff; }
+</style>
+</head>
+<body>
+<h1>Steam, propositions</h1>
+<p class="lead"><span class="warn">⚠️ Données d’exemple</span><br>Pas encore de clé Steam : le profil est inventé, mais les données ont exactement la forme que renvoie ton backend, et les images viennent des vrais jeux sur Steam. Avec la clé, les cartes afficheront le vrai profil sans rien changer</p>
+
+<h2>Profil <span class="s">(steam/profile)</span></h2><div class="grid" id="prof"></div>
+<h2>Jeux récents <span class="s">(steam/recent_games)</span></h2><div class="grid" id="recent"></div>
+<h2>Statistiques de la bibliothèque <span class="s">(steam/library_stats)</span></h2><div class="grid" id="lib"></div>
+
+<script>
+// EXAMPLE data, in the exact shapes returned by steam/profile, steam/recent_games and steam/library_stats
+const img = (id) => `https://cdn.akamai.steamstatic.com/steam/apps/${id}/header.jpg`
+const game = (appId, name, m2, mt) => ({ appId, name, minutesLast2Weeks: m2, minutesTotal: mt, header: img(appId), url: `https://store.steampowered.com/app/${appId}` })
+const PROFILE = { steamId: '76561198000000000', name: 'Morayo_Gaming', avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=morex&top=curly&skinColor=ae5d29&backgroundColor=c0aede', url: 'https://steamcommunity.com',
+  status: 'online', currentGame: 'Stardew Valley', level: 27, memberSince: '2019-03-14T00:00:00Z', country: 'BJ', isPublic: true }
+const RECENT = [game(413150, 'Stardew Valley', 540, 8200), game(1145360, 'Hades', 310, 2900), game(1245620, 'ELDEN RING', 190, 6100), game(367520, 'Hollow Knight', 75, 1800)]
+const LIB = { gameCount: 64, playedCount: 46, neverPlayedCount: 18, totalMinutes: 74400, totalHours: 1240,
+  topGames: [game(413150, 'Stardew Valley', 540, 8200), game(1245620, 'ELDEN RING', 190, 6100), game(292030, 'The Witcher 3', 0, 4700), game(1145360, 'Hades', 310, 2900), game(367520, 'Hollow Knight', 75, 1800)] }
+const STEAM = '<svg viewBox="0 0 24 24" fill="#c7d5e0"><path d="M12 2a10 10 0 0 0-9.96 9.08l5.36 2.22a2.83 2.83 0 0 1 1.6-.5h.16l2.38-3.45v-.05a3.77 3.77 0 1 1 3.77 3.77h-.09l-3.4 2.43v.13a2.83 2.83 0 0 1-5.6.57L2.4 14.66A10 10 0 1 0 12 2Zm-3.75 15.2-1.23-.51a2.13 2.13 0 1 0 1.17-2.93l1.27.53a1.57 1.57 0 1 1-1.2 2.91Zm9.2-7.9a2.51 2.51 0 1 0-2.5 2.52 2.51 2.51 0 0 0 2.5-2.51Zm-4.39 0a1.89 1.89 0 1 1 1.89 1.89 1.89 1.89 0 0 1-1.89-1.89Z"/></svg>'
+const head = (t, s) => `<div class="head"><span class="ico">${STEAM}</span><div><div class="t">${t}</div><div class="s">${s}</div></div></div>`
+const flag = (c) => String.fromCodePoint(...[...c].map((x) => 0x1f1e6 + x.charCodeAt(0) - 65))
+const h = (m) => `${Math.round(m / 60)} h`
+const STATUS = { online: ['En ligne', '#57cbde'], offline: ['Hors ligne', '#8f98a0'], away: ['Absent', '#e5b54a'], busy: ['Occupé', '#f87171'] }
+const since = new Date(PROFILE.memberSince).getFullYear()
+const opts = (id, list) => (document.getElementById(id).innerHTML = list.map(([n, d, html], i) => `<div class="opt">${html}<p><b>${i + 1} · ${n}</b> : ${d}</p></div>`).join(''))
+
+opts('prof', [
+  ['Carte de joueur', 'grand avatar dans un anneau qui tourne (couleur selon le statut), le niveau en badge doré, et « Joue à… » qui clignote quand il est en jeu',
+    `<div class="card steam p1"><div class="ring"><img src="${PROFILE.avatar}" alt=""><span class="lvl">${PROFILE.level}</span></div><div class="name">${PROFILE.name}</div>
+     <div class="s">${STATUS[PROFILE.status][0]} · ${flag(PROFILE.country)} · depuis ${since}</div><div class="playing"><span class="dot"></span>Joue à ${PROFILE.currentGame}</div></div>`],
+  ['Écran de console', 'un écran sombre façon Steam : pseudo lumineux, voyant de statut, et le jeu en cours qui défile en bas',
+    `<div class="card p2">${head('Profil Steam', 'steamcommunity.com')}<div class="scr"><div class="n">${PROFILE.name}</div><div class="led"><span class="dot"></span>${STATUS[PROFILE.status][0].toUpperCase()}</div>
+     <div class="row"><span>NIVEAU</span><b>${PROFILE.level}</b></div><div class="row"><span>PAYS</span><b>${flag(PROFILE.country)} ${PROFILE.country}</b></div><div class="row"><span>MEMBRE DEPUIS</span><b>${since}</b></div>
+     <div class="marquee"><span>▶ EN JEU : ${PROFILE.currentGame.toUpperCase()} ▶ EN JEU : ${PROFILE.currentGame.toUpperCase()}</span></div></div></div>`],
+  ['Badge de joueur', 'une carte d’accès : avatar carré, pseudo, pays, ancienneté, puis niveau et statut en bas',
+    `<div class="card p3">${head('Profil Steam', 'Badge de joueur')}<div class="badge"><img src="${PROFILE.avatar}" alt=""><div><div class="k">Pseudo</div><div class="v">${PROFILE.name}</div>
+     <div class="k">Pays</div><div class="v">${flag(PROFILE.country)} Bénin</div><div class="k">Membre depuis</div><div class="v">${since}</div></div></div>
+     <div class="strip"><span><b>${PROFILE.level}</b>niveau</span><span><b style="color:${STATUS[PROFILE.status][1]}">●</b>${STATUS[PROFILE.status][0]}</span><span><b>🎮</b>${PROFILE.currentGame}</span></div></div>`],
+])
+const max2 = Math.max(...RECENT.map((g) => g.minutesLast2Weeks))
+opts('recent', [
+  ['Étagère', 'les jaquettes des jeux côte à côte, qu’on fait glisser, avec les heures jouées ces 2 semaines',
+    `<div class="card steam">${head('Jeux récents', '2 dernières semaines')}<div class="shelf">${RECENT.map((g) => `<a href="${g.url}" target="_blank"><img src="${g.header}" alt=""><span class="cap"><b>${g.name}</b><span>${h(g.minutesLast2Weeks)} ces 2 semaines</span></span></a>`).join('')}</div></div>`],
+  ['Classement', 'chaque jeu avec son icône et une barre qui se remplit selon le temps joué, comme un classement',
+    `<div class="card steam">${head('Jeux récents', '2 dernières semaines')}<div class="bars">${RECENT.map((g) => `<div class="bar"><img src="${g.header}" alt=""><div><div class="nm">${g.name}</div><div class="tr"><i style="width:${(g.minutesLast2Weeks / max2) * 100}%"></i></div></div><span class="h">${h(g.minutesLast2Weeks)}</span></div>`).join('')}</div></div>`],
+  ['À la une', 'le jeu le plus joué en grand avec son image, les autres en petites vignettes en dessous',
+    `<div class="card steam">${head('Jeux récents', '2 dernières semaines')}<div class="feat"><img src="${RECENT[0].header}" alt=""><div class="cap"><b>${RECENT[0].name}</b><span>🔥 ${h(RECENT[0].minutesLast2Weeks)} ces 2 semaines</span></div></div>
+     <div class="thumbs">${RECENT.slice(1).map((g) => `<div><img src="${g.header}" alt=""><small>${h(g.minutesLast2Weeks)}</small></div>`).join('')}</div></div>`],
+])
+const pct = LIB.playedCount / LIB.gameCount, C = 2 * Math.PI * 38
+const podium = [LIB.topGames[1], LIB.topGames[0], LIB.topGames[2]], heights = [70, 96, 54], medal = ['🥈', '🥇', '🥉'], colors = ['#c0c7d0', '#e5b54a', '#cd7f32']
+opts('lib', [
+  ['Tableau de bord', 'le total d’heures en géant (et en jours), un anneau « jeux joués » et une touche d’humour pour les jeux jamais lancés',
+    `<div class="card steam l1">${head('Ma bibliothèque', `${LIB.gameCount} jeux`)}<div><div class="big">${LIB.totalHours.toLocaleString('fr-FR')} h</div><div class="s">soit ${Math.round(LIB.totalHours / 24)} jours de jeu</div></div>
+     <div class="donut"><svg class="d" viewBox="0 0 92 92"><circle cx="46" cy="46" r="38" fill="none" stroke="rgb(255 255 255 / .1)" stroke-width="9"/><circle cx="46" cy="46" r="38" fill="none" stroke="#57cbde" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/></svg>
+     <div class="fun"><b>${LIB.playedCount} jeux joués</b> sur ${LIB.gameCount}<br>${LIB.neverPlayedCount} jamais lancés 😅</div></div></div>`],
+  ['Podium', 'tes 3 jeux les plus joués sur un podium 🥇🥈🥉, avec leurs heures au total',
+    `<div class="card steam">${head('Ma bibliothèque', `${LIB.totalHours.toLocaleString('fr-FR')} h au total`)}<div class="pod">${podium.map((g, i) => `<div><img src="${g.header}" alt=""><small>${g.name}</small><b>${h(g.minutesTotal)}</b><span class="step" style="height:${heights[i]}px;background:linear-gradient(${colors[i]}, rgb(255 255 255 / .05))">${medal[i]}</span></div>`).join('')}</div></div>`],
+  ['Jaquettes empilées', 'le top 5 en jaquettes qui se chevauchent (elles se soulèvent au survol), et les chiffres clés en bas',
+    `<div class="card steam">${head('Ma bibliothèque', 'Top 5')}<div class="stack">${LIB.topGames.map((g, i) => `<img src="${g.header}" alt="" title="${g.name} · ${h(g.minutesTotal)}" style="left:${i * 10.5}%;top:${(i % 2) * 18}px;z-index:${5 - i};transform:rotate(${(i - 2) * 3}deg)">`).join('')}</div>
+     <div class="kpis"><span><b>${LIB.gameCount}</b>jeux</span><span><b>${LIB.totalHours.toLocaleString('fr-FR')}</b>heures</span><span><b>${LIB.neverPlayedCount}</b>jamais lancés</span></div></div>`],
+])
+</script>
+</body>
+</html>

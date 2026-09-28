@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { fetchWithTimeout } from '../../common/fetch-timeout.util';
 import { ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
 import { TtlCache } from '../../common/ttl-cache.util';
+import { resolveCryptoId } from './assets.util';
 
 const FETCH_TIMEOUT_MS = 10_000;
 const BASE_URL = 'https://api.coingecko.com/api/v3';
@@ -14,15 +16,11 @@ const HISTORY_TTL_MS = 10 * 60_000;
 const FIAT_TTL_MS = 60 * 60_000; // ECB publishes once a day
 
 async function fetchJsonUncached(url: string, widgetName: string): Promise<any> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   let res: Response;
   try {
-    res = await fetch(url, { signal: controller.signal });
+    res = await fetchWithTimeout(url, {}, FETCH_TIMEOUT_MS);
   } catch (err) {
     throw new ServiceFetchError('market_data', widgetName, `Could not reach market data API: ${(err as Error).message}`);
-  } finally {
-    clearTimeout(timeout);
   }
   if (!res.ok) {
     throw new ServiceFetchError('market_data', widgetName, `Market data API returned HTTP ${res.status}`);
@@ -55,15 +53,11 @@ async function fetchFiatSeriesUncached(base: string, quote: string, days: number
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   const url = `https://api.frankfurter.dev/v1/${iso(start)}..${iso(end)}?base=${base.toUpperCase()}&symbols=${quote.toUpperCase()}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   let res: Response;
   try {
-    res = await fetch(url, { signal: controller.signal });
+    res = await fetchWithTimeout(url, {}, FETCH_TIMEOUT_MS);
   } catch (err) {
     throw new ServiceFetchError('market_data', 'exchange_rate', `Could not reach market data API: ${(err as Error).message}`);
-  } finally {
-    clearTimeout(timeout);
   }
   if (res.status === 404 || res.status === 422) return null;
   if (!res.ok) {
@@ -97,17 +91,18 @@ const exchangeRate: WidgetDefinition = {
   name: 'exchange_rate',
   description: 'Display the exchange rate for a currency pair, with its recent history',
   params: [
-    { name: 'base', type: 'string', required: true },
-    { name: 'quote', type: 'string', required: true },
+    { name: 'base', type: 'string', required: true, optionsUrl: '/services/market_data/assets?kind=all' },
+    { name: 'quote', type: 'string', required: true, optionsUrl: '/services/market_data/assets?kind=fiat' },
     { name: 'days', type: 'integer' },
   ],
   primaryMetric: (d) => ((d as { rate?: unknown })?.rate as number) ?? null,
   async fetchData(config) {
-    const base = String(config.base ?? '').toLowerCase();
+    const rawBase = String(config.base ?? '').trim();
     const quote = String(config.quote ?? '').toLowerCase();
-    if (!base || !quote) {
+    if (!rawBase || !quote) {
       throw new ServiceFetchError('market_data', 'exchange_rate', 'Both "base" and "quote" parameters are required');
     }
+    let base = rawBase.toLowerCase();
     const parsedDays = Number(config.days);
     const days = Number.isFinite(parsedDays) && parsedDays > 0 ? Math.min(parsedDays, 90) : DEFAULT_HISTORY_DAYS;
 
@@ -116,9 +111,20 @@ const exchangeRate: WidgetDefinition = {
       if (series) return summarize(base, quote, days, series, series[series.length - 1].price);
     }
 
-    const url = `${BASE_URL}/simple/price?ids=${encodeURIComponent(base)}&vs_currencies=${encodeURIComponent(quote)}`;
-    const data = await fetchJson(url, 'exchange_rate', PRICE_TTL_MS);
-    const rate = data?.[base]?.[quote];
+    const priceOf = (id: string) =>
+      fetchJson(`${BASE_URL}/simple/price?ids=${encodeURIComponent(id)}&vs_currencies=${encodeURIComponent(quote)}`, 'exchange_rate', PRICE_TTL_MS);
+    let data = await priceOf(base);
+    let rate = data?.[base]?.[quote];
+    if (rate === undefined) {
+      // A free-typed name ("Ether") instead of the CoinGecko id ("ethereum") — resolve it once and retry,
+      // so a widget saved before the id-picking suggestions existed self-heals instead of failing forever.
+      const resolved = await resolveCryptoId(rawBase).catch(() => null);
+      if (resolved && resolved !== base) {
+        base = resolved;
+        data = await priceOf(base);
+        rate = data?.[base]?.[quote];
+      }
+    }
     if (rate === undefined) {
       throw new ServiceFetchError('market_data', 'exchange_rate', `No rate found for ${base}/${quote} (check the asset id)`);
     }
@@ -148,25 +154,40 @@ const priceHistory: WidgetDefinition = {
   name: 'price_history',
   description: 'Display the price history for an asset',
   params: [
-    { name: 'asset', type: 'string', required: true },
+    { name: 'asset', type: 'string', required: true, optionsUrl: '/services/market_data/assets?kind=crypto' },
     { name: 'days', type: 'integer' },
-    { name: 'currency', type: 'string' },
+    { name: 'currency', type: 'string', optionsUrl: '/services/market_data/assets?kind=fiat' },
   ],
   primaryMetric: (d) => {
     const last = Array.isArray(d) ? d[d.length - 1] : null;
     return typeof last?.price === 'number' ? last.price : null;
   },
   async fetchData(config) {
-    const asset = String(config.asset ?? '').toLowerCase();
-    if (!asset) {
+    const rawAsset = String(config.asset ?? '').trim();
+    if (!rawAsset) {
       throw new ServiceFetchError('market_data', 'price_history', 'Missing required "asset" parameter');
     }
+    let asset = rawAsset.toLowerCase();
     const parsedDays = Number(config.days);
     const days = Number.isFinite(parsedDays) && parsedDays > 0 ? parsedDays : 7;
     const currency = String(config.currency ?? 'usd').toLowerCase();
 
-    const url = `${BASE_URL}/coins/${encodeURIComponent(asset)}/market_chart?vs_currency=${encodeURIComponent(currency)}&days=${days}`;
-    const data = await fetchJson(url, 'price_history', HISTORY_TTL_MS);
+    const chartOf = (id: string) =>
+      fetchJson(`${BASE_URL}/coins/${encodeURIComponent(id)}/market_chart?vs_currency=${encodeURIComponent(currency)}&days=${days}`, 'price_history', HISTORY_TTL_MS);
+    // CoinGecko 404s a market_chart call for an id it doesn't know (fetchJson turns that into a throw),
+    // so a free-typed name ("Ether") is caught here and retried once with the resolved id ("ethereum") —
+    // same self-healing as exchange_rate below, for a widget saved before the id-picking suggestions existed.
+    let data: any;
+    try {
+      data = await chartOf(asset);
+    } catch {
+      const resolved = await resolveCryptoId(rawAsset).catch(() => null);
+      if (!resolved || resolved === asset) {
+        throw new ServiceFetchError('market_data', 'price_history', `No price history found for "${asset}" (check the asset id)`);
+      }
+      asset = resolved;
+      data = await chartOf(asset);
+    }
     const prices = data?.prices;
     if (!Array.isArray(prices)) {
       throw new ServiceFetchError('market_data', 'price_history', `No price history found for "${asset}" (check the asset id)`);

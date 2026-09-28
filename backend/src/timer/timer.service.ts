@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
+import { Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { SERVICE_PROVIDERS } from '../services/service-providers.token';
@@ -8,7 +9,10 @@ import { decryptSecrets } from '../common/secret-config.util';
 import { RefreshHooksService } from '../insights/refresh-hooks.service';
 import { decryptToken } from '../common/token-encryption.util';
 
-const TICK_MS = 15_000;
+// Short enough that a widget is refreshed a few seconds after its countdown (shown on its card) ends
+const TICK_MS = 5_000;
+// Widgets refreshed at the same time: one slow or unreachable service no longer holds up everyone else's
+const CONCURRENCY = 8;
 
 interface DueWidgetInstance {
   id: string;
@@ -51,9 +55,18 @@ export class TimerService {
            OR "lastRefreshedAt" + ("refreshRateSeconds" * INTERVAL '1 second') <= NOW()
       `;
 
-      for (const instance of due) {
-        await this.refreshInstance(instance);
-      }
+      let next = 0;
+      const worker = async () => {
+        while (next < due.length) {
+          const instance = due[next++];
+          try {
+            await this.refreshInstance(instance);
+          } catch (err) {
+            this.logger.error(`Refresh crashed for instance ${instance.id}: ${(err as Error).message}`);
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, due.length) }, worker));
     } finally {
       this.ticking = false;
     }
@@ -64,38 +77,50 @@ export class TimerService {
     const widget = provider?.widgets.find((w) => w.name === instance.widgetName);
 
     if (!provider || !widget) {
-      this.logger.error(
-        `Unknown service/widget for instance ${instance.id}: ${instance.serviceName}/${instance.widgetName}`,
-      );
+      const msg = `Unknown service/widget: "${instance.serviceName}/${instance.widgetName}" no longer exists`;
+      this.logger.error(`Instance ${instance.id}: ${msg}`);
       // Still push lastRefreshedAt so a permanently-unknown widget doesn't
       // get re-selected on every single tick.
       await this.prisma.widgetInstance.update({
         where: { id: instance.id },
-        data: { lastRefreshedAt: new Date() },
+        data: { lastRefreshedAt: new Date(), lastError: msg },
       });
       return;
     }
 
     try {
-      const auth = widgetNeedsAuth(provider, widget) ? await this.resolveAuth(instance.userId, instance.serviceName) : undefined;
+      const needsAuth = widgetNeedsAuth(provider, widget);
+      const auth = needsAuth ? await this.resolveAuth(instance.userId, instance.serviceName) : undefined;
+      if (needsAuth && !auth) {
+        // The account behind this widget was disconnected: stop reading the service and clear what was shown,
+        // so the card asks to reconnect instead of silently going on. It resumes by itself once reconnected.
+        await this.prisma.widgetInstance.update({
+          where: { id: instance.id },
+          data: {
+            cachedData: Prisma.DbNull,
+            lastRefreshedAt: new Date(),
+            lastError: `${instance.serviceName} is not connected anymore — connect it again to resume this widget`,
+          },
+        });
+        return;
+      }
       const config = this.decryptConfig(widget, instance.config);
       const data = await widget.fetchData(config, auth);
       await this.prisma.widgetInstance.update({
         where: { id: instance.id },
-        data: { cachedData: data as object, lastRefreshedAt: new Date() },
+        data: { cachedData: data as object, lastRefreshedAt: new Date(), lastError: null },
       });
       await this.hooks?.afterRefresh({ ...instance, config }, widget, data);
     } catch (err) {
-      this.logger.error(
-        `Refresh failed for instance ${instance.id} (${instance.serviceName}/${instance.widgetName}): ${(err as Error).message}`,
-      );
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Refresh failed for instance ${instance.id} (${instance.serviceName}/${instance.widgetName}): ${message}`);
       // Keep the last known-good cachedData untouched — the frontend keeps
       // showing stale-but-real data instead of nothing. Only push the next
       // attempt back by refreshRateSeconds, so a broken API isn't hammered
       // every tick.
       await this.prisma.widgetInstance.update({
         where: { id: instance.id },
-        data: { lastRefreshedAt: new Date() },
+        data: { lastRefreshedAt: new Date(), lastError: message },
       });
     }
   }

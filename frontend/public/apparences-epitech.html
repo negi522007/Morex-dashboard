@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex My Epitech</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .62), rgb(15 12 50 / .8)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 36px; } h2 { text-align: center; font-weight: 500; margin: 34px 0 6px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .65); margin: 8px auto 22px; max-width: 820px; padding: 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; max-width: 1250px; margin: 0 auto; padding: 0 20px 20px; }
+  @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+  .opt { min-width: 0; } .opt > p { margin: 10px 0 0; font-size: 13px; color: rgb(255 255 255 / .65); } .opt > p b { color: #fff; }
+  .card { position: relative; overflow: hidden; border-radius: 24px; padding: 18px; height: 360px; display: flex; flex-direction: column; gap: 10px;
+    background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); backdrop-filter: blur(22px); }
+  .head { display: flex; align-items: center; gap: 10px; }
+  .ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: #0b5fff; flex: none; font: 800 13px Poppins; }
+  .t { font-weight: 600; font-size: 14px; } .s { font-size: 11.5px; color: rgb(255 255 255 / .6); }
+  /* P1 day rail */
+  .rail { position: relative; flex: 1; margin-left: 38px; border-left: 1px dashed rgb(255 255 255 / .2); }
+  .rail .hr { position: absolute; left: -40px; font-size: 10px; color: rgb(255 255 255 / .5); transform: translateY(-50%); width: 32px; text-align: right; }
+  .rail .blk { position: absolute; left: 8px; right: 0; border-radius: 12px; padding: 6px 10px; font-size: 12px; overflow: hidden; border-left: 3px solid; }
+  .rail .blk b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rail .now { position: absolute; left: -4px; right: 0; height: 2px; background: #f43f5e; } .rail .now::before { content: ""; position: absolute; left: -3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #f43f5e; }
+  /* P2 week */
+  .week { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; min-height: 0; }
+  .week .col { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .week .dn { text-align: center; font-size: 10.5px; color: rgb(255 255 255 / .6); padding: 4px 0; border-radius: 10px; } .week .dn b { display: block; font-size: 15px; color: #fff; }
+  .week .today .dn { background: linear-gradient(160deg, #0b5fff, #38bdf8); color: #fff; }
+  .week .ev { border-radius: 9px; padding: 5px 6px; font-size: 10px; line-height: 1.25; overflow: hidden; }
+  .week .ev b { display: block; font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* P3 ticket */
+  .ticket { flex: 1; display: flex; flex-direction: column; border-radius: 18px; background: #f8fafc; color: #0f172a; overflow: hidden; }
+  .ticket .top { padding: 14px 16px; background: linear-gradient(135deg, #0b5fff, #38bdf8); color: #fff; }
+  .ticket .top .k { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; opacity: .85; } .ticket .top h3 { margin: 4px 0 0; font-size: 17px; line-height: 1.2; }
+  .ticket .cut { height: 0; border-top: 2px dashed #cbd5e1; margin: 0 14px; position: relative; }
+  .ticket .rows { padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  .ticket .rows span { display: block; font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: #64748b; } .ticket .rows b { font: 700 15px 'JetBrains Mono', monospace; }
+  .ticket .then { margin-top: auto; padding: 10px 16px; background: #eef2ff; font-size: 11.5px; color: #334155; }
+  /* profile 1 id card */
+  .idc { flex: 1; border-radius: 18px; padding: 16px; position: relative; overflow: hidden; background: linear-gradient(135deg, #0b1f5c, #0b5fff 70%, #38bdf8); display: grid; grid-template-columns: 86px 1fr; gap: 14px; align-content: start; }
+  .idc::after { content: ""; position: absolute; right: -60px; bottom: -60px; width: 200px; height: 200px; border-radius: 50%; border: 30px solid rgb(255 255 255 / .07); }
+  .idc .ph { width: 86px; height: 104px; border-radius: 12px; background: rgb(255 255 255 / .18); display: grid; place-items: center; font-size: 30px; font-weight: 700; }
+  .idc .k { font-size: 9px; letter-spacing: .16em; text-transform: uppercase; opacity: .7; margin-top: 6px; } .idc .v { font-size: 13.5px; font-weight: 600; }
+  .idc .login { grid-column: 1/-1; font: 500 12px 'JetBrains Mono', monospace; padding: 8px 10px; border-radius: 10px; background: rgb(0 0 0 / .25); display: flex; justify-content: space-between; }
+  .idc .chip { grid-column: 1/-1; display: flex; flex-wrap: wrap; gap: 6px; } .chip span { font-size: 11px; padding: 4px 10px; border-radius: 999px; background: rgb(255 255 255 / .15); }
+  /* profile 2 hello */
+  .hello { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; }
+  .hello .av { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; font-weight: 700; background: conic-gradient(from 90deg, #0b5fff, #38bdf8, #a78bfa, #0b5fff); padding: 4px; }
+  .hello .av div { width: 100%; height: 100%; border-radius: 50%; background: #0f172a; display: grid; place-items: center; }
+  .hello h3 { margin: 2px 0 0; font-size: 19px; }
+  .stats3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stats3 div { border-radius: 14px; padding: 10px 6px; text-align: center; background: rgb(255 255 255 / .07); } .stats3 b { display: block; font-size: 15px; } .stats3 span { font-size: 10.5px; color: rgb(255 255 255 / .6); }
+  /* profile 3 terminal */
+  .whoami { flex: 1; border-radius: 16px; background: #0b1020; border: 1px solid rgb(255 255 255 / .1); padding: 14px; font: 500 12.5px/1.7 'JetBrains Mono', monospace; overflow: hidden; }
+  .whoami .p { color: #38bdf8; } .whoami .k { color: #a78bfa; } .whoami .v { color: #86efac; } .whoami .c { color: #64748b; }
+  .cursor { display: inline-block; width: 8px; height: 14px; background: #fff; vertical-align: middle; animation: bl 1s steps(1) infinite; } @keyframes bl { 50% { opacity: 0 } }
+</style>
+</head>
+<body>
+<h1>My Epitech, propositions</h1>
+<p class="lead">⚠️ Données d’exemple : le planning a besoin de ton token de calendrier et le profil de ta connexion My Epitech. La forme des données est exactement celle que renvoie le backend</p>
+<h2>Planning <span class="s">(epitech/planning)</span></h2>
+<div class="grid" id="plan"></div>
+<h2>Profil <span class="s">(epitech/profile)</span></h2>
+<div class="grid" id="prof"></div>
+<script>
+// Example data in the exact shapes returned by epitech/planning and epitech/profile
+const base = new Date(); base.setHours(0, 0, 0, 0)
+const at = (d, h, m = 0) => { const x = new Date(base); x.setDate(x.getDate() + d); x.setHours(h, m); return x.toISOString() }
+const PLAN = { events: [
+  { title: 'Kick-off G-WEB-500 Dashboard', start: at(0, 9), end: at(0, 10, 30), allDay: false, location: 'Cotonou · Salle Turing' },
+  { title: 'Follow-up Dashboard', start: at(0, 14), end: at(0, 15), allDay: false, location: 'Cotonou · Salle Lovelace' },
+  { title: 'Hub : atelier Git', start: at(0, 16, 30), end: at(0, 18), allDay: false, location: 'Hub' },
+  { title: 'Review C Pool', start: at(1, 10), end: at(1, 12), allDay: false, location: 'Salle Hopper' },
+  { title: 'Soutenance Dashboard', start: at(3, 9, 30), end: at(3, 10), allDay: false, location: 'Salle Turing' },
+  { title: 'Talk : sécurité web', start: at(4, 17), end: at(4, 18), allDay: false, location: 'Amphi' },
+], generatedAt: new Date().toISOString() }
+const PROFILE = { login: 'prenom.nom@epitech.eu', name: 'Prénom Nom', email: 'prenom.nom@epitech.eu', campus: 'Cotonou', promotion: '2029', cursus: 'PGE · Bachelor', groups: ['PGE3', 'Cotonou 2029'] }
+
+const COL = ['#38bdf8', '#a78bfa', '#34d399', '#fb923c', '#f472b6']
+const hm = (iso) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+const head = (t, s) => `<div class="head"><span class="ico">EPI</span><div><div class="t">${t}</div><div class="s">${s}</div></div></div>`
+const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString()
+const dayLbl = (iso) => { const diff = Math.round((new Date(iso).setHours(0, 0, 0, 0) - base) / 864e5); return diff === 0 ? 'Aujourd’hui' : diff === 1 ? 'Demain' : new Date(iso).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' }) }
+const opts = (id, list) => (document.getElementById(id).innerHTML = list.map(([n, d, h], i) => `<div class="opt">${h}<p><b>${i + 1} · ${n}</b> : ${d}</p></div>`).join(''))
+
+function render() {
+  const E = PLAN.events, today = E.filter((e) => sameDay(e.start, base))
+  // 1 day rail 8h-19h
+  const H0 = 8, H1 = 19, pct = (iso) => ((new Date(iso).getHours() + new Date(iso).getMinutes() / 60 - H0) / (H1 - H0)) * 100
+  const now = new Date(), nowP = ((now.getHours() + now.getMinutes() / 60 - H0) / (H1 - H0)) * 100
+  const rail = [8, 10, 12, 14, 16, 18].map((h) => `<span class="hr" style="top:${((h - H0) / (H1 - H0)) * 100}%">${h} h</span>`).join('') +
+    today.map((e, i) => `<div class="blk" style="top:${pct(e.start)}%;height:${pct(e.end) - pct(e.start)}%;background:${COL[i]}22;border-color:${COL[i]}"><b>${e.title}</b>${hm(e.start)}–${hm(e.end)} · ${e.location}</div>`).join('') +
+    (nowP > 0 && nowP < 100 ? `<div class="now" style="top:${nowP}%"></div>` : '')
+  // 2 week
+  // School days only: the next 5 days from Monday to Friday
+  const days = []; for (let k = 0; days.length < 5; k++) { const d = new Date(base); d.setDate(d.getDate() + k); if (d.getDay() % 6) days.push(d) }
+  const week = days.map((d, i) => {
+    return `<div class="col ${sameDay(d, base) ? 'today' : ''}"><div class="dn">${d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '')}<b>${d.getDate()}</b></div>
+      ${E.filter((e) => sameDay(e.start, d)).map((e, j) => `<div class="ev" style="background:${COL[(i + j) % 5]}33"><b>${e.title}</b>${hm(e.start)}</div>`).join('')}</div>` }).join('')
+  // 3 ticket
+  const nx = E.find((e) => new Date(e.end) > now) ?? E[0], after = E.filter((e) => new Date(e.start) > new Date(nx.start)).slice(0, 1)[0]
+  const [campus, room] = nx.location.includes('·') ? nx.location.split(' · ') : ['Cotonou', nx.location]
+  opts('plan', [
+    ['Ma journée', 'la journée d’aujourd’hui sur une règle de 8 h à 19 h, chaque activité est un bloc à sa vraie taille, avec une ligne rouge pour l’heure actuelle', `<div class="card">${head('Planning', 'Aujourd’hui · ' + today.length + ' activités')}<div class="rail">${rail}</div></div>`],
+    ['Ma semaine', 'les 5 prochains jours en colonnes, comme un emploi du temps, avec les activités empilées dans chaque jour', `<div class="card">${head('Planning', 'Cette semaine')}<div class="week">${week}</div></div>`],
+    ['Billet', 'la prochaine activité façon billet d’entrée, avec la salle et l’heure en gros, et la suivante en bas', `<div class="card">${head('Planning', 'Prochaine activité')}<div class="ticket"><div class="top"><div class="k">${dayLbl(nx.start)}</div><h3>${nx.title}</h3></div>
+      <div class="rows"><div><span>Salle</span><b>${room}</b></div><div><span>Campus</span><b>${campus}</b></div><div><span>Début</span><b>${hm(nx.start)}</b></div><div><span>Fin</span><b>${hm(nx.end)}</b></div></div>
+      <div class="cut"></div>${after ? `<div class="then">Ensuite : <b>${after.title}</b> · ${dayLbl(after.start)} ${hm(after.start)}</div>` : ''}</div></div>`],
+  ])
+  const P = PROFILE, ini = (P.name ?? P.login).split(/[ .]/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+  opts('prof', [
+    ['Carte étudiant', 'une vraie carte d’étudiant Epitech : initiales, nom, campus, promo, cursus, login et groupes', `<div class="card">${head('Mon profil', 'My Epitech')}<div class="idc"><div class="ph">${ini}</div>
+      <div><div class="k">Nom</div><div class="v">${P.name}</div><div class="k">Campus</div><div class="v">${P.campus}</div><div class="k">Promotion</div><div class="v">${P.promotion}</div></div>
+      <div class="login"><span>${P.login}</span><span>🎓</span></div><div class="chip">${[P.cursus, ...P.groups].map((g) => `<span>${g}</span>`).join('')}</div></div></div>`],
+    ['Bonjour', 'un avatar rond avec un anneau dégradé, ton nom en grand, puis trois cases : campus, promo, cursus', `<div class="card">${head('Mon profil', 'My Epitech')}<div class="hello"><div class="av"><div>${ini}</div></div><h3>${P.name}</h3><div class="s">${P.email}</div></div>
+      <div class="stats3"><div><b>${P.campus}</b><span>Campus</span></div><div><b>${P.promotion}</b><span>Promo</span></div><div><b>${P.cursus.split(' · ')[0]}</b><span>Cursus</span></div></div></div>`],
+    ['whoami', 'un terminal qui tape ta fiche, dans le même style que le terminal GitHub', `<div class="card">${head('Mon profil', 'My Epitech')}<div class="whoami"><div><span class="p">morex@epitech</span>:~$ whoami</div>
+      ${Object.entries({ login: P.login, name: P.name, campus: P.campus, promotion: P.promotion, cursus: P.cursus, groups: P.groups.join(', ') }).map(([k, v]) => `<div><span class="k">${k.padEnd(10, ' ')}</span><span class="v">${v}</span></div>`).join('')}
+      <div class="c"># via ton compte My Epitech (OIDC)</div><div><span class="p">morex@epitech</span>:~$ <span class="cursor"></span></div></div></div>`],
+  ])
+}
+render(); setInterval(render, 60000)
+</script>
+</body>
+</html>

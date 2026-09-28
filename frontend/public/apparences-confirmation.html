@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex page confirmation</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Caveat:wght@500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background: #020617; }
+  h1.top { text-align: center; font-weight: 600; margin: 0; padding-top: 34px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .7); margin: 8px auto 18px; max-width: 860px; padding: 0 16px; }
+  .states { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; padding: 0 16px; }
+  .states button { font: inherit; font-size: 13px; padding: 8px 16px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .25); background: transparent; color: #fff; cursor: pointer; }
+  .states button.on { background: #fff; color: #1e1b4b; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; max-width: 1200px; margin: 0 auto; padding: 0 20px 60px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .opt > p { margin: 12px 0 0; font-size: 13px; color: rgb(255 255 255 / .7); } .opt > p b { color: #fff; }
+  .stage { position: relative; min-height: 540px; border-radius: 26px; overflow: hidden; display: grid; place-items: center; padding: 28px 18px; border: 1px solid rgb(255 255 255 / .1); }
+  .brand { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 16px; }
+  .brand img { width: 30px; }
+  ul { text-align: left; padding-left: 20px; margin: 8px 0 0; } li { margin: 5px 0; }
+  .btns { display: grid; gap: 9px; margin: 18px 0 8px; }
+  .btns button { font: inherit; font-weight: 600; font-size: 14px; border-radius: 999px; padding: 12px 18px; cursor: pointer; border: 0; }
+  .fl { animation: fl 3s ease-in-out infinite; display: inline-block; } @keyframes fl { 50% { transform: translateY(-7px) rotate(-6deg); } }
+
+  /* 1 · petit mot (same notebook as the email) */
+  .s1 { background: radial-gradient(700px 400px at 20% 0%, rgb(167 139 250 / .35), transparent), #1e1b4b; }
+  .note { position: relative; width: 100%; max-width: 380px; padding: 38px 30px 26px; border-radius: 6px; color: #3b2f5c; text-align: center; transform: rotate(-1.2deg);
+    background: repeating-linear-gradient(#fffaf0 0 29px, #e9dcf7 29px 30px); box-shadow: 0 20px 50px rgb(0 0 0 / .45); }
+  .note::before { content: ''; position: absolute; top: -12px; left: 50%; width: 110px; height: 26px; margin-left: -55px; background: rgb(244 114 182 / .75); transform: rotate(-3deg); }
+  .note::after { content: ''; position: absolute; left: 26px; top: 0; bottom: 0; border-left: 2px solid rgb(244 114 182 / .35); }
+  .note h2 { font-family: Caveat, cursive; font-size: 36px; margin: 4px 0 6px; color: #7c3aed; line-height: 1.1; }
+  .note p { margin: 6px 0; font-size: 14px; line-height: 1.6; } .note .hand { font-family: Caveat, cursive; font-size: 21px; }
+  .note .btns button.y { background: #7c3aed; color: #fff; box-shadow: 0 8px 18px rgb(124 58 237 / .35); }
+  .note .btns button.n { background: transparent; color: #7c3aed; border: 1.5px dashed #c4b5fd; }
+  .note small { font-size: 11.5px; opacity: .7; } .note .brand { color: #3b2f5c; margin-bottom: 8px; }
+  .note ul { font-size: 13px; } .note .sig { font-family: Caveat, cursive; font-size: 20px; text-align: right; margin-top: 10px; }
+
+  /* 2 · petite planète (same as the login messages) */
+  .s2 { background: linear-gradient(rgb(2 6 23 / .55), rgb(15 12 50 / .85)), url(/accueil_photo.jpg) 50% 30%/cover; }
+  .glass { width: 100%; max-width: 390px; padding: 30px 26px; border-radius: 30px; text-align: center; background: rgb(255 255 255 / .09); border: 1px solid rgb(255 255 255 / .18); backdrop-filter: blur(20px); box-shadow: 0 24px 60px rgb(0 0 0 / .5); }
+  .glass .planet { font-size: 62px; line-height: 1; margin: 14px 0 6px; }
+  .glass h2 { margin: 6px 0; font-size: 23px; } .glass p { margin: 6px 0; font-size: 14px; color: rgb(255 255 255 / .8); }
+  .glass .who { display: inline-flex; align-items: center; gap: 10px; margin: 10px 0 2px; padding: 8px 14px 8px 8px; border-radius: 999px; background: rgb(255 255 255 / .1); font-size: 13px; text-align: left; }
+  .glass .who i { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 700; background: linear-gradient(135deg, #a78bfa, #38bdf8); }
+  .glass .btns button.y { background: #fff; color: #1e1b4b; } .glass .btns button.n { background: transparent; color: #fff; border: 1px solid rgb(255 255 255 / .3); }
+  .glass small { font-size: 11.5px; opacity: .6; } .glass ul { font-size: 13px; color: rgb(255 255 255 / .8); }
+
+  /* 3 · carte d'embarquement */
+  .s3 { background: radial-gradient(circle at 70% 20%, rgb(56 189 248 / .25), transparent 50%), url(/sahara_night.jpeg) 50% 60%/cover; }
+  .pass { width: 100%; max-width: 400px; border-radius: 22px; overflow: hidden; color: #0f172a; background: #fff; box-shadow: 0 24px 60px rgb(0 0 0 / .55); }
+  .pass .hd { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; color: #fff; background: linear-gradient(135deg, #4f46e5, #0ea5e9); }
+  .pass .hd .brand { color: #fff; } .pass .hd span { font: 700 11px 'Space Mono', monospace; letter-spacing: .12em; opacity: .85; }
+  .pass .bd { padding: 18px 20px 6px; }
+  .pass .route { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 14px; }
+  .pass .route b { font: 700 26px 'Space Mono', monospace; } .pass .route small { display: block; font-size: 10.5px; color: #64748b; }
+  .pass .route .plane { flex: 1; text-align: center; color: #6366f1; position: relative; }
+  .pass .route .plane::before { content: ''; position: absolute; left: 10px; right: 10px; top: 50%; border-top: 2px dashed #c7d2fe; z-index: 0; }
+  .pass .route .plane span { position: relative; background: #fff; padding: 0 6px; font-size: 20px; }
+  .pass .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; font-size: 13px; }
+  .pass .fields small { display: block; font: 700 9.5px 'Space Mono', monospace; letter-spacing: .1em; color: #94a3b8; }
+  .pass .cut { position: relative; margin: 16px 0 0; border-top: 2px dashed #e2e8f0; }
+  .pass .cut::before, .pass .cut::after { content: ''; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: #0b1026; } .pass .cut::before { left: -31px; } .pass .cut::after { right: -31px; }
+  .pass .ft { padding: 6px 20px 18px; text-align: center; }
+  .pass .btns button.y { background: linear-gradient(135deg, #4f46e5, #0ea5e9); color: #fff; } .pass .btns button.n { background: #f1f5f9; color: #334155; }
+  .pass small.note2 { font-size: 11.5px; color: #64748b; } .pass h2 { margin: 0 0 6px; font-size: 20px; } .pass p { font-size: 13.5px; margin: 6px 0; color: #334155; } .pass ul { font-size: 13px; color: #334155; }
+  .stamp { display: inline-block; margin: 6px 0 2px; padding: 4px 14px; border: 3px solid currentColor; border-radius: 8px; font: 700 18px 'Space Mono', monospace; letter-spacing: .1em; transform: rotate(-8deg); }
+  .bars { height: 34px; margin: 10px auto 0; max-width: 220px; background: repeating-linear-gradient(90deg, #0f172a 0 2px, transparent 2px 4px, #0f172a 4px 5px, transparent 5px 8px); opacity: .8; }
+
+  /* 4 · enveloppe qui s'ouvre */
+  .s4 { background: linear-gradient(160deg, #312e81, #831843); }
+  .env { position: relative; width: 100%; max-width: 380px; }
+  .env .letter { position: relative; z-index: 1; margin: 0 14px; padding: 26px 22px 20px; border-radius: 16px; background: #fff; color: #1e1b4b; text-align: center; box-shadow: 0 16px 40px rgb(0 0 0 / .35); animation: rise .9s .3s cubic-bezier(.2, .9, .2, 1.1) both; }
+  @keyframes rise { from { transform: translateY(120px); opacity: 0; } }
+  .env .pocket { position: relative; z-index: 2; height: 90px; margin-top: -54px; border-radius: 0 0 18px 18px; background: linear-gradient(160deg, #f9a8d4, #c084fc); box-shadow: 0 16px 40px rgb(0 0 0 / .35);
+    clip-path: polygon(0 0, 50% 55%, 100% 0, 100% 100%, 0 100%); }
+  .env .seal { position: absolute; z-index: 3; left: 50%; bottom: 40px; width: 44px; height: 44px; margin-left: -22px; border-radius: 50%; display: grid; place-items: center; background: #7c3aed; box-shadow: 0 4px 10px rgb(0 0 0 / .3); font-size: 20px; }
+  .env h2 { margin: 4px 0 6px; font-size: 22px; } .env p { margin: 6px 0; font-size: 14px; color: #475569; } .env .big { font-size: 42px; line-height: 1; }
+  .env .btns button.y { background: linear-gradient(135deg, #7c3aed, #ec4899); color: #fff; } .env .btns button.n { background: #f5f3ff; color: #6d28d9; }
+  .env small { font-size: 11.5px; color: #94a3b8; } .env ul { font-size: 13px; color: #475569; }
+  .env .brand { color: #1e1b4b; margin-bottom: 6px; }
+  .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .confetti i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; animation: fall 2.6s linear infinite; }
+  @keyframes fall { to { transform: translateY(620px) rotate(540deg); } }
+</style>
+</head>
+<body>
+<h1 class="top">La page « C’est bien toi ? »</h1>
+<p class="lead">C’est la page qui s’ouvre quand on clique sur le lien de l’email. Elle a 4 moments : la question, « oui c’est moi », « non ce n’était pas moi » et le lien expiré. Choisis un moment ci-dessous, et tu peux cliquer sur les boutons des maquettes</p>
+<div class="states" id="st"></div>
+<div class="grid" id="g"></div>
+<script>
+const NAME = 'Morayo', MAIL = 'm***@gmail.com'
+const STATES = [['ask', '✉️ La question'], ['ok', '🎉 Oui, c’est moi'], ['no', '🛡️ Ce n’était pas moi'], ['bad', '⏳ Lien expiré']]
+let state = 'ask'
+const brand = '<div class="brand"><img src="/logo.svg" alt="">Morex</div>'
+const confetti = () => `<div class="confetti">${Array.from({ length: 26 }, (_, i) => `<i style="left:${(i * 37) % 100}%;background:${['#fde047', '#f472b6', '#a78bfa', '#38bdf8', '#34d399'][i % 5]};animation-delay:${(i % 9) * .28}s"></i>`).join('')}</div>`
+const tips = ['Ajoute tes premiers widgets : météo, actus, ton GitHub', 'Mets ta date de naissance dans ton profil pour ton horoscope', 'Connecte GitHub ou Microsoft pour plus de widgets']
+const safe = ['Personne ne peut utiliser ton adresse sans cliquer sur ce lien', 'On ne t’enverra plus d’email d’inscription pendant 24 h', 'Si tu voulais un compte : réinscris-toi demain, ou passe par GitHub / Microsoft']
+const li = (a) => `<ul>${a.map((x) => `<li>${x}</li>`).join('')}</ul>`
+const btn = (y, n) => `<div class="btns"><button class="y" data-go="ok">${y}</button>${n ? `<button class="n" data-go="no">${n}</button>` : ''}</div>`
+const btnGo = (label) => `<div class="btns"><button class="y" data-go="ask">${label}</button></div>`
+
+const D = [
+  ['s1', 'Petit mot', 'le même carnet crème que l’email, avec son scotch rose et l’écriture à la main : l’email et la page se suivent comme une seule histoire', {
+    ask: `<div class="note">${brand}<h2>Coucou ${NAME} !</h2><p>Quelqu’un a utilisé <b>${MAIL}</b> pour créer un compte Morex.</p><p class="hand">C’était toi ? ✿</p>${btn('Oui, c’est moi 💜', 'Non, ce n’était pas moi')}<small>Rien ne se passe tant que tu n’as pas choisi · lien valable 24 h</small></div>`,
+    ok: `<div class="note">${brand}<h2>Bienvenue à bord ! 🎉</h2><p>Ton compte est confirmé, tu peux te connecter.</p>${btnGo('Me connecter')}<p class="hand">Pour bien commencer :</p>${li(tips)}<div class="sig">L’équipe Morex ♡</div></div>`,
+    no: `<div class="note">${brand}<h2>C’est noté 🛡️</h2><p>Aucun compte n’a été créé et la demande a été supprimée.</p>${li(safe)}<div class="sig">Tu peux fermer cette page ♡</div></div>`,
+    bad: `<div class="note">${brand}<h2>Oups, ce lien a fané 🥀</h2><p>Il est déjà utilisé ou a plus de 24 heures.</p><p class="hand">Pas grave, on recommence ?</p>${btnGo('M’inscrire à nouveau')}</div>`,
+  }],
+  ['s2', 'Petite planète', 'la carte en verre sur la photo d’accueil, avec la planète qui flotte : exactement le style des messages de la page de connexion', {
+    ask: `<div class="glass">${brand}<div class="planet fl">📬</div><h2>C’est bien toi ?</h2><div class="who"><i>M</i><span><b>${NAME}</b><br>${MAIL}</span></div><p>Ce compte Morex attend ta confirmation.</p>${btn('Oui, c’est moi', 'Non, ce n’était pas moi')}<small>Rien ne se passe tant que tu n’as pas choisi · lien valable 24 h</small></div>`,
+    ok: `<div class="glass">${brand}<div class="planet fl">🚀</div><h2>Décollage réussi, ${NAME} !</h2><p>Ton compte est confirmé.</p>${btnGo('Me connecter')}${li(tips)}</div>`,
+    no: `<div class="glass">${brand}<div class="planet fl">🛡️</div><h2>C’est réglé</h2><p>Aucun compte n’a été créé, la demande a été supprimée.</p>${li(safe)}<small>Tu peux fermer cette page</small></div>`,
+    bad: `<div class="glass">${brand}<div class="planet fl">☄️</div><h2>Ce lien s’est perdu dans l’espace</h2><p>Il est déjà utilisé ou a plus de 24 heures. Réinscris-toi avec la même adresse : un nouvel email partira.</p>${btnGo('M’inscrire à nouveau')}</div>`,
+  }],
+  ['s3', 'Carte d’embarquement', 'un billet « Morex Airlines » au nom de la personne : dire oui, c’est embarquer ; le billet est tamponné à chaque réponse', {
+    ask: `<div class="pass"><div class="hd">${brand}<span>BOARDING PASS</span></div><div class="bd"><div class="route"><div><b>MAIL</b><small>Ta boîte</small></div><div class="plane"><span>✈️</span></div><div style="text-align:right"><b>MRX</b><small>Ton dashboard</small></div></div><div class="fields"><div><small>PASSAGER</small>${NAME}</div><div><small>EMAIL</small>${MAIL}</div><div><small>VALIDITÉ</small>24 heures</div><div><small>STATUT</small>En attente</div></div></div><div class="cut"></div><div class="ft"><h2>C’est bien toi ?</h2>${btn('Oui, j’embarque ✈️', 'Non, ce n’était pas moi')}<small class="note2">Rien ne se passe tant que tu n’as pas choisi</small></div></div>`,
+    ok: `<div class="pass"><div class="hd">${brand}<span>BOARDING PASS</span></div><div class="ft" style="padding-top:18px"><div class="stamp" style="color:#16a34a">EMBARQUÉ</div><h2 style="margin-top:10px">Bon voyage, ${NAME} !</h2><p>Ton compte est confirmé.</p>${btnGo('Me connecter')}${li(tips)}<div class="bars"></div></div></div>`,
+    no: `<div class="pass"><div class="hd">${brand}<span>BOARDING PASS</span></div><div class="ft" style="padding-top:18px"><div class="stamp" style="color:#dc2626">ANNULÉ</div><h2 style="margin-top:10px">Vol annulé</h2><p>Aucun compte n’a été créé, la demande a été supprimée.</p>${li(safe)}</div></div>`,
+    bad: `<div class="pass"><div class="hd">${brand}<span>BOARDING PASS</span></div><div class="ft" style="padding-top:18px"><div class="stamp" style="color:#d97706">EXPIRÉ</div><h2 style="margin-top:10px">Ce billet n’est plus valable</h2><p>Il est déjà utilisé ou a plus de 24 heures. Réinscris-toi pour recevoir un nouveau billet.</p>${btnGo('M’inscrire à nouveau')}</div></div>`,
+  }],
+  ['s4', 'Enveloppe qui s’ouvre', 'une enveloppe rose avec un sceau violet : la lettre sort toute seule de l’enveloppe quand la page s’ouvre', {
+    ask: `<div class="env"><div class="letter">${brand}<div class="big">💌</div><h2>Coucou ${NAME} !</h2><p>Quelqu’un a utilisé <b>${MAIL}</b> pour créer un compte Morex. C’était toi ?</p>${btn('Oui, c’est moi', 'Non, ce n’était pas moi')}<small>Lien valable 24 h</small></div><div class="pocket"></div><div class="seal">✦</div></div>`,
+    ok: `<div class="env"><div class="letter">${brand}<div class="big">🎉</div><h2>Bienvenue, ${NAME} !</h2><p>Ton compte est confirmé.</p>${btnGo('Me connecter')}${li(tips)}</div><div class="pocket"></div><div class="seal">✦</div></div>`,
+    no: `<div class="env"><div class="letter">${brand}<div class="big">🛡️</div><h2>Lettre déchirée</h2><p>Aucun compte n’a été créé, la demande a été supprimée.</p>${li(safe)}</div><div class="pocket"></div><div class="seal">✦</div></div>`,
+    bad: `<div class="env"><div class="letter">${brand}<div class="big">⏳</div><h2>Cette lettre a expiré</h2><p>Elle est déjà utilisée ou a plus de 24 heures. Réinscris-toi : une nouvelle lettre partira.</p>${btnGo('M’inscrire à nouveau')}</div><div class="pocket"></div><div class="seal">✦</div></div>`,
+  }],
+]
+function draw() {
+  document.getElementById('st').innerHTML = STATES.map(([k, l]) => `<button class="${k === state ? 'on' : ''}" data-s="${k}">${l}</button>`).join('')
+  document.getElementById('g').innerHTML = D.map(([cls, n, d, v], i) => `<div class="opt"><div class="stage ${cls}">${state === 'ok' ? confetti() : ''}${v[state]}</div><p><b>${i + 1} · ${n}</b> : ${d}</p></div>`).join('')
+}
+document.addEventListener('click', (e) => {
+  const s = e.target.closest('[data-s]'), g = e.target.closest('[data-go]')
+  if (s) state = s.dataset.s
+  else if (g) state = g.dataset.go
+  else return
+  draw()
+})
+draw()
+</script>
+</body>
+</html>

@@ -17,7 +17,7 @@ your dashboard.
 
 ## Overview
 
-A customizable web dashboard: users sign up, subscribe to services (GitHub, Steam, weather, RSS, ...),
+A customizable web dashboard: users sign up, subscribe to services (GitHub, weather, RSS, YouTube, ...),
 then build their own dashboard by adding, configuring, and moving widgets. Each widget refreshes
 automatically at a user-defined interval.
 
@@ -29,14 +29,15 @@ automatically at a user-defined interval.
 | Market data | No | ✅ Done | `exchange_rate` (base, quote, days — fiat pairs like EUR→USD via ECB, crypto via CoinGecko; returns its history), `price_history` (asset, days, currency) |
 | GitHub | OAuth 2.0 | ✅ Done | `recent_commits` (repo, number), `open_issues` (repo, number), `repo_stats` (repo), `daily_changes` (repo, hours — stand-up of the last hours) |
 | World clock | No | ✅ Done | `world_clock` (homeTimezone, cities) — pure timezone math, no external API |
-| Weather | No | ✅ Done | `forecast` (city) — Open-Meteo, no key |
+| Weather | No | ✅ Done | `current_weather`, `daily_forecast`, `hourly_forecast` (city, unit, days/hours) — Open-Meteo, no key |
+| YouTube | Server API key (`YOUTUBE_API_KEY`) | ✅ Done | `channel_stats`, `latest_videos`, `trending`, `video_stats` |
 | Calendar | No (secret iCal URL) | ✅ Done | `upcoming_events` (url, days, number) — Google Calendar's secret iCal address or any `.ics` |
 | My Epitech | Optional ("Connect with My Epitech", OIDC) | ✅ Done* | `planning` (calendarToken), `profile` — *login needs Epitech staff to declare the app, see API.md |
 | Custom API | No | ✅ Done | `json_value`, `json_list` — any public JSON API, chosen with a URL + path |
-| Steam | API key | ⏳ Not started | — |
+| Well-being | No | ✅ Done | `daily_quote`, `did_you_know`, `horoscope` (sign) — written in EN/FR/ES, horoscope labelled "for fun" |
 | Maps / Cinema | API key | ⏳ Not started | — |
 
-**Beyond widgets** (all documented in [API.md](./API.md)): optional **AI** (article recaps with images,
+**Beyond widgets** (all documented in [API.md](./API.md)): a **Well-being** widget group (quote of the day, "did you know?", horoscope), an "Is this you?" **confirmation page** with a "not me" option, **sign-in with a school Microsoft account**, a **help assistant** that explains the app, each service and the technical vocabulary in plain words (English/French/Spanish, works with or without AI), optional **AI** (article recaps with images,
 per-widget insights, a daily brief, a natural-language widget assistant — off unless `AI_PROVIDER`/`AI_API_KEY`
 are set, opt-in per widget, never touches the journal), **threshold alerts** (in-app + email), **value
 history** for charts, a **read-only public share link**, and **SSRF protection** on every user-supplied URL
@@ -48,28 +49,41 @@ server at `GET /about.json` — this table can drift, that endpoint can't.
 
 ## Install & run
 
-```bash
-cp .env.example .env   # fill in secrets (SMTP if not using the bundled Mailhog, GitHub OAuth, token encryption key...)
-docker compose build
-docker compose up
-```
-
-The server listens on `http://localhost:8080`. Quick check:
+You only need **Docker** (with Compose v2). From a fresh clone:
 
 ```bash
-curl http://localhost:8080/about.json
+docker compose up --build
 ```
 
-Then, in a separate terminal, run the frontend:
+That is all: it builds and starts the API, the database, a local mail catcher and the web app, runs the
+database migrations, and generates the encryption key it needs. No `.env` file is required.
+
+| What | Where |
+|---|---|
+| Web app | http://localhost:5173 |
+| API (and `GET /about.json`) | http://localhost:8080 |
+| Interactive API docs | http://localhost:8080/docs |
+| Mail catcher (confirmation emails land here by default) | http://localhost:8025 |
+
+Quick check: `curl http://localhost:8080/about.json`. To try it: open the web app, register, open the
+confirmation email in the mail catcher, click its link, log in.
+
+**Optional features** are switched on by copying `.env.example` to `.env` and filling in what you want,
+then `docker compose up -d --force-recreate server`: real SMTP delivery, "Sign in with GitHub", "Connect
+with My Epitech", the AI features (free providers work), the YouTube widgets (`YOUTUBE_API_KEY`) and
+your own `TOKEN_ENCRYPTION_KEY` (otherwise one is generated and kept in a Docker volume — set your own
+for anything beyond local use, and never change it once data exists). Confirmation links use `APP_URL`
+(`http://localhost:8080`): they only work on the machine running the server unless you set a public URL.
+
+**Working on the frontend with hot reload** (instead of the containerised build):
 
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev      # http://localhost:5173 — stop the `frontend` container first, it uses the same port
 ```
 
-Opens on `http://localhost:5173` — see [FRONTEND.md](./FRONTEND.md) for what's built there
-(routes, the widget dashboard, how its dev proxy talks to the backend) and what isn't yet.
+See [FRONTEND.md](./FRONTEND.md) for what's built there (routes, the dev proxy, what isn't yet).
 
 ## How to use it
 
@@ -188,6 +202,7 @@ important, what isn't and why.
 - [x] Weather service (Open-Meteo)
 - [x] Backend: AI enrichment, calendar/Epitech/custom-API services, alerts, history, share link, My Epitech OIDC, SSRF guard (see API.md; frontend adaptation checklist at the end of it)
 - [ ] Get the app declared by Epitech staff (OIDC client id/secret) — needed before "Connect with My Epitech" works
-- [ ] Services: Steam, Maps/Cinema
+- [x] Backend: "Is this you?" confirmation page, birth date at sign-up, Well-being widgets (quote of the day, did you know, horoscope), Microsoft sign-in (see API.md)
+- [ ] Services: Maps/Cinema
 - [ ] Frontend: apply the Morex mockup (`frontend/public/mockups.html`) — Morayo; the backend side is done, see "Backing the Morex mockup" in [API.md](./API.md)
 - [ ] Frontend: Terms of Service/Privacy Policy acceptance, in-app docs page

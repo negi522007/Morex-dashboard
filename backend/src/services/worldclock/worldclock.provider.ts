@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { iso2Of, resolveZone } from './places.util';
 import { ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
 
 interface ZonedNow {
@@ -51,8 +52,10 @@ const worldClock: WidgetDefinition = {
   name: 'world_clock',
   description: "Show the current time in a set of cities relative to the user's own timezone",
   params: [
-    { name: 'homeTimezone', type: 'string', required: true },
-    { name: 'cities', type: 'string', required: true },
+    // Names, cities or countries are resolved to IANA zones (also server-side). optionsUrl feeds a
+    // search-as-you-type dropdown: GET <optionsUrl>?q=…&lang=fr → [{ value, label, kind, country, offset }].
+    { name: 'homeTimezone', type: 'string', required: true, optionsUrl: '/services/worldclock/places' },
+    { name: 'cities', type: 'string', required: true, optionsUrl: '/services/worldclock/places', multiple: true },
   ],
   async fetchData(config) {
     const homeTimezone = String(config.homeTimezone ?? '');
@@ -60,24 +63,33 @@ const worldClock: WidgetDefinition = {
     if (!homeTimezone || !citiesRaw) {
       throw new ServiceFetchError('worldclock', 'world_clock', 'Both "homeTimezone" and "cities" parameters are required');
     }
-    const cityZones = citiesRaw
+    const cityInputs = citiesRaw
       .split(',')
       .map((tz) => tz.trim())
       .filter(Boolean);
-    if (cityZones.length === 0) {
+    if (cityInputs.length === 0) {
       throw new ServiceFetchError('worldclock', 'world_clock', '"cities" must contain at least one IANA timezone');
     }
 
-    const now = new Date();
-    const home = zonedNow(now, homeTimezone, 'world_clock');
+    const resolve = (typed: string) => {
+      const zone = resolveZone(typed);
+      if (!zone) throw new ServiceFetchError('worldclock', 'world_clock', `Unknown place "${typed}"`);
+      // A typed name ("Cotonou") is kept as the label; a raw zone id is prettified.
+      return { timeZone: zone, label: zone === typed ? labelFor(zone) : typed, iso2: iso2Of(typed, zone) };
+    };
 
-    const cities = cityZones.map((timeZone) => {
+    const now = new Date();
+    const homePlace = resolve(homeTimezone);
+    const home = zonedNow(now, homePlace.timeZone, 'world_clock');
+
+    const cities = cityInputs.map(resolve).map(({ timeZone, label, iso2 }) => {
       const z = zonedNow(now, timeZone, 'world_clock');
       const hoursDiff = Math.round(((z.epochMinutes - home.epochMinutes) / 60) * 2) / 2;
       const dayOffset = z.dateKey === home.dateKey ? 0 : z.dateKey > home.dateKey ? 1 : -1;
       return {
         timezone: timeZone,
-        label: labelFor(timeZone),
+        label,
+        iso2,
         hour: z.hour,
         minute: z.minute,
         isDay: z.hour >= 6 && z.hour < 18,
@@ -87,7 +99,7 @@ const worldClock: WidgetDefinition = {
     });
 
     return {
-      home: { timezone: homeTimezone, hour: home.hour, minute: home.minute, isDay: home.hour >= 6 && home.hour < 18 },
+      home: { timezone: homePlace.timeZone, label: homePlace.label, iso2: homePlace.iso2, hour: home.hour, minute: home.minute, isDay: home.hour >= 6 && home.hour < 18 },
       cities,
     };
   },

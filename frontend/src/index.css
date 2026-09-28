@@ -1,1 +1,64 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+
+  --animate-fade-up: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-drift: drift 40s ease-in-out infinite alternate;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes drift {
+    from {
+      transform: scale(1.05) translate3d(0, 0, 0);
+    }
+    to {
+      transform: scale(1.15) translate3d(-1.5%, -2%, 0);
+    }
+  }
+}
+
+/* The little planet of the login / sign-up messages floats gently */
+@keyframes planet {
+  50% {
+    transform: translateY(-6px) rotate(-6deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Chrome's autofill paints its own light background over the input, which
+   hid the white text and the password eye. Keep the glass look instead. */
+.glass-input:-webkit-autofill,
+.glass-input:-webkit-autofill:hover,
+.glass-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
+  -webkit-box-shadow: 0 0 0 1000px rgb(49 46 129 / 0.55) inset;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* The sign-up "look for this message" sky: stars link up one by one and draw an envelope */
+.sent-sky { display: block; width: 240px; max-width: 100%; margin: 0 auto 14px; overflow: visible; }
+.sent-sky line { stroke: rgb(196 181 253 / .85); stroke-width: 1.5; stroke-dasharray: 200; stroke-dashoffset: 200; filter: drop-shadow(0 0 3px #a78bfa); animation: skyDraw 6s ease-in-out infinite; }
+.sent-sky .star { fill: #fff; filter: drop-shadow(0 0 5px #fff); animation: skyTwinkle 2.4s ease-in-out infinite; }
+.sent-sky .dust { fill: #fff; animation: skyTwinkle 3s ease-in-out infinite; }
+@keyframes skyDraw { 0% { stroke-dashoffset: 200; opacity: 1; } 45%, 85% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+@keyframes skyTwinkle { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .sent-sky line { animation: none; stroke-dashoffset: 0; } .sent-sky .star, .sent-sky .dust { animation: none; } }

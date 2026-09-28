@@ -50,11 +50,11 @@ describe('TimerService', () => {
     expect(fetchDataMock).toHaveBeenCalledWith({ x: 1 }, undefined);
     expect(prisma.widgetInstance.update).toHaveBeenCalledWith({
       where: { id: 'w1' },
-      data: { cachedData: { ok: true }, lastRefreshedAt: expect.any(Date) },
+      data: { cachedData: { ok: true }, lastRefreshedAt: expect.any(Date), lastError: null },
     });
   });
 
-  it('keeps updating lastRefreshedAt but leaves cachedData alone when fetchData throws', async () => {
+  it('keeps updating lastRefreshedAt but leaves cachedData alone when fetchData throws, and records the exact error', async () => {
     fetchDataMock.mockRejectedValue(new Error('boom'));
     prisma.$queryRaw.mockResolvedValue([
       { id: 'w1', userId: 'u1', serviceName: 'test-service', widgetName: 'widget-a', config: {} },
@@ -64,7 +64,7 @@ describe('TimerService', () => {
 
     expect(prisma.widgetInstance.update).toHaveBeenCalledWith({
       where: { id: 'w1' },
-      data: { lastRefreshedAt: expect.any(Date) },
+      data: { lastRefreshedAt: expect.any(Date), lastError: 'boom' },
     });
   });
 
@@ -78,7 +78,7 @@ describe('TimerService', () => {
     expect(fetchDataMock).not.toHaveBeenCalled();
     expect(prisma.widgetInstance.update).toHaveBeenCalledWith({
       where: { id: 'w1' },
-      data: { lastRefreshedAt: expect.any(Date) },
+      data: { lastRefreshedAt: expect.any(Date), lastError: expect.stringContaining('does-not-exist/nope') },
     });
   });
 
@@ -107,6 +107,40 @@ describe('TimerService', () => {
     await service.handleTick();
 
     expect(fetchDataMock).toHaveBeenCalledWith({}, { credentials: { apiKey: 'xyz' } });
+  });
+
+  it('stops a widget whose account was disconnected: no fetch, and its data is cleared', async () => {
+    providers[0].requiresAuth = true;
+    prisma.oAuthAccount.findFirst.mockResolvedValue(null);
+    prisma.serviceSubscription.findUnique.mockResolvedValue(null);
+    prisma.$queryRaw.mockResolvedValue([
+      { id: 'w1', userId: 'u1', serviceName: 'test-service', widgetName: 'widget-a', config: {} },
+    ]);
+
+    await service.handleTick();
+
+    expect(fetchDataMock).not.toHaveBeenCalled();
+    expect(prisma.widgetInstance.update).toHaveBeenCalledWith({
+      where: { id: 'w1' },
+      data: { cachedData: expect.anything(), lastRefreshedAt: expect.any(Date), lastError: expect.stringContaining('not connected anymore') },
+    });
+  });
+
+  it('refreshes several widgets at the same time, so a slow one does not hold up the others', async () => {
+    let inFlight = 0, maxInFlight = 0;
+    fetchDataMock.mockImplementation(async () => {
+      inFlight++; maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((r) => setTimeout(r, 20));
+      inFlight--;
+      return { ok: true };
+    });
+    prisma.$queryRaw.mockResolvedValue(
+      Array.from({ length: 12 }, (_, i) => ({ id: `w${i}`, userId: 'u1', serviceName: 'test-service', widgetName: 'widget-a', config: {} })),
+    );
+    await service.handleTick();
+    expect(fetchDataMock).toHaveBeenCalledTimes(12);
+    expect(maxInFlight).toBeGreaterThan(1);
+    expect(maxInFlight).toBeLessThanOrEqual(8);
   });
 
   it('skips a tick that starts while the previous one is still running', async () => {

@@ -72,6 +72,37 @@ inbox, check Mailhog first — the email is there. To get real delivery instead,
 provider in `.env` (see [CONTRIBUTING.md](./CONTRIBUTING.md#sending-real-confirmation-emails-not-just-to-mailhog))
 — and recreate the `server` container afterward, since env vars are only read at container start.
 
+## The confirmation email was "sent" from my Gmail, but the other person never got it / can't confirm
+
+Three separate causes, in order of likelihood:
+
+1. **The link points to `localhost`.** The mail contains `APP_URL` + `/auth/confirm?token=…`, and `APP_URL`
+   defaults to `http://localhost:8080`. On someone else's device that is *their own* machine, so the link
+   fails even though the mail arrived. `localhost` only works for whoever runs the server. Fix, in order of
+   how far away the other person is:
+   - **Same Wi-Fi/network (a phone, another laptop on your router)** — the simplest fix: find your
+     machine's LAN IP (`ip addr` on Linux/macOS, `ipconfig` on Windows — something like `192.168.1.23`),
+     set `APP_URL=http://192.168.1.23:8080` **and** `FRONTEND_URL=http://192.168.1.23:5173` in `.env`, then
+     `docker compose up -d --force-recreate server frontend`. Open `http://192.168.1.23:5173` on the other
+     device to use the app itself, or just wait for the confirmation email, its link now works from there
+     too. No code change needed: nothing in the backend is tied to `localhost` (the session cookie has no
+     fixed domain, there is no CORS allow-list restricting the origin). A local firewall blocking incoming
+     connections to 8080/5173 is the most common thing that still stops it working.
+   - **Anyone else, anywhere** — a LAN IP will not reach them: use a deployed URL, or a temporary tunnel to
+     your machine (e.g. `cloudflared tunnel --url http://localhost:8080`, then put that URL in `APP_URL`
+     — and the matching tunnel for the frontend in `FRONTEND_URL` — and recreate both containers).
+2. **It landed in spam.** Mail sent through a personal Gmail account by an unknown app is often filtered.
+   Ask them to check Spam/Promotions and mark it "not spam". The mail now has a plain-text part too,
+   which helps. For real use, send from a proper transactional provider on a domain with SPF/DKIM.
+3. **The address doesn't exist.** Gmail then sends *you* a "Delivery Status Notification" bounce, which is
+   how you recognise this case. The server also logs `SMTP refused …` when the SMTP server rejects a
+   recipient outright (the signup is then rolled back and the API answers `503`); on success it logs
+   `Mail "…" accepted by the SMTP server` — that only proves the SMTP server took it, not that it reached
+   the inbox.
+
+Retrying is safe: an unconfirmed signup no longer blocks the address (it is replaced after 2 minutes, and
+deleted after 24 h) — see API.md, `POST /auth/register`.
+
 ## Registering "succeeds" (`201`) but the confirmation email fails with `550 Invalid syntax in MAIL command`
 
 Almost always a stale `backend/.env` (or root `.env`) — if `.env.example` gained new/changed variables

@@ -22,7 +22,10 @@ import { extname } from 'node:path';
 import { diskStorage } from 'multer';
 import type { Request, Response } from 'express';
 import { AuthService, PublicUser } from './auth.service';
+import { parseBirthDate } from '../common/birth-date.util';
+import { asPageLang, langFromHeader, renderConfirmPage } from './confirm-page';
 import { EpitechOidcService } from './epitech-oidc.service';
+import { MicrosoftOidcService } from './microsoft-oidc.service';
 import { SessionGuard } from './session.guard';
 import { CurrentUser } from './current-user.decorator';
 import { setSessionCookie } from '../common/session-cookie.util';
@@ -40,6 +43,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly config: ConfigService,
     private readonly epitechOidc: EpitechOidcService,
+    private readonly microsoftOidc: MicrosoftOidcService,
   ) {}
 
   @Post('register')
@@ -51,6 +55,7 @@ export class AuthController {
         password: 'at least 8 characters',
         firstName: 'Ada',
         lastName: 'Lovelace',
+        birthDate: '2001-02-28',
       },
     },
   })
@@ -59,7 +64,8 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'An account with this email already exists' })
   @ApiResponse({ status: 503, description: 'Confirmation email failed to send — account was NOT created' })
   async register(
-    @Body() body: { email?: string; password?: string; firstName?: string; lastName?: string },
+    @Body() body: { email?: string; password?: string; firstName?: string; lastName?: string; birthDate?: string },
+    @Req() req: Request,
   ) {
     const { email, password } = this.validateCredentials(body);
     const firstName = body.firstName?.trim();
@@ -70,20 +76,66 @@ export class AuthController {
     if (!lastName) {
       throw new BadRequestException('Last name is required');
     }
-    return this.authService.register(email, password, firstName, lastName);
+    // Optional for now so existing clients keep working; set REQUIRE_BIRTH_DATE=true once the form asks for it.
+    const hasBirthDate = body.birthDate !== undefined && body.birthDate !== null && body.birthDate !== '';
+    if (!hasBirthDate && this.config.get<string>('REQUIRE_BIRTH_DATE') === 'true') {
+      throw new BadRequestException('Date of birth is required');
+    }
+    const birthDate = hasBirthDate ? parseBirthDate(body.birthDate) : null;
+    return this.authService.register(email, password, firstName, lastName, birthDate, langFromHeader(req.headers['accept-language']));
   }
 
+  // The link in the confirmation email. It shows a page that ASKS ("is this you?") and changes nothing:
+  // mail scanners and link previews open links automatically, so a GET must never confirm an account.
   @Get('confirm')
-  @ApiOperation({ summary: 'Confirm an account via the link emailed on register' })
-  @ApiResponse({ status: 200, description: 'Email confirmed, plain text response' })
-  @ApiResponse({ status: 400, description: 'Missing token query param' })
-  @ApiResponse({ status: 401, description: 'Token unknown or expired (24h TTL)' })
-  async confirm(@Query('token') token: string, @Res() res: Response) {
-    if (!token) {
-      throw new BadRequestException('Missing confirmation token');
-    }
-    await this.authService.confirmEmail(token);
-    res.status(200).send('Email confirmed. You can now log in.');
+  @ApiOperation({ summary: 'Page behind the emailed link: "Is this you?" with a confirm and a "not me" button (HTML). Set CONFIRM_PAGE_URL to send users to your own frontend page instead.' })
+  @ApiResponse({ status: 200, description: 'HTML page (also for an invalid/expired token, which shows a "link doesn\'t work" page)' })
+  @ApiResponse({ status: 302, description: 'CONFIRM_PAGE_URL is set: redirect to it with ?token=' })
+  async confirmPage(@Query('token') token: string, @Query('lang') lang: string, @Req() req: Request, @Res() res: Response) {
+    const custom = this.config.get<string>('CONFIRM_PAGE_URL');
+    if (custom) return res.redirect(`${custom}${custom.includes('?') ? '&' : '?'}token=${encodeURIComponent(token ?? '')}`);
+    const pending = await this.authService.previewConfirmation(String(token ?? '')).catch(() => null);
+    const frontendUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+    res.set({ 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' }).type('html').send(
+      renderConfirmPage({
+        lang: lang ? asPageLang(lang) : langFromHeader(req.headers['accept-language']),
+        token: String(token ?? ''),
+        pending,
+        frontendUrl,
+      }),
+    );
+  }
+
+  @Get('confirm/preview')
+  @ApiOperation({ summary: 'JSON: who a confirmation link is for (masked email, first name) — for a custom confirmation page. Changes nothing.' })
+  @ApiResponse({ status: 200, description: '{ email: "a***@gmail.com", firstName, expiresAt }' })
+  @ApiResponse({ status: 401, description: 'Invalid, used or expired link' })
+  preview(@Query('token') token: string) {
+    return this.authService.previewConfirmation(String(token ?? ''));
+  }
+
+  @Post('confirm')
+  @HttpCode(200)
+  @ApiOperation({ summary: '"Yes, it is me": confirm the account behind the token' })
+  @ApiBody({ schema: { example: { token: '64 hex characters from the email link' } } })
+  @ApiResponse({ status: 200, description: '{ status: "confirmed" } — the user can now log in' })
+  @ApiResponse({ status: 401, description: 'Invalid, used or expired link' })
+  async confirm(@Body() body: { token?: string }) {
+    if (!body?.token) throw new BadRequestException('Missing confirmation token');
+    await this.authService.confirmEmail(body.token);
+    return { status: 'confirmed' };
+  }
+
+  @Post('confirm/reject')
+  @HttpCode(200)
+  @ApiOperation({ summary: '"No, it was not me": delete the pending account and stop mailing that address for 24 h' })
+  @ApiBody({ schema: { example: { token: '64 hex characters from the email link' } } })
+  @ApiResponse({ status: 200, description: '{ status: "removed" }' })
+  @ApiResponse({ status: 401, description: 'Invalid, used or expired link' })
+  async reject(@Body() body: { token?: string }) {
+    if (!body?.token) throw new BadRequestException('Missing confirmation token');
+    await this.authService.rejectConfirmation(body.token);
+    return { status: 'removed' };
   }
 
   @Post('login')
@@ -121,12 +173,12 @@ export class AuthController {
   @UseGuards(SessionGuard)
   @ApiCookieAuth('dashboard_session')
   @ApiOperation({ summary: 'Get the currently logged-in user — useful to check auth state on app load' })
-  @ApiResponse({ status: 200, description: 'The current user, plus githubLinked and `epitech` (linked My Epitech profile or null)' })
+  @ApiResponse({ status: 200, description: 'The current user, plus githubLinked and `epitech` and `microsoft` (linked-account profiles or null)' })
   @ApiResponse({ status: 401, description: 'No valid session' })
   async me(@CurrentUser() user: PublicUser) {
     const githubLinked = await this.authService.hasLinkedGithub(user.id);
-    const epitech = await this.epitechOidc.profileOf(user.id);
-    return { ...user, githubLinked, epitech };
+    const [epitech, microsoft] = await Promise.all([this.epitechOidc.profileOf(user.id), this.microsoftOidc.profileOf(user.id)]);
+    return { ...user, githubLinked, epitech, microsoft };
   }
 
   @Patch('me')
@@ -171,6 +223,7 @@ export class AuthController {
       language?: string;
       widgetSkin?: string;
       avatarConfig?: unknown;
+      birthDate?: string | null;
     },
   ) {
     const cookieName = this.config.get<string>('SESSION_COOKIE_NAME') ?? 'dashboard_session';

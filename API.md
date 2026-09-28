@@ -67,19 +67,37 @@ Public. Body:
   "email": "user@example.com",
   "password": "at least 8 characters",
   "firstName": "Ada",
-  "lastName": "Lovelace"
+  "lastName": "Lovelace",
+  "birthDate": "2001-02-28"
 }
 ```
+`birthDate` (`YYYY-MM-DD`, at least 13 years old) is used only to compute the zodiac sign, which pre-selects the horoscope widget (see *Well-being*). It is accepted and validated now, and made mandatory by setting `REQUIRE_BIRTH_DATE=true` on the server once the register form asks for it (`400` otherwise). Accounts created with GitHub / My Epitech / Microsoft have none until the user adds it via `PATCH /auth/me { birthDate }` (`null` removes it).
+
 `firstName`/`lastName` are **required**. Editable later via `PATCH /auth/me` (see below).
+
+**Unconfirmed signups don't lock the address.** If the same email registers again while its previous signup was never confirmed (older than 2 minutes), the old unconfirmed account is replaced by the new one and a fresh confirmation mail is sent (the old link stops working). Unconfirmed accounts are also deleted automatically 24 h after creation, when their link expires. Confirmed accounts are never replaced. So the register form can simply be retried; no special "resend" flow is needed.
 
 | Status | When |
 |---|---|
 | `201` | Created. Body: `{ id, email, firstName, lastName, isAdmin }`. A confirmation email was sent — the account can't log in yet. |
 | `400` | Invalid email format, password under 8 characters, or missing `firstName`/`lastName`. |
-| `409` | An account with this email already exists. |
+| `409` | A confirmed account with this email already exists — **or** an unconfirmed signup for it was created less than 2 minutes ago (message: "A confirmation email was just sent…"; show it as-is, and suggest checking spam). |
 | `503` | The confirmation email failed to send — the account was **not** created (safe to retry). |
 
-### `GET /auth/confirm?token=...`
+### The confirmation email — "Is this you?"
+
+The email contains a link to `GET /auth/confirm?token=…`. It **never confirms by itself** (mail scanners and link previews open links automatically): it shows a styled page that asks *"Is this you?"* with two buttons.
+
+| Route | What |
+|---|---|
+| `GET /auth/confirm?token=&lang=` | The page (HTML, in the browser's language or `?lang=fr|en|es`): question, **"Yes, it's me"** and **"No, it wasn't me"**. Invalid/expired links show a "this link doesn't work" page with a way forward. If `CONFIRM_PAGE_URL` is set, it redirects there instead (`?token=` appended) so a React page can replace it. |
+| `GET /auth/confirm/preview?token=` | JSON `{ email: "a***@gmail.com", firstName, expiresAt }` for a custom page. Changes nothing. `401` if invalid/used/expired. |
+| `POST /auth/confirm` `{ token }` | **Yes, it's me.** → `{ status: "confirmed" }`; the user can log in. `401` if invalid. |
+| `POST /auth/confirm/reject` `{ token }` | **No, it wasn't me.** Deletes the pending account and blocks that address from password sign-ups for 24 h (so nobody can keep mailing it). Never touches an already-confirmed account. → `{ status: "removed" }`. |
+
+After *yes* the page offers "Sign in" (→ `FRONTEND_URL/login`) and first-step tips; after *no* it explains nothing was activated, that no more sign-up mail will be sent for 24 h, and what to do next. `POST /auth/register` answers `409` with a clear message while an address is blocked.
+
+### `GET /auth/confirm?token=...` (legacy note)
 
 Public — the link emailed on register. Plain-text response, not JSON.
 
@@ -117,7 +135,7 @@ Public. Body:
 
 | Status | When |
 |---|---|
-| `200` | `{ id, email, firstName, lastName, isAdmin, createdAt, bio, theme, language, widgetSkin, avatarConfig, avatarPhotoUrl, githubLinked, epitech }` for the current user. `epitech` is `null` or `{ login, name, email, campus, promotion, cursus, groups[] }` (see *My Epitech* below). |
+| `200` | `{ id, email, firstName, lastName, isAdmin, createdAt, bio, theme, language, widgetSkin, avatarConfig, avatarPhotoUrl, githubLinked, epitech }` for the current user. `epitech` is `null` or `{ login, name, email, campus, promotion, cursus, groups[] }` (see *My Epitech* below); `microsoft` is `null` or `{ name, email, tenant }`; `birthDate` is `"YYYY-MM-DD"` or `null` and `zodiac` (`aries`…`pisces`) is derived from it. |
 | `401` | No valid session. |
 
 `githubLinked` is the only way the frontend can know whether GitHub is connected — there's no other
@@ -185,7 +203,11 @@ to GitHub's consent screen.
 
 ### `DELETE /auth/github`
 
-🔒 Session required. Unlinks the current user's GitHub account.
+🔒 Session required. Unlinks the current user's GitHub account. Also revokes the grant on GitHub's own
+side (`DELETE /applications/{client_id}/grant`), best-effort — a failure there never blocks the local
+unlink. Without this, GitHub still considered the app authorized for that account, so the next "Connect
+GitHub" click skipped the consent screen and silently reused the same account instead of letting the
+user pick a different one.
 
 | Status | When |
 |---|---|
@@ -257,6 +279,7 @@ List the current user's widget instances (for rendering the dashboard).
   "decoration": null,
   "lastRefreshedAt": "2026-09-17T22:32:49.701Z",
   "cachedData": [{ "title": "...", "link": "...", "publishedAt": "...", "image": null, "summary": null, "feedTitle": "..." }],
+  "lastError": null,
   "aiEnabled": false,
   "insight": null,
   "insightAt": null,
@@ -278,11 +301,29 @@ List the current user's widget instances (for rendering the dashboard).
 | **new** `calendar/upcoming_events` | `{ events: [{ title, start, end, allDay, location }], generatedAt }` — params `url` (**secret**: a Google Calendar "secret address in iCal format", or any `.ics`/`webcal://` link), `days` (default 14, max 60), `number` (default 8, max 30). `start`/`end` are ISO instants; all-day events start at 00:00 UTC of their date. Recurring events are expanded. **Private widget: cannot be shared.** |
 | **new** `epitech/planning` | same shape as the calendar — param `calendarToken` (**secret**, the token from My Epitech → calendar link), `days`, `number`. **Private, cannot be shared.** |
 | **new** `epitech/profile` | `{ login, name, email, campus, promotion, cursus, groups[] }` — no params; needs a linked My Epitech account (`needsAccount`, see below). Private. |
-| **new** `custom_api/json_value` | `{ label, unit, value, fetchedAt }` — params `url` (**secret**), `path` (e.g. `data.items[0].price`), `label`, `unit`. Public JSON APIs only (no auth headers are ever sent). Numeric values feed history and alerts. |
-| **new** `custom_api/json_list` | `{ items: [{ title, subtitle }], fetchedAt }` — params `url` (**secret**), `path` (to an array), `titleField`, `subtitleField`, `number`. |
-| `weather/forecast` | `{ city, country, temperature, weatherCode, days: [{ date, weatherCode, min, max }] }` — `city` param, geocoded and forecast through Open-Meteo (no key); `days` is the next five days; `weatherCode` is a WMO code |
+| **new** `custom_api/json_value` | `{ label, unit, value, fetchedAt }` — params `url` (**secret**), `path` (optional, e.g. `data.items[0].price`; empty = the response itself is the value), `label`, `unit`. Public JSON APIs only (no auth headers are ever sent). Numeric values feed history and alerts. |
+| **new** `custom_api/json_list` | `{ items: [{ title, subtitle }], fetchedAt }` — params `url` (**secret**), `path` (optional, to an array; empty = the response itself is the list), `titleField` (required), `subtitleField`, `number`. |
+| `weather/current_weather` | `{ city, country, unit, temperature, feelsLike, humidity, windKmh, condition, isDay, high, low }` — params `city` (required), `unit` (`celsius` default \| `fahrenheit`). Open-Meteo, no key. |
+| `weather/daily_forecast` | `{ city, country, unit, now: { temperature, condition }, days: [{ date, condition, min, max, rainChance }] }` — params `city`, `days` (default 5, max 16), `unit`. `days` are the days *after* today. |
+| `weather/hourly_forecast` | `{ city, country, unit, hours: [{ time, temperature, condition, rainChance }] }` — params `city`, `hours` (default 12, max 48), `unit`. `time` is local to the city. |
+| `youtube/channel_stats` | `{ title, handle, avatar, subscribers, views, videos, url }` — param `channel` (`@handle`, channel id `UC…` or channel URL). `subscribers` is `null` when the owner hides it. |
+| `youtube/latest_videos` | `[video]` — params `channel`, `number` (default 5, max 25) |
+| `youtube/trending` | `[video]` — params `country` (2 letters, e.g. `FR`), `number` |
+| `youtube/video_stats` | `video` — param `video` (id or any youtube.com / youtu.be link) |
+
+`condition` (weather) is one of `clear`, `partly_cloudy`, `cloudy`, `fog`, `drizzle`, `rain`, `snow`, `thunderstorm` — map each to an icon + translated label; the old raw `weatherCode` is gone. A `video` is `{ id, title, channel, thumbnail, publishedAt, views, likes, comments, url }` (counts are numbers, `null` if hidden). **YouTube needs `YOUTUBE_API_KEY` on the server** (`.env`); without it the widgets can be created but stay empty (`cachedData: null`, reason in the server log). The daily YouTube quota is shared by all users, so keep refresh rates reasonable (≥ 5 min).
+
+> **Breaking change since the first weather version:** `weather/forecast` no longer exists (creating it returns `400 Unknown widget`). Widgets already stored under that name simply stop refreshing; delete and recreate them as `current_weather` / `daily_forecast`.
 | `worldclock/world_clock` | `{ home, cities: [...] }` — `homeTimezone` and comma-separated `cities` params, IANA names |
-`lastRefreshedAt`/`cachedData` are `null` until the scheduler's first tick after creation (up to 15s).
+`lastRefreshedAt`/`cachedData` are `null` until the scheduler's first tick after creation (up to 5s).
+
+`lastError` is the exact reason the *last* refresh failed (e.g. `"GitHub API returned HTTP 404"`,
+`"No articles found at this address — check it is a real RSS/Atom feed link"`,
+`"github is not connected anymore — connect it again to resume this widget"`), or `null` once a refresh
+succeeds. `cachedData` keeps the last known-good value while `lastError` is set (stale data, not wiped) —
+show both: the stale content plus a small error note, instead of an indefinite "waiting for data" state.
+A widget that has never once succeeded has `cachedData: null` and `lastError` set — render the error, not
+a generic empty/loading placeholder.
 
 #### Secret parameters (`secret: true` in `/about.json`)
 
@@ -308,7 +349,7 @@ the user's `language`. Shapes (`insight.kind`):
 |---|---|---|
 | `rss_digest` | `rss/article_list` | `items: [{ link, image, summary, whyItMatters, topics[], readingMinutes, language }]` — match to `cachedData` rows by `link`; `image` = the article's `og:image` (or feed image); `summary` is a short recap translated into the user's language. |
 | `summary` | any widget without a specific one | `{ headline, detail, tone: "good"\|"neutral"\|"warning" }` |
-| `weather_advice` | `weather/forecast` | `{ advice, outfit }` |
+| `weather_advice` | `weather/current_weather`, `weather/daily_forecast` | `{ advice, outfit }` |
 | `standup` | `github/daily_changes` | `{ summary, highlights[] }` (empty when no commits) |
 
 Images are hot-linked from the article's site (your browser loads them); use `referrerpolicy="no-referrer"`
@@ -346,7 +387,7 @@ for the set) are both optional, as are `aiEnabled` (default `false`) and `shared
 ### `PATCH /widgets/:id`
 
 Reconfigure *and* move share this one endpoint — send whichever of `config`, `refreshRateSeconds`,
-`position`, `title`, `decoration`, `aiEnabled`, `shared` changed (at least one required). Omitted fields are left untouched.
+`position`, `title`, `decoration`, `aiEnabled`, `shared` changed (at least one required). Omitted fields are left untouched. Changing `config` makes the widget refresh on the next scheduler tick (≤ 15 s) instead of waiting for its full refresh rate — poll `GET /widgets` shortly after.
 
 ```json
 { "config": { "link": "https://hnrss.org/frontpage", "number": 1 }, "position": { "x": 2, "y": 3, "w": 4, "h": 2 }, "title": "Renamed", "decoration": "none" }
@@ -369,7 +410,7 @@ The widget's main number over time, sampled by the server on refresh (at most on
 { "widgetId": "uuid", "supported": true, "days": 7, "points": [{ "at": "2026-09-25T10:00:00.000Z", "value": 1.17 }] }
 ```
 `supported: false` (and `points: []`) when the widget has no numeric value. Numeric widgets:
-`exchange_rate` (rate), `price_history` (latest price), `weather/forecast` (temperature), `github/repo_stats`
+`exchange_rate` (rate), `price_history` (latest price), `weather/current_weather` and `weather/daily_forecast` (temperature), `youtube/channel_stats` (subscribers), `youtube/video_stats` (views), `github/repo_stats`
 (stars), `github/daily_changes` (commit count), `custom_api/json_value` (when numeric). `days` 1–90,
 `points` 2–1000 (long series are thinned evenly, last point kept). A brand-new widget has few points.
 
@@ -387,6 +428,29 @@ The widget's main number over time, sampled by the server on refresh (at most on
 "Connect with My Epitech": OpenID Connect against `https://my.epitech.eu`; the student logs in with their
 **Microsoft** account on Epitech's side (we never see a password). Code flow + PKCE (S256), `state` +
 `nonce`, and the `id_token` signature (RS256, provider keys) is verified before anything is trusted.
+
+**Why Epitech must be involved.** "Sign in with My Epitech" is an OpenID Connect login: Epitech's server only
+lets *registered* applications start it, and registering creates the two values our server needs — a
+**client id** and a **client secret** (the secret is generated by Epitech and shown once). Until an app is
+registered, Epitech's login page refuses it, and the code has nothing to authenticate with. Registering is a
+staff-only action (`POST /sso/clients` on My Epitech's API, needs a staff token), so a student account cannot do
+it, and nothing in our code can work around it.
+
+**What to send to Epitech staff** (this is exactly what their form/endpoint takes):
+
+| Field | Value |
+|---|---|
+| `name` | `Dashboard (Epitech PGE3 2026 project)` — any readable name |
+| `clientId` | a short slug you choose, e.g. `dashboard-pge3-2026` |
+| `redirectUris` | `["http://localhost:8080/auth/epitech/callback"]` — **plus the public URL of your deployment if it has one** (`<APP_URL>/auth/epitech/callback`, must match `EPITECH_OIDC_CALLBACK_URL` exactly) |
+| `tokenEndpointAuthMethod` | `client_secret_post` |
+| `scopes` | `openid profile email groups` (those are the only ones Epitech offers) |
+| `allowedAudiences` | `["student"]` (add `"staff"` if staff should log in too) |
+
+They send back the client id and the secret → put them in `.env` as `EPITECH_OIDC_CLIENT_ID` /
+`EPITECH_OIDC_CLIENT_SECRET`, then `docker compose up -d --force-recreate server`. Ask for a
+localhost redirect only for development; for the defense demo, check with them whether a localhost redirect
+is accepted.
 
 **Setup (someone at Epitech must do this once):** the app has to be declared by Epitech staff as an OIDC
 client with callback `http://localhost:8080/auth/epitech/callback` (and your production URL). They give a
@@ -426,7 +490,7 @@ models, or a local Ollama) — ready-to-paste settings are in `.env.example`.
 ### `GET /ai/status`
 
 🔒 `{ available, provider: "anthropic"|"openai"|"mock"|null, dailyCallsPerUser, usedToday, remainingToday }`.
-Use `available` to show/hide every AI control. Each user has a daily call cap (`AI_DAILY_CALLS_PER_USER`,
+Use `available` to show/hide every AI control. Reasoning models (Gemini 3.x, `gpt-oss`…) spend part of the token budget thinking; set `AI_REASONING_EFFORT=low` for them (`.env.example`). Each user has a daily call cap (`AI_DAILY_CALLS_PER_USER`,
 default 60); when it is reached, insights simply stop updating and the raw data keeps working.
 
 ### `GET /brief` · `POST /brief/refresh`
@@ -439,21 +503,32 @@ default 60); when it is reached, insights simply stop updating and the raw data 
 off, quota is reached, or no widget has AI on with data). Suggested UX: show the card when `brief` exists;
 otherwise a "Generate my brief" button calling `POST`.
 
-### `POST /assistant/widgets`
+### `POST /assistant/widgets` — a conversation, not a one-shot command
 
-🔒 Natural-language widget creation. Body `{ "prompt": "follow bitcoin and tech news" }` (≤ 500 chars).
+🔒 Natural-language widget creation, as a real back-and-forth: the assistant can ask a clarifying
+question before it has enough to act, exactly like a person would, instead of guessing from one message.
+
+Body `{ "prompt": "I want to follow some cool stuff", "history"?: [{ "role": "user"|"assistant", "content": string }] }`
+(`prompt` ≤ 500 chars; `history` = the conversation so far, oldest first — send back what the API returned
+as `reply` as an `"assistant"` turn, and what the user typed as `"user"` turns; the last 8 are kept).
 
 ```json
-{ "available": true, "suggestions": [{
+{ "available": true, "reply": "What kind of content are you into — news, a market, GitHub, the weather?", "suggestions": [] }
+```
+or, once it has enough:
+```json
+{ "available": true, "reply": "Sure — here's a Bitcoin widget.", "suggestions": [{
     "serviceName": "market_data", "widgetName": "price_history", "title": "Bitcoin",
     "config": { "asset": "bitcoin", "days": 7 }, "refreshRateSeconds": 300,
     "reason": "Bitcoin price over the last week", "needsAccount": null, "missingSecrets": [] }] }
 ```
-**Nothing is created.** Show the drafts, and when the user confirms, send the draft to the normal
-`POST /widgets` (`serviceName`, `widgetName`, `config`, `refreshRateSeconds`, optional `title`) — every draft
-was already validated with those exact rules. `needsAccount` = a service name the user must link first;
-`missingSecrets` = params (e.g. a calendar URL) the user must type, never guessed by the model.
-`{ available: false, suggestions: [] }` when AI is off.
+Always render `reply` as a chat bubble from the assistant, whether or not `suggestions` is empty — an empty
+`suggestions` array with a `reply` is expected mid-conversation, not a failure. **Nothing is created.** When
+the user confirms a suggestion, send it to the normal `POST /widgets` (`serviceName`, `widgetName`,
+`config`, `refreshRateSeconds`, optional `title`) — every draft was already validated with those exact
+rules. `needsAccount` = a service name the user must link first; `missingSecrets` = params (e.g. a calendar
+URL) the user must type, never guessed by the model. `{ available: false, reply: "", suggestions: [] }`
+when AI is off.
 
 ## Alerts
 
@@ -538,7 +613,97 @@ Body: any of `{ "mood": "😴", "text": "Updated text" }` (at least one required
 
 ## Services
 
-Service-specific endpoints that aren't widget data itself — currently just GitHub's repo picker.
+Service-specific endpoints that aren't widget data itself: type-ahead suggestions for widget form fields, and GitHub's repo picker.
+
+**`optionsUrl` in `about.json`:** a param carrying `"optionsUrl"` should be rendered as a combobox — a text field with a dropdown of suggestions fed by that URL — not a plain free-text input, and not (except where noted below) a *closed* dropdown: typing something not in the list is still allowed, unless the field only makes sense as an exact match (`worldclock`'s places, `wellbeing`'s sign, `youtube`'s country, GitHub's repo). This now covers **every service that has a field worth suggesting** — a URL/path/repo/city/channel/asset/etc. field ought to offer something to pick instead of an empty box; a handful of fields genuinely can't (a secret calendar link, a video id) and are documented as such below.
+
+- Call it as `GET <optionsUrl>?q=<what the user typed>&lang=<ui language>&limit=<n>`, debounced (~200 ms). Empty `q` should still be called on focus where noted (worldclock, market_data fiat list, youtube countries, rss feeds): it returns a sane starting list, not an error.
+- `optionsUrl` may already contain a query string (e.g. `/services/market_data/assets?kind=crypto`) — **append** your own params with `&`, never replace it.
+- If the param also has `"multiple": true`, render a multi-select; the value sent to the widget is the picked `value`s joined by commas.
+- **`dependsOn: string[]`** (new): names of *other params in the same form* whose current typed value must be sent as query params to `optionsUrl`, using that param's own name (e.g. custom_api's `path` field has `dependsOn: ["url"]` → call `GET /services/custom_api/inspect?url=<what the user typed in the url field>&q=…`). Only call the endpoint once every listed dependency has a non-empty value; otherwise leave the field a plain input (or show it disabled) — calling it with a missing dependency just returns an empty list, not an error.
+- Every `/services/*` endpoint listed here needs a session (🔒) unless said otherwise, and degrades to an empty array — never an error — when the underlying source is unreachable, so a suggestions dropdown can simply show "no suggestions" and the field stays a normal text input.
+
+### `GET /services/weather/cities?q=&lang=&limit=`
+
+🔒 Type-ahead for the weather widgets' `city` field — live results from the same geocoder the widgets
+themselves use (Open-Meteo), so whatever is picked is guaranteed to resolve. `q` shorter than 2 characters
+returns `[]` (nothing to search yet). `lang` = `en`\|`fr`\|`es` (affects the localisation of results, not
+just labels — "Londres" in `fr` finds London). Cached 10 minutes.
+
+```json
+[ { "value": "Paris", "label": "Paris, Île-de-France, France", "country": "France", "admin1": "Île-de-France" } ]
+```
+Submit the picked `value` as `city` — it is the exact name the geocoder itself would resolve to.
+
+### `GET /services/market_data/assets?q=&kind=&limit=`
+
+🔒 Type-ahead for `base`/`quote`/`asset`/`currency`. `kind` is baked into each param's `optionsUrl` already
+(`fiat`, `crypto`, or `all`) — pass `q`/`lang`/`limit` only. Fiat currencies come from the same ECB-backed
+API (`frankfurter.dev`) the `exchange_rate` widget itself uses for fiat pairs (real codes, so they always
+resolve); crypto ids come from CoinGecko's full coin list. Both cached a day. An empty `q` still returns the
+(short) fiat list; crypto needs at least 2 characters (scanning 20k+ coins on nothing typed would be slow
+and useless).
+
+```json
+[ { "value": "eur", "label": "EUR — Euro", "kind": "fiat" },
+  { "value": "bitcoin", "label": "Bitcoin (BTC)", "kind": "crypto" } ]
+```
+
+### `GET /services/youtube/countries?q=&lang=&limit=`
+
+🔒 Type-ahead for the `trending` widget's `country` field — every 2-letter code YouTube's `regionCode`
+accepts, named in the requested language, static data (no external call). Empty `q` returns the full list
+(there is no "popularity" ordering for countries, so it's meant to be scrolled/filtered client-side, not
+narrowed to a short default).
+
+```json
+[ { "value": "FR", "label": "France" } ]
+```
+
+### `GET /services/rss/feeds?q=&category=`
+
+🔒 A small **curated** list of well-known, reliable feeds (news/tech/science/sport/business) — a starting
+point, not an exhaustive index (there is no general "search every RSS feed" API to call). The `link` field
+stays free text; typing any other feed address still works exactly as before.
+
+```json
+[ { "value": "https://hnrss.org/frontpage", "label": "Hacker News — Front page", "category": "tech" } ]
+```
+
+### `GET /services/custom_api/inspect?url=&path=&q=`
+
+🔒 The one that's actually grounded in the user's own data: fetches the URL already typed in the widget
+form (through the same SSRF-safe fetcher the widget itself uses — never a raw `fetch`) and proposes **real**
+paths found in that exact response, instead of asking the user to guess a JSON path blind.
+
+- No `path` given → inspects the response root. Feeds the `path` field of both `json_value` and `json_list`
+  (`dependsOn: ["url"]`).
+- `path` given (the list path already chosen) → treats that node as an array and returns the scalar fields
+  of its *first item*. Feeds `titleField`/`subtitleField` (`dependsOn: ["url", "path"]`).
+
+```json
+{ "root": "object",
+  "values": [ { "path": "data.price", "label": "data.price", "sample": "12.5" } ],
+  "lists":  [ { "path": "data.items", "label": "data.items",
+                "fields": [ { "path": "name", "label": "name", "sample": "Widget" } ] } ] }
+```
+`values` are candidates for `path` (on `json_value`) or, when `path` was passed, for `titleField`/
+`subtitleField`. `lists` are candidates for `path` (on `json_list`) — each already carries its own item's
+`fields` so the frontend can show a second-step preview without a second request. An unreachable URL, a
+non-JSON or non-2xx response, or a private/internal address (refused by the SSRF guard) all degrade to
+`{ "root": "scalar", "values": [], "lists": [] }` — never a `400`/`500` from a field the user simply hasn't
+finished typing yet, except a genuinely missing `url` (`400`).
+
+### Fields with no suggestions, on purpose
+
+- `calendar.url`, `epitech.calendarToken` — the value **is** the credential (a personal calendar
+  link/token); there is nothing public to suggest, and suggesting past values would mean storing them
+  unencrypted somewhere.
+- `youtube.channel`, `youtube.video` — no public, free "search accounts/videos" endpoint exists
+  without spending extra API quota per keystroke; paste the channel/video link or id directly (see the
+  `term-youtube-ids` help entry for exactly what's accepted).
+- `custom_api.url` — arbitrary by definition; nothing to suggest until a URL exists (see `inspect` above
+  for what happens once it does).
 
 ### `GET /services/github/repos`
 
@@ -552,6 +717,44 @@ Service-specific endpoints that aren't widget data itself — currently just Git
 | `400` | No GitHub account linked for this user (connect one via `GET /auth/github` first), or GitHub rejected the request. |
 | `401` | No valid session. |
 | `503` | Server missing `TOKEN_ENCRYPTION_KEY`. |
+
+### `GET /services/worldclock/places?q=&lang=&limit=` — the first one built; every endpoint above follows this same shape
+
+🔒 Session required. Type-ahead for the world clock's `homeTimezone` (single) and `cities` (`multiple`) params:
+cities, **countries** and raw time-zone names, in any language, accents optional. `lang` = `en`|`fr`|`es`
+(labels), `limit` 1–20 (default 8). With an empty `q` it returns the biggest cities as a starting list.
+
+```json
+[ { "value": "Africa/Cairo", "label": "Égypte", "kind": "country", "country": "Égypte", "offset": "UTC+3" },
+  { "value": "Africa/Porto-Novo", "label": "Cotonou, Bénin", "kind": "city", "country": "Bénin", "offset": "UTC+1" } ]
+```
+Submit the picked `value` (an IANA zone). A country maps to its main zone (for several-zone countries the
+label shows which city: `États-Unis (New York)`). The widget also **resolves plain names on the server**, so
+`cities: "Delhi, Égypte, Bangladesh"` works even without the dropdown, and each card is labelled with what
+the user typed; an unknown place fails with `Unknown place "X"` in the server log (the card stays empty).
+
+---
+
+## Help center (help assistant)
+
+Explains the app to non-technical users: how to do things, each service and widget setting ("where do I find
+the channel ID?"), and the technical words they may meet (API key, OAuth, iCal, JSON path, quota, IANA time
+zone…). Content is in `en`/`fr`/`es`, written once in `backend/src/helpdesk/kb/`, and a test fails if a
+service, widget or widget parameter is added without its help entry — so it cannot drift from `/about.json`.
+
+| Route | Auth | What |
+|---|---|---|
+| `GET /helpdesk/knowledge?lang=fr` | public | Everything: `{ language, entries: [{ id, kind, title, body, related: [{ id, title }] }] }`. `kind` is `guide`, `service`, `widget` or `term`. Ids: `service`, `service/widget` (e.g. `youtube/trending`), `term-…`, `guide-…`. Cached 1 h. Use it for a Help page, tooltips, and to open an entry by id. |
+| `GET /helpdesk/search?q=&lang=&limit=5&service=&widget=` | public | Instant keyword search, no AI (works logged out, e.g. on the login page). `service`/`widget` = where the user is, to rank the relevant entries first. Same entry shape, best first. |
+| `POST /helpdesk/ask?lang=` | 🔒 | Body `{ question (2–400 chars), history?: [{ role: "user"\|"assistant", content }] (last 6 kept), context?: { service, widget } }`. |
+
+`POST /helpdesk/ask` answers `{ mode, language, answer, sources: [{ id, title, kind }], followUps: string[], related: [{ id, title }] }`:
+- `mode: "ai"` — a short answer written by the model **from the documentation only** (it says it doesn't know rather than inventing), in the user's language (or `?lang=`), with up to 3 suggested follow-up questions.
+- `mode: "search"` — AI is off, over its daily limit or failed: `answer` is the best documentation entry as is. **Never an error** — always render it the same way; only the `mode` differs (optionally a small "AI" badge when `ai`).
+- Nothing matched: `mode: "search"` with a "not found" sentence and `related` = starter topics.
+- `400` for an empty/too long question. The AI path counts against the user's daily AI cap (`GET /ai/status`).
+
+The question is sent to the AI provider only when AI is configured (with the few documentation entries it needs); nothing else about the user is.
 
 ---
 
@@ -632,13 +835,13 @@ backend; only the wiring is left on the frontend side.
 | Widget order and size | `position` (opaque JSON) |
 | Exchange-rate graph, min/max, change | `cachedData.history / min / max / changePct` |
 | Bitcoin coin card and chart | `market_data/price_history` (a series of `{ timestamp, price }`) |
-| Weather card (now + next 5 days) | `weather/forecast`, param `city` |
+| Weather card (now + next days, by the hour) | `weather/current_weather`, `weather/daily_forecast`, `weather/hourly_forecast`, param `city` |
 | World clock timeline | `worldclock/world_clock`, params `homeTimezone`, `cities` (the shape only needs the zone names — pins can be computed in the browser) |
 | Terminal GitHub card | `github/recent_commits` → `[{ sha, message, author, date }]` |
 
 **Dev proxy:** every backend route prefix must be in `frontend/vite.config.ts`'s proxy list. Beyond `/auth`,
 `/widgets` and `/about.json`, add: **`/journal`, `/services`, `/uploads`, `/ai`, `/brief`, `/assistant`,
-`/alerts`, `/share`, `/public`** — otherwise Vite answers with its own `index.html` (HTTP 200) and the page
+`/alerts`, `/share`, `/public`, `/helpdesk`** — otherwise Vite answers with its own `index.html` (HTTP 200) and the page
 gets HTML where it expects JSON (this caused a white page once already). Note `/public/…` here is the
 *API*; pick a different name for the frontend's own share page route (e.g. `/s/:token`) so the proxy
 doesn't swallow it.
@@ -684,10 +887,15 @@ keeps working unchanged. Do these in order of value:
   here. Google **Calendar** is covered instead by `calendar/upcoming_events` (secret iCal address — no OAuth,
   no credentials stored).
 - **Epitech credits / XP / streaks / notifications** — see *My Epitech* above.
+- **Steam** — built (`profile`, `recent_games`, `library_stats`), then removed. Valve only issues a Web API
+  key to an account that has spent at least $5 (real money, once, ever) on the Steam store — a "Limited
+  Account" restriction, unrelated to owning free games. Untestable without spending money, so it was pulled
+  rather than shipped unverified. If your own account clears that bar later, the code is in git history
+  (the commit that added it) and can be restored; nothing else in the app depends on it.
 
 ---
 
 ## Not built yet
 
-- Steam and Maps/Cinema services — once they exist, `/about.json` and the `serviceName` values
+- Maps/Cinema services — once they exist, `/about.json` and the `serviceName` values
   usable in `/widgets` will include them automatically, no doc update needed on this side.

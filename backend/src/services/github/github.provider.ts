@@ -1,13 +1,19 @@
 import { Injectable } from '@nestjs/common';
+import { fetchWithTimeout } from '../../common/fetch-timeout.util';
 import { UNTRUSTED_RULES, clip, languageName } from '../../ai/ai.service';
 import { ServiceAuthContext, ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
 
 const FETCH_TIMEOUT_MS = 10_000;
 
+// Accepts "owner/name" as-is, or a GitHub URL someone pasted instead of picking from the dropdown
+// (https://github.com/owner/name, with or without a trailing slash/.git) — normalized to "owner/name"
+// either way, so a pasted link never silently 404s on every refresh forever.
 function parseRepo(config: Record<string, string | number>, widgetName: string): string {
-  const repo = String(config.repo ?? '');
-  if (!repo || !repo.includes('/')) {
-    throw new ServiceFetchError('github', widgetName, 'The "repo" parameter must look like "owner/name"');
+  const raw = String(config.repo ?? '').trim();
+  const url = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s]+\/[^/\s]+?)(?:\.git)?\/?$/i.exec(raw);
+  const repo = url ? url[1] : raw;
+  if (!repo || !/^[^/\s]+\/[^/\s]+$/.test(repo)) {
+    throw new ServiceFetchError('github', widgetName, 'The "repo" parameter must look like "owner/name" (a GitHub URL also works)');
   }
   return repo;
 }
@@ -27,8 +33,6 @@ function parsePerPage(config: Record<string, string | number>): number {
 // nestjs/nest works). Widgets configured against a private repo will error
 // — expected given the scope, not a bug.
 async function githubGet(path: string, auth: ServiceAuthContext | undefined, widgetName: string): Promise<any> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
     'User-Agent': 'dashboard-app',
@@ -37,11 +41,9 @@ async function githubGet(path: string, auth: ServiceAuthContext | undefined, wid
 
   let res: Response;
   try {
-    res = await fetch(`https://api.github.com${path}`, { headers, signal: controller.signal });
+    res = await fetchWithTimeout(`https://api.github.com${path}`, { headers }, FETCH_TIMEOUT_MS);
   } catch (err) {
     throw new ServiceFetchError('github', widgetName, `Could not reach GitHub API: ${(err as Error).message}`);
-  } finally {
-    clearTimeout(timeout);
   }
   if (!res.ok) {
     throw new ServiceFetchError('github', widgetName, `GitHub API returned HTTP ${res.status}`);

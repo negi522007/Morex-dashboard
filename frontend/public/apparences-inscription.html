@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex boîte mail</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .55), rgb(15 12 50 / .8)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1.top { text-align: center; font-weight: 600; margin: 0; padding-top: 34px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .7); margin: 8px auto 26px; max-width: 820px; padding: 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; max-width: 1250px; margin: 0 auto; padding: 0 20px 60px; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .opt > p { margin: 12px 0 0; font-size: 13px; color: rgb(255 255 255 / .7); } .opt > p b { color: #fff; }
+  /* the auth glass panel */
+  .panel { position: relative; min-height: 470px; padding: 34px 26px 26px; border-radius: 28px; background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .16); backdrop-filter: blur(18px); display: flex; flex-direction: column; overflow: hidden; }
+  .panel h2 { margin: 0 0 18px; font-size: 25px; font-weight: 700; line-height: 1.2; }
+  .panel .sw { margin-top: auto; padding-top: 18px; text-align: center; font-size: 12.5px; opacity: .7; } .panel .sw u { opacity: 1; font-weight: 600; }
+  .mail { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 7px 14px 7px 8px; border-radius: 999px; background: rgb(255 255 255 / .1); font-size: 13px; font-weight: 600; }
+  .mail i { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 12px; background: #fff; }
+  .mail span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 20px; border-radius: 999px; background: #fff; color: #1e1b4b; font-weight: 600; font-size: 13.5px; text-decoration: none; border: 0; cursor: pointer; }
+  .btn.ghost { background: transparent; color: #fff; border: 1px solid rgb(255 255 255 / .3); }
+  .tip { font-size: 12px; opacity: .65; margin-top: 12px; line-height: 1.5; }
+  .c { text-align: center; }
+
+  /* 1 · envelope flying to the mailbox */
+  .fly { position: relative; height: 120px; margin: 0 0 10px; }
+  .fly svg.path { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .fly .env { position: absolute; font-size: 34px; offset-path: path('M 20 95 C 90 10, 170 10, 240 70'); animation: flyEnv 3.2s ease-in-out infinite; }
+  @keyframes flyEnv { 0% { offset-distance: 0%; opacity: 0; } 10% { opacity: 1; } 80% { offset-distance: 100%; opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+  .fly .box { position: absolute; right: 6px; bottom: 6px; font-size: 44px; }
+  /* 2 · little note */
+  .mini { width: 210px; margin: 6px auto 18px; padding: 18px 16px 14px 24px; border-radius: 4px; color: #3b2f5c; text-align: center; transform: rotate(-3deg); position: relative;
+    background: repeating-linear-gradient(#fffaf0 0 19px, #e9dcf7 19px 20px); box-shadow: 0 14px 30px rgb(0 0 0 / .4); animation: bob 3s ease-in-out infinite; }
+  .mini::before { content: ''; position: absolute; top: -9px; left: 50%; width: 70px; height: 18px; margin-left: -35px; background: rgb(244 114 182 / .75); transform: rotate(-4deg); }
+  .mini b { font: 700 24px Caveat, cursive; color: #7c3aed; display: block; } .mini span { display: inline-block; margin-top: 6px; padding: 5px 12px; border-radius: 999px; background: #7c3aed; color: #fff; font-size: 10.5px; font-weight: 600; }
+  @keyframes bob { 50% { transform: rotate(-1deg) translateY(-5px); } }
+  .hand { font: 500 22px Caveat, cursive; }
+  /* 3 · steps */
+  .steps { list-style: none; margin: 4px 0 0; padding: 0; position: relative; }
+  .steps::before { content: ''; position: absolute; left: 17px; top: 18px; bottom: 18px; border-left: 2px dashed rgb(255 255 255 / .2); }
+  .steps li { position: relative; display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; font-size: 13.5px; }
+  .steps li i { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-style: normal; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .2); z-index: 1; backdrop-filter: blur(6px); }
+  .steps li.done i { background: #34d399; border-color: #34d399; color: #064e3b; font-weight: 700; }
+  .steps li.now i { background: #fde047; border-color: #fde047; animation: ping 1.6s infinite; }
+  @keyframes ping { 0% { box-shadow: 0 0 0 0 rgb(253 224 71 / .6); } 100% { box-shadow: 0 0 0 12px rgb(253 224 71 / 0); } }
+  .steps li small { display: block; opacity: .6; font-size: 11.5px; } .steps li.later { opacity: .55; }
+  /* 4 · mailbox with the flag up */
+  .mb { position: relative; width: 150px; height: 130px; margin: 0 auto 8px; }
+  .mb .post { position: absolute; left: 68px; bottom: 0; width: 14px; height: 50px; background: #92400e; border-radius: 3px; }
+  .mb .body { position: absolute; left: 20px; bottom: 44px; width: 110px; height: 64px; border-radius: 34px 34px 8px 8px; background: linear-gradient(#818cf8, #6366f1); box-shadow: inset 0 -6px 0 rgb(0 0 0 / .15); }
+  .mb .door { position: absolute; left: 28px; bottom: 48px; width: 30px; height: 44px; border-radius: 15px 15px 4px 4px; background: #4f46e5; }
+  .mb .letter { position: absolute; left: 32px; bottom: 76px; font-size: 26px; animation: peek 2.4s ease-in-out infinite; }
+  @keyframes peek { 0%, 100% { transform: translateY(8px); } 50% { transform: translateY(-6px) rotate(-8deg); } }
+  .mb .flag { position: absolute; left: 124px; bottom: 60px; width: 4px; height: 44px; background: #e5e7eb; transform-origin: bottom; animation: flag 2.4s ease-in-out infinite; }
+  .mb .flag::after { content: ''; position: absolute; top: 0; left: 4px; width: 20px; height: 14px; background: #f43f5e; border-radius: 0 3px 3px 0; }
+  @keyframes flag { 0%, 20% { transform: rotate(90deg); } 40%, 100% { transform: rotate(0); } }
+  .help { margin-top: 14px; border-radius: 16px; background: rgb(255 255 255 / .06); padding: 10px 14px; font-size: 12.5px; text-align: left; }
+  .help b { display: block; margin-bottom: 4px; font-size: 12.5px; } .help li { margin: 2px 0; opacity: .8; } .help ul { margin: 0; padding-left: 18px; }
+  /* 5 · postcard */
+  .card { position: relative; margin: 4px 0 14px; padding: 16px; border-radius: 14px; background: #fffaf0; color: #3b2f5c; display: grid; grid-template-columns: 1fr 1px 1fr; gap: 14px; box-shadow: 0 16px 34px rgb(0 0 0 / .4); transform: rotate(1.5deg); }
+  .card .l { font: 500 19px/1.25 Caveat, cursive; } .card .sep { background: #e9dcf7; }
+  .card .r { position: relative; font-size: 11px; padding-top: 44px; }
+  .card .r .line { border-bottom: 1px solid #cbd5e1; padding: 3px 0; word-break: break-all; font-weight: 600; }
+  .card .stamp { position: absolute; right: 0; top: 0; width: 40px; height: 46px; display: grid; place-items: center; font-size: 22px; background: #fde68a; outline: 2px dashed #f59e0b; outline-offset: -4px; }
+  .card .pm { position: absolute; right: 26px; top: 14px; width: 46px; height: 46px; border: 2px solid rgb(124 58 237 / .6); border-radius: 50%; display: grid; place-items: center; font-size: 8px; font-weight: 700; color: rgb(124 58 237 / .8); transform: rotate(-16deg); text-align: center; line-height: 1.1; }
+  .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  /* 6 · countdown of the link */
+  .big { font-size: 58px; line-height: 1; margin: 6px 0 10px; animation: bob2 3s ease-in-out infinite; } @keyframes bob2 { 50% { transform: translateY(-6px) rotate(-6deg); } }
+  .timer { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 12px 14px; border-radius: 16px; background: rgb(255 255 255 / .06); text-align: left; font-size: 12.5px; }
+  .timer svg { width: 40px; height: 40px; flex: none; transform: rotate(-90deg); } .timer circle { fill: none; stroke-width: 4; }
+  .timer b { font-size: 15px; display: block; }
+</style>
+</head>
+<body>
+<h1 class="top">« Regarde ta boîte mail »</h1>
+<p class="lead">L’écran juste après l’inscription. Idée commune à toutes : un bouton « Ouvrir Gmail / Outlook » qui ouvre directement la bonne boîte selon l’adresse, et l’adresse qui ne se coupe plus au milieu</p>
+<div class="grid" id="g"></div>
+<script>
+const MAIL = 'exaucue12@gmail.com'
+const G = '<i style="color:#ea4335;font-weight:700">G</i>'
+const pill = `<span class="mail">${G}<span>${MAIL}</span></span>`
+const openBtn = '<a class="btn" href="#"><b style="color:#ea4335">G</b> Ouvrir Gmail</a>'
+const signIn = '<a class="btn ghost" href="#">Se connecter</a>'
+const sw = '<div class="sw">Déjà membre ? <u>Se connecter</u></div>'
+const P = [
+  ['Enveloppe qui s’envole', 'une enveloppe part en l’air et atterrit dans une boîte aux lettres, en boucle ; l’adresse dans une pastille, le bouton ouvre ta messagerie', `
+    <h2>Regarde ta boîte mail</h2>
+    <div class="fly"><svg class="path" viewBox="0 0 280 120" preserveAspectRatio="none"><path d="M 20 95 C 90 10, 170 10, 240 70" fill="none" stroke="rgb(255 255 255 / .25)" stroke-width="2" stroke-dasharray="4 6"/></svg><span class="env">✉️</span><span class="box">📫</span></div>
+    <div class="c"><b>Un petit mot vient de partir vers</b><div style="margin:10px 0 4px">${pill}</div><p class="tip">Clique sur « Oui, c’est moi » dans l’email, puis connecte-toi.</p><div class="row">${openBtn}${signIn}</div></div>${sw}`],
+  ['Le petit mot', 'une miniature du carnet de l’email (même scotch rose, même écriture) : on sait exactement quoi chercher dans sa boîte', `
+    <h2>Un petit mot t’attend 💌</h2>
+    <div class="mini"><b>Coucou Exaucé !</b><small style="font-size:10px">Ton univers Morex t’attend…</small><br><span>Oui, c’est moi 💜</span></div>
+    <div class="c"><p class="hand" style="margin:0">Cherche ce message dans ta boîte</p><div style="margin:8px 0">${pill}</div><div class="row">${openBtn}${signIn}</div></div>${sw}`],
+  ['Les étapes', 'on voit où on en est : compte créé ✓, email envoyé ✓, la prochaine étape clignote en jaune', `
+    <h2>Presque fini, Exaucé !</h2>
+    <ul class="steps">
+      <li class="done"><i>✓</i><span>Compte créé<small>Bienvenue dans l’univers Morex</small></span></li>
+      <li class="done"><i>✓</i><span>Email envoyé<small>${MAIL}</small></span></li>
+      <li class="now"><i>👆</i><span><b>Clique sur « Oui, c’est moi »</b><small>dans l’email reçu (lien valable 24 h)</small></span></li>
+      <li class="later"><i>🚀</i><span>Connecte-toi<small>et ajoute tes premiers widgets</small></span></li>
+    </ul>
+    <div class="row">${openBtn}</div>${sw}`],
+  ['Boîte aux lettres', 'une boîte aux lettres dont le drapeau se lève avec la lettre qui dépasse, et un petit encadré « Pas reçu ? » pour les spams', `
+    <h2>Tu as du courrier !</h2>
+    <div class="mb"><span class="letter">✉️</span><span class="body"></span><span class="door"></span><span class="flag"></span><span class="post"></span></div>
+    <div class="c">${pill}<div class="row">${openBtn}${signIn}</div></div>
+    <div class="help"><b>Pas reçu ?</b><ul><li>Regarde dans les spams ou l’onglet « Promotions »</li><li>Vérifie l’adresse ci-dessus</li><li>Attends une minute, ça peut prendre un peu de temps</li></ul></div>${sw}`],
+  ['Carte postale', 'une carte postale avec timbre et tampon Morex : un mot à la main à gauche, ton adresse à droite', `
+    <h2>Regarde ta boîte mail</h2>
+    <div class="card"><div class="l">Coucou Exaucé !<br>Clique sur « Oui, c’est moi » et on ouvre les portes ✿</div><div class="sep"></div><div class="r"><span class="stamp">🪐</span><span class="pm">MOREX<br>POSTE<br>2026</span><div class="line">Exaucé</div><div class="line">${MAIL}</div></div></div>
+    <div class="row">${openBtn}${signIn}</div>${sw}`],
+  ['Fusée + lien 24 h', 'la fusée actuelle mais plus grande et hors de la boîte, avec un petit cercle qui montre que le lien reste valable 24 heures', `
+    <h2>Regarde ta boîte mail</h2>
+    <div class="c"><div class="big">🚀</div><b>Ton univers est presque prêt</b><p class="tip" style="margin-top:4px">Un petit mot t’attend. Clique sur « Oui, c’est moi », puis connecte-toi.</p><div style="margin:10px 0">${pill}</div></div>
+    <div class="timer"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" stroke="rgb(255 255 255 / .12)"/><circle cx="20" cy="20" r="16" stroke="#a78bfa" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="4"/></svg><span><b>23 h 58</b>avant que le lien expire</span></div>
+    <div class="row">${openBtn}${signIn}</div>${sw}`],
+]
+document.getElementById('g').innerHTML = P.map(([n, d, h], i) => `<div class="opt"><div class="panel">${h}</div><p><b>${i + 1} · ${n}</b> : ${d}</p></div>`).join('')
+</script>
+</body>
+</html>

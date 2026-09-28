@@ -41,7 +41,9 @@ export class AiService {
 
   get provider(): 'anthropic' | 'openai' | 'mock' | null {
     const p = (this.config.get<string>('AI_PROVIDER') ?? '').toLowerCase();
-    if (p === 'mock') return 'mock';
+    // The offline "mock" writes canned, meaningless text. It exists for developing without a key and
+    // is refused in production (the Docker image) so a demo can never show fake AI output by accident.
+    if (p === 'mock') return this.config.get<string>('NODE_ENV') === 'production' && this.config.get<string>('AI_ALLOW_MOCK') !== 'true' ? null : 'mock';
     if (!this.config.get<string>('AI_API_KEY')) return null;
     if (p === 'anthropic') return 'anthropic';
     if (p === 'openai' || p === 'openai-compatible') return 'openai';
@@ -143,7 +145,12 @@ export class AiService {
       },
       body: JSON.stringify({
         model: this.config.get<string>('AI_MODEL') || DEFAULT_OPENAI_MODEL,
-        max_tokens: maxTokens,
+        // A reasoning model spends part of the budget thinking before it writes the answer: without headroom
+        // the JSON gets cut off ("unterminated JSON"). Only when reasoning is configured.
+        max_tokens: this.config.get<string>('AI_REASONING_EFFORT') ? Math.min(maxTokens * 4 + 1024, 8192) : maxTokens,
+        // Reasoning models (Gemini 3.x, gpt-oss…) spend part of max_tokens "thinking"; a low effort
+        // keeps room for the JSON answer. Only sent when configured: plain models reject the field.
+        ...(this.config.get<string>('AI_REASONING_EFFORT') ? { reasoning_effort: this.config.get<string>('AI_REASONING_EFFORT') } : {}),
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: user },

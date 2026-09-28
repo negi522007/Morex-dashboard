@@ -105,6 +105,67 @@ value history, and a read-only share link. Credential-like widget params are enc
 Epitech credits/XP (not exposed by the OIDC scopes; the only workaround is users pasting their session
 token, refused for security). The frontend was not touched.
 
+**Sept 26** — Merged Morayo's `feat/youtube` (Morex frontend + YouTube service + 3-widget weather) into
+`feat/morex-backend` and verified the whole stack end to end (API, then the real frontend in a headless
+browser: no console errors, no failing requests, all widget kinds rendering). Fixed a signup problem found
+in use: an unconfirmed account used to block its email address forever; it is now replaced on retry (2 min
+cooldown against mail spam) and purged after 24 h. The mailer now treats a refused recipient as a failure,
+adds a plain-text part, and logs what the SMTP server answered. Documented why confirmation links only work
+for the machine running the server unless `APP_URL` is public (TROUBLESHOOTING.md).
+
+**Sept 26 (defense checklist)** — Went through the school's defense checklist against the running app.
+Fixed: `docker compose up --build` now starts everything (the web app was missing from compose — it is
+built and served by nginx, which also forwards the API routes), works with **no `.env`** (safe defaults,
+mail to Mailhog, an encryption key generated once into a dedicated volume that is not served publicly),
+and waits for the database (a fresh clone used to crash on its first migration). Verified from a copy of the
+repo without `.env`. The UI findings for Morayo are listed at the end of FRONTEND.md.
+
+**Sept 26 (later)** — Reported by a user: the world clock rejected "Égypte" and "Bangladesh" ("Unknown city").
+Cause: the form only knew city names (IANA zones are named after cities). Fix: the backend now resolves
+cities *and countries* in three languages (`city-timezones` + `countries-and-timezones` datasets), serves a
+type-ahead `GET /services/worldclock/places` for a dropdown, and the widget accepts plain names. Also added
+a **help assistant** (`/helpdesk/*`): a trilingual knowledge base of guides, every service/widget/parameter
+and the technical vocabulary, searchable without AI and answered by the AI model from those pages only when
+available (never an error: it degrades to the best page). A test fails if a widget or parameter has no help
+entry. Free AI model guidance re-checked against the providers' current docs; `AI_REASONING_EFFORT` added for
+reasoning models. Specs for every screen not yet built are in FRONTEND.md.
+
+**Sept 26 (evening)** — Feedback from a real user test, acted on: (1) the confirmation link opened a bare
+white page and confirmed on click. It now opens a styled "Is this you?" page with *Yes* and *No, it wasn't
+me* (which deletes the pending account and closes that address to sign-ups for a day), and a plain GET never
+confirms anything (mail scanners open links). The email itself is styled and trilingual. (2) The offline
+"mock" AI was refused in production so a demo can never show fake AI text; a real Gemini key is used instead.
+(3) Date of birth is collected at sign-up (validated, ≥ 13, optional on the API until the form asks for it)
+for a **Well-being widget group** (quote of the day, did you know, horoscope — Morayo's idea was a group of widgets, not a page, so it is three ordinary widgets). (4) **Steam** service added.
+(5) A **Microsoft sign-in** restricted to one organisation (tenant-checked against email spoofing) as the
+self-service alternative to My Epitech's staff-only client registration — untested against the real
+Microsoft until the app is registered. The Epitech/Microsoft/GitHub-style sign-ins now share one accounts
+service and one controller factory instead of copies.
+
+**Sept 28** — Two requests after trying the app: generalize the world clock's new suggestion dropdown to
+every field, everywhere; and make the widget-creation assistant a real conversation instead of a one-shot
+command. Added live/real suggestion endpoints for weather cities (Open-Meteo geocoder), market currencies
+and crypto (Frankfurter + CoinGecko), YouTube trending countries (static), curated RSS feeds, and — the most
+useful one — `custom_api/inspect`, which fetches the URL the user already typed (through the SSRF guard) and
+proposes the actual JSON paths found in it, so the `path`/`titleField`/`subtitleField` fields go from "guess
+a path" to "pick from what's really there." A new `WidgetParam.dependsOn` lets a field's suggestions depend
+on another field's current value (used by `custom_api`'s path-dependent fields). `POST /assistant/widgets`
+now takes an optional `history` and can answer with only a clarifying `reply` and no `suggestions` — a
+question, not a guess — when the request is too vague. Also found and fixed a real bug of my own: a Steam
+unit test used `make(undefined)`, which (JS default-parameter quirk) silently fell back to the default key
+instead of testing the "no key" path, and `custom_api`'s `path` was wrongly required, breaking APIs whose
+answer is a bare list or value at the root.
+
+**Sept 29** — Two real, hands-on bug reports, both fixed and verified live against the running app: a
+GitHub widget config saved as a full pasted URL (`https://github.com/owner/repo`) instead of `owner/repo`
+was silently 404ing forever, and a `market_data` widget saved with a free-typed crypto name ("Ether")
+instead of its CoinGecko id ("ethereum") did the same — both now self-heal on the next refresh (the GitHub
+one normalizes a pasted URL; the market one resolves the name via the existing suggestion search and
+retries once), no need to delete and recreate the widget. Also: **Steam was built, then removed** — Valve
+only issues a Web API key to an account that has spent at least $5 real money once (a "Limited Account"
+policy, unrelated to owning free games), which isn't testable here, so it was pulled rather than shipped
+unverified (see API.md → *Deliberately not built*). YouTube confirmed working end to end with a real key.
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |

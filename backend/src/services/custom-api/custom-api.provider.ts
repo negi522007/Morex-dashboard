@@ -35,7 +35,8 @@ export class CustomApiProvider implements ServiceProvider {
         description: 'Show one value from any public JSON API (URL + path such as data.items[0].price)',
         params: [
           { name: 'url', type: 'string', required: true, secret: true },
-          { name: 'path', type: 'string', required: true },
+          // Optional: empty means "the response itself is the value" (e.g. an API that just answers 42).
+          { name: 'path', type: 'string', optionsUrl: '/services/custom_api/inspect', dependsOn: ['url'] },
           { name: 'label', type: 'string' },
           { name: 'unit', type: 'string' },
         ],
@@ -45,7 +46,7 @@ export class CustomApiProvider implements ServiceProvider {
           const value = getPath(json, String(config.path ?? ''));
           if (value === undefined) throw new ServiceFetchError('custom_api', 'json_value', `Path "${config.path}" not found in the response`);
           return {
-            label: config.label ? String(config.label) : String(config.path),
+            label: config.label ? String(config.label) : String(config.path ?? '') || 'value',
             unit: config.unit ? String(config.unit) : null,
             value: typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean' ? value : scalar(value),
             fetchedAt: new Date().toISOString(),
@@ -57,15 +58,16 @@ export class CustomApiProvider implements ServiceProvider {
         description: 'Show a list from any public JSON API (path to an array + which fields to display)',
         params: [
           { name: 'url', type: 'string', required: true, secret: true },
-          { name: 'path', type: 'string', required: true },
-          { name: 'titleField', type: 'string', required: true },
-          { name: 'subtitleField', type: 'string' },
+          // Optional: empty means "the response itself is the list" (an answer that starts with [ ).
+          { name: 'path', type: 'string', optionsUrl: '/services/custom_api/inspect', dependsOn: ['url'] },
+          { name: 'titleField', type: 'string', required: true, optionsUrl: '/services/custom_api/inspect', dependsOn: ['url', 'path'] },
+          { name: 'subtitleField', type: 'string', optionsUrl: '/services/custom_api/inspect', dependsOn: ['url', 'path'] },
           { name: 'number', type: 'integer' },
         ],
         fetchData: async (config) => {
           const json = await this.load(config, 'json_list');
           const list = getPath(json, String(config.path ?? ''));
-          if (!Array.isArray(list)) throw new ServiceFetchError('custom_api', 'json_list', `Path "${config.path}" is not a list in the response`);
+          if (!Array.isArray(list)) throw new ServiceFetchError('custom_api', 'json_list', config.path ? `Path "${config.path}" is not a list in the response` : 'The response is not a list: set "path" to where the list is');
           const n = Number(config.number);
           const limit = Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), 30) : 8;
           const items = list.slice(0, limit).map((row) => ({

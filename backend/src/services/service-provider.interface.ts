@@ -10,6 +10,14 @@ export interface WidgetParam {
   // at /services/github/repos. Absent means "plain text/number input",
   // same as before this field existed.
   optionsUrl?: string;
+  // The value is a comma-separated list: render a multi-select (each picked item's `value` joined by commas).
+  multiple?: boolean;
+  // Names of other params in the same form whose CURRENT typed value must be sent as query params to
+  // `optionsUrl` (e.g. custom_api's "path" options depend on "url"; call the endpoint only once every
+  // listed param has something typed). A dropdown fed this way is suggestions to speed typing, not a
+  // closed list — the field still accepts free text unless the widget only makes sense with an exact
+  // match (e.g. a sign, a country code).
+  dependsOn?: string[];
   // The value is a credential in disguise (a private calendar URL, an API
   // key inside a URL...). It is encrypted at rest and NEVER returned by the
   // API: reads show SECRET_MASK instead. Render it as a password field; to

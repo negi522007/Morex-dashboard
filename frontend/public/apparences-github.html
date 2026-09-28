@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex GitHub widgets</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root { --a1: #818cf8; --a2: #38bdf8; --glow: 99 102 241; --gh: #238636; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .62), rgb(15 12 50 / .8)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 36px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .65); margin: 8px auto 6px; max-width: 820px; }
+  section { max-width: 1250px; margin: 0 auto; padding: 26px 20px 8px; }
+  h2 { font-size: 19px; font-weight: 600; margin: 0 0 14px; } h2 code { font-size: 12px; font-weight: 400; color: rgb(255 255 255 / .55); margin-left: 8px; }
+  .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  @media (max-width: 1000px) { .row { grid-template-columns: 1fr; } }
+  .opt { min-width: 0; } .opt > p { margin: 10px 0 0; font-size: 13px; color: rgb(255 255 255 / .65); } .opt > p b { color: #fff; }
+  .card { position: relative; overflow: hidden; border-radius: 24px; padding: 18px; height: 300px; display: flex; flex-direction: column; gap: 10px;
+    background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); backdrop-filter: blur(22px); }
+  .head { display: flex; align-items: center; gap: 10px; }
+  .ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: #0d1117; border: 1px solid rgb(255 255 255 / .15); flex: none; }
+  .ico svg { width: 18px; height: 18px; fill: #fff; }
+  .t { font-weight: 600; font-size: 14px; } .s { font-size: 11.5px; color: rgb(255 255 255 / .6); } .tab { font-variant-numeric: tabular-nums; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none; }
+  .sha { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #fbbf24; }
+  .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 7px; border-radius: 6px; background: rgb(255 255 255 / .1); }
+
+  /* commits 1 terminal */
+  .term { background: #0d1117; border-color: #30363d; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .term .dots { display: flex; gap: 6px; } .term .dots i { width: 11px; height: 11px; border-radius: 50%; }
+  .term .line { opacity: 0; animation: typeIn .3s ease-out forwards; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #c9d1d9; }
+  @keyframes typeIn { to { opacity: 1; } }
+  .term .cur { display: inline-block; width: 8px; height: 14px; background: #c9d1d9; vertical-align: -2px; animation: bl 1s steps(1) infinite; } @keyframes bl { 50% { opacity: 0; } }
+  /* commits 2 git graph */
+  .graph { flex: 1; display: flex; flex-direction: column; gap: 0; overflow: hidden; }
+  .graph .c { display: grid; grid-template-columns: 22px 1fr; gap: 8px; min-height: 40px; position: relative; }
+  .graph .c::before { content: ""; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: linear-gradient(var(--a1), var(--a2)); opacity: .6; }
+  .graph .c:first-child::before { top: 12px; } .graph .c:last-child::before { bottom: calc(100% - 12px); }
+  .graph .node { position: relative; z-index: 1; width: 12px; height: 12px; margin: 6px 0 0 5px; border-radius: 50%; background: #0d1117; border: 3px solid var(--a2); }
+  .graph .c:first-child .node { background: var(--a2); box-shadow: 0 0 10px var(--a2); }
+  /* commits 3 cards with avatars */
+  .clist { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+  .clist .it { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 14px; background: rgb(255 255 255 / .05); }
+
+  /* issues */
+  .iss { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: rgb(255 255 255 / .05); }
+  .iss .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #3fb950; flex: none; margin-top: 2px; position: relative; }
+  .iss .dot::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: #3fb950; }
+  .ticket { position: relative; padding: 12px 14px 12px 18px; border-radius: 12px; background: #fef9c3; color: #422006; transform: rotate(-1.5deg); box-shadow: 0 10px 20px -8px rgb(0 0 0 / .6); }
+  .ticket:nth-child(2) { transform: rotate(1.2deg); background: #fce7f3; color: #500724; }
+  .ticket .pin { position: absolute; top: -6px; left: 50%; width: 12px; height: 12px; border-radius: 50%; background: #ef4444; box-shadow: 0 2px 4px rgb(0 0 0 / .4); }
+  .bignum { font-size: 72px; font-weight: 800; line-height: .9; letter-spacing: -.04em; }
+
+  /* stats */
+  .tiles3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: auto; }
+  .tiles3 div { padding: 12px 4px; border-radius: 16px; background: rgb(255 255 255 / .06); text-align: center; }
+  .tiles3 b { display: block; font-size: 20px; }
+  .starfield { position: absolute; inset: 0; pointer-events: none; }
+  .starfield i { position: absolute; font-style: normal; color: #fde047; animation: tw 2.4s ease-in-out infinite; text-shadow: 0 0 8px #fde047; }
+  @keyframes tw { 50% { opacity: .25; transform: scale(.8); } }
+  .odo { display: flex; gap: 3px; justify-content: center; }
+  .odo span { width: 30px; height: 44px; border-radius: 8px; display: grid; place-items: center; font-size: 28px; font-weight: 700; background: linear-gradient(#1f2937 50%, #111827 50%); font-family: 'JetBrains Mono', monospace; animation: roll .8s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes roll { from { transform: translateY(-40%) rotateX(80deg); opacity: 0; } }
+  .odo .sep { width: 8px; background: none; }
+  .bars { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+  .bars .b { display: grid; grid-template-columns: 70px 1fr 50px; gap: 8px; align-items: center; font-size: 12px; }
+  .bars .b i { height: 10px; border-radius: 999px; background: linear-gradient(90deg, var(--a1), var(--a2)); display: block; animation: grow 1s cubic-bezier(.2,.8,.2,1) both; transform-origin: left; }
+  @keyframes grow { from { transform: scaleX(0); } }
+
+  /* daily changes */
+  .ai { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #c4b5fd; }
+  .ai svg { width: 10px; height: 10px; fill: #a78bfa; }
+  .note { padding: 12px 14px; border-radius: 16px; background: rgb(139 92 246 / .12); border: 1px solid rgb(167 139 250 / .25); font-size: 12.5px; line-height: 1.5; }
+  .hl { margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.6; color: rgb(255 255 255 / .8); }
+  .people { display: flex; gap: 0; margin-top: auto; align-items: center; }
+  .people .av { margin-left: -8px; border: 2px solid #1e1b4b; } .people .av:first-child { margin-left: 0; }
+  .pulse { flex: 1; display: flex; align-items: flex-end; gap: 4px; min-height: 60px; }
+  .pulse i { flex: 1; border-radius: 4px 4px 0 0; background: linear-gradient(to top, var(--a1), var(--a2)); min-height: 3px; animation: grow2 .8s cubic-bezier(.2,.8,.2,1) both; transform-origin: bottom; }
+  .pulse i.zero { background: rgb(255 255 255 / .1); }
+  @keyframes grow2 { from { transform: scaleY(0); } }
+  .paper { background: #fbf5e9; color: #3b3450; border: 0; }
+  .paper .t { color: #4c3f78; } .paper .s { color: #7a7094; }
+  .paper .date { font-family: 'Caveat', cursive; }
+</style>
+</head>
+<body>
+<h1>GitHub, 3 propositions par widget</h1>
+<p class="lead">Avec les vraies données du dépôt facebook/react, transformées exactement comme le fait votre backend</p>
+<div id="app"></div>
+<script>
+const G = {"recent_commits": [{"sha": "d083ec1", "message": "[compiler] Allow setState after await in effect functions (#36734)", "author": "lauren", "date": "2026-09-22T17:26:59Z"}, {"sha": "8b0da1c", "message": "[rust-compiler] Fix detection of shorthand and computed properties (#37674)", "author": "Jimmy Miller", "date": "2026-09-22T16:13:10Z"}, {"sha": "f8e63c6", "message": "[Flight] Preserve leading `U+FEFF` in text rows (#37625)", "author": "Hendrik Liebau", "date": "2026-09-22T15:07:13Z"}, {"sha": "59aff3e", "message": "[compiler] Bail on use of arguments object (#37645)", "author": "Jimmy Miller", "date": "2026-09-18T09:10:50Z"}, {"sha": "71f7255", "message": "[Flight] Server References for arbitrary object types (#37636)", "author": "Andrew Clark", "date": "2026-09-17T16:27:10Z"}, {"sha": "2b19aec", "message": "[rust-compiler] Fix exponentiation to match js semantics (#37587)", "author": "Rusty Raven", "date": "2026-09-16T10:35:58Z"}], "open_issues": [{"number": 37682, "title": "Bug: hydration restart storm — a root that suspends during hydration re-renders thousands of times when `useDeferredValue(value, initialValue)` is mounted", "author": "GorkemMergenay", "createdAt": "2026-09-24T07:38:15Z"}, {"number": 37681, "title": "[DevTools Bug]: Extension reloads on client-side navigation", "author": "yepitschunked", "createdAt": "2026-09-23T23:57:05Z"}], "repo_stats": {"stars": 250719, "forks": 51411, "openIssues": 1378, "description": "The library for web and native user interfaces."}, "daily_changes": {"repo": "facebook/react", "hours": 72, "since": "2026-09-22T14:56:38Z", "commitCount": 3, "authors": [{"name": "lauren", "count": 1}, {"name": "Jimmy Miller", "count": 1}, {"name": "Hendrik Liebau", "count": 1}], "commits": [{"sha": "d083ec1", "message": "[compiler] Allow setState after await in effect functions (#36734)", "author": "lauren", "date": "2026-09-22T17:26:59Z"}, {"sha": "8b0da1c", "message": "[rust-compiler] Fix detection of shorthand and computed properties (#37674)", "author": "Jimmy Miller", "date": "2026-09-22T16:13:10Z"}, {"sha": "f8e63c6", "message": "[Flight] Preserve leading `U+FEFF` in text rows (#37625)", "author": "Hendrik Liebau", "date": "2026-09-22T15:07:13Z"}]}}
+const GH_ICON = '<svg viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.57.1.79-.25.79-.55v-2.12c-3.2.7-3.87-1.36-3.87-1.36-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.17.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.64 1.59.24 2.76.12 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14v3.17c0 .3.21.66.79.55A10.51 10.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>'
+const REPO = G.daily_changes.repo
+const head = (title) => `<div class="head"><span class="ico">${GH_ICON}</span><div><div class="t">${title}</div><div class="s mono">${REPO}</div></div></div>`
+const ago = (iso) => { const h = (Date.now() - new Date(iso)) / 36e5; return h < 1 ? `il y a ${Math.round(h * 60)} min` : h < 48 ? `il y a ${Math.round(h)} h` : `il y a ${Math.round(h / 24)} j` }
+const COLORS = ['#f472b6', '#38bdf8', '#fbbf24', '#a78bfa', '#34d399', '#fb923c']
+const colorOf = (name) => COLORS[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORS.length]
+const initials = (n) => n.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase()
+const av = (n) => `<span class="av" style="background:${colorOf(n)};color:#111" title="${n}">${initials(n)}</span>`
+// Conventional-commit type ("[compiler]", "fix:", "feat:") if the message has one
+const typeOf = (m) => (m.match(/^\[([^\]]+)\]/) ?? m.match(/^(\w+)(\(.+?\))?:/))?.[1] ?? null
+const fmtK = (n) => n.toLocaleString('fr-FR', { notation: 'compact', maximumFractionDigits: 1 })
+const C = G.recent_commits, I = G.open_issues, R = G.repo_stats, D = G.daily_changes
+const STAND = { summary: `Le compilateur avance : les effets asynchrones peuvent maintenant mettre à jour l’état après un await, et les outils de dev gagnent en stabilité`,
+  highlights: D.commits.slice(0, 3).map((c) => c.message.replace(/\s*\(#\d+\)$/, '')) }
+
+// hourly buckets for the activity pulse
+const buckets = Array.from({ length: 18 }, () => 0)
+D.commits.forEach((c) => { const i = Math.floor(((new Date(c.date) - new Date(D.since)) / 36e5) / (D.hours / 18)); if (i >= 0 && i < 18) buckets[i]++ })
+const bmax = Math.max(1, ...buckets)
+const maxA = Math.max(1, ...D.authors.map((a) => a.count))
+
+const sections = [
+  ['⌨️ Derniers commits', 'recent_commits', [
+    ['Terminal', 'celui que tu avais choisi : les commits s’écrivent comme un git log', `<div class="card term"><div class="dots"><i style="background:#f85149"></i><i style="background:#d29922"></i><i style="background:#3fb950"></i><span class="s" style="margin-left:8px">${REPO}</span></div>
+      <div class="line" style="animation-delay:0s"><span style="color:#3fb950">morex@react</span>:~$ git log --oneline</div>
+      ${C.map((c, i) => `<div class="line" style="animation-delay:${(i + 1) * .3}s"><span class="sha">${c.sha}</span> ${c.message}</div>`).join('')}<div><span class="cur"></span></div></div>`],
+    ['Graphe git', 'une vraie ligne de branche avec un point par commit, le plus récent qui brille', `<div class="card">${head('Derniers commits')}
+      <div class="graph">${C.slice(0, 5).map((c) => `<div class="c"><span class="node"></span><div style="min-width:0"><div class="clamp2" style="font-size:12.5px;line-height:1.35">${c.message}</div>
+        <div class="s"><span class="sha">${c.sha}</span> · ${c.author} · ${ago(c.date)}</div></div></div>`).join('')}</div></div>`],
+    ['Avatars', 'qui a fait quoi, avec une étiquette pour le type de changement ([compiler], fix…)', `<div class="card">${head('Derniers commits')}
+      <div class="clist">${C.slice(0, 4).map((c) => { const t = typeOf(c.message); return `<div class="it">${av(c.author)}<div style="min-width:0;flex:1"><div class="clamp2" style="font-size:12.5px">${c.message.replace(/^\[[^\]]+\]\s*/, '')}</div><div class="s">${c.author} · ${ago(c.date)}</div></div>${t ? `<span class="tag">${t}</span>` : ''}</div>` }).join('')}</div></div>`],
+  ]],
+  ['🐞 Issues ouvertes', 'open_issues', [
+    ['Liste GitHub', 'comme sur GitHub : le rond vert « ouvert », le numéro, l’auteur et l’ancienneté', `<div class="card">${head('Issues ouvertes')}
+      ${I.map((i) => `<div class="iss"><span class="dot"></span><div style="min-width:0"><div class="clamp2" style="font-size:13px;font-weight:500">${i.title}</div><div class="s">#${i.number} · ouverte ${ago(i.createdAt)} par ${i.author}</div></div></div>`).join('')}</div>`],
+    ['Post-it', 'chaque issue sur un post-it épinglé et légèrement penché', `<div class="card">${head('Issues ouvertes')}<div style="display:flex;flex-direction:column;gap:16px;padding-top:6px">
+      ${I.map((i) => `<div class="ticket"><span class="pin"></span><div style="font-size:12.5px;font-weight:600" class="clamp2">${i.title}</div><div style="font-size:11px;opacity:.7;margin-top:4px">#${i.number} · ${i.author}</div></div>`).join('')}</div></div>`],
+    ['Âge des issues', 'chaque issue avec une barre qui montre depuis combien de temps elle attend (plus c’est long, plus c’est orange)', `<div class="card">${head('Issues ouvertes')}
+      ${(() => { const oldest = Math.max(...I.map((i) => Date.now() - new Date(i.createdAt))); return I.map((i) => { const age = Date.now() - new Date(i.createdAt), r = age / oldest
+        return `<div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px"><span class="clamp2" style="font-weight:500">${i.title}</span><span class="s" style="white-space:nowrap">#${i.number}</span></div>
+          <span style="height:8px;border-radius:999px;background:rgb(255 255 255 / .08);display:block"><i style="display:block;height:100%;border-radius:inherit;width:${Math.max(6, r * 100)}%;background:linear-gradient(90deg,#34d399,${r > .6 ? '#fb923c' : '#fbbf24'})"></i></span>
+          <span class="s">ouverte ${ago(i.createdAt)} par ${i.author}</span></div>` }).join('') })()}</div>`],
+  ]],
+  ['⭐ Statistiques du dépôt', 'repo_stats', [
+    ['Trois tuiles', 'la description puis étoiles, forks et issues', `<div class="card">${head('Statistiques')}<div class="s clamp2" style="font-size:12.5px">${R.description}</div>
+      <div class="tiles3"><div>⭐<b class="tab">${fmtK(R.stars)}</b><span class="s">étoiles</span></div><div>🍴<b class="tab">${fmtK(R.forks)}</b><span class="s">forks</span></div><div>🐞<b class="tab">${fmtK(R.openIssues)}</b><span class="s">issues</span></div></div></div>`],
+    ['Ciel étoilé', 'le nombre d’étoiles en compteur mécanique, sur un fond d’étoiles qui scintillent', `<div class="card" style="background:linear-gradient(170deg,#0b1026,#1e1b4b)"><div class="starfield">${Array.from({ length: 22 }, (_, i) => `<i style="left:${(i * 41) % 96}%;top:${(i * 29) % 90}%;font-size:${8 + (i % 4) * 3}px;animation-delay:-${i * .3}s">★</i>`).join('')}</div>
+      ${head('Statistiques')}<div style="margin-top:auto;position:relative"><div class="odo">${R.stars.toLocaleString('fr-FR').split('').map((ch, i) => /\d/.test(ch) ? `<span style="animation-delay:${i * .08}s">${ch}</span>` : '<span class="sep"></span>').join('')}</div>
+      <div class="s" style="text-align:center;margin-top:8px;letter-spacing:.3em;text-transform:uppercase">étoiles</div></div>
+      <div class="s" style="position:relative;text-align:center;margin-top:auto">🍴 ${fmtK(R.forks)} forks · 🐞 ${fmtK(R.openIssues)} issues</div></div>`],
+    ['Barres', 'les trois chiffres en barres, pour comparer d’un coup d’œil', `<div class="card">${head('Statistiques')}<div class="s clamp2" style="font-size:12.5px">${R.description}</div>
+      <div class="bars">${[['⭐ étoiles', R.stars], ['🍴 forks', R.forks], ['🐞 issues', R.openIssues]].map(([l, v], i) => `<div class="b"><span>${l}</span><span style="background:rgb(255 255 255 / .08);border-radius:999px;display:block"><i style="width:${Math.max(3, (v / R.stars) * 100)}%;animation-delay:${i * .15}s"></i></span><b class="tab" style="text-align:right">${fmtK(v)}</b></div>`).join('')}</div></div>`],
+  ]],
+  ['📋 Ce qui a changé', 'daily_changes', [
+    ['Stand-up IA', 'le résumé de l’IA (si elle est activée), les points clés, et qui a travaillé', `<div class="card">${head(`Les ${D.hours} dernières heures`)}
+      <span class="ai"><svg viewBox="0 0 24 24"><path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z"/></svg>Stand-up par l’IA</span>
+      <div class="note">${STAND.summary}</div><ul class="hl">${STAND.highlights.map((h) => `<li class="clamp2">${h}</li>`).join('')}</ul>
+      <div class="people">${D.authors.map((a) => av(a.name)).join('')}<span class="s" style="margin-left:10px">${D.commitCount} commits · ${D.authors.length} personnes</span></div></div>`],
+    ['Pouls d’activité', 'un histogramme des commits sur la période, puis qui a contribué le plus', `<div class="card">${head(`Les ${D.hours} dernières heures`)}
+      <div style="display:flex;align-items:baseline;gap:8px"><span class="bignum tab" style="font-size:44px">${D.commitCount}</span><span class="s">commits</span></div>
+      <div class="pulse">${buckets.map((b, i) => `<i class="${b ? '' : 'zero'}" style="height:${b ? (b / bmax) * 100 : 5}%;animation-delay:${i * .03}s" title="${b} commit(s)"></i>`).join('')}</div>
+      <div class="bars" style="gap:6px;margin-top:0">${D.authors.slice(0, 3).map((a) => `<div class="b" style="grid-template-columns:110px 1fr 20px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.name}</span><span style="background:rgb(255 255 255 / .08);border-radius:999px;display:block"><i style="width:${(a.count / maxA) * 100}%"></i></span><b>${a.count}</b></div>`).join('')}</div></div>`],
+    ['Carnet de bord', 'façon cahier : le résumé écrit à la main, puis la liste des changements', `<div class="card paper"><div class="head"><span class="ico">${GH_ICON}</span><div><div class="t">Carnet de bord</div><div class="s mono">${REPO}</div></div></div>
+      <div style="font-family:Georgia,serif;font-style:italic;font-size:13px;line-height:1.55;border-left:2px solid #8b5cf6;padding-left:10px">${STAND.summary}</div>
+      <ol style="margin:0;padding-left:18px;font-size:12px;line-height:1.7">${D.commits.slice(0, 4).map((c) => `<li class="clamp2"><b>${c.author.split(' ')[0]}</b> — ${c.message.replace(/\s*\(#\d+\)$/, '')}</li>`).join('')}</ol>
+      <div class="s" style="margin-top:auto">${D.commitCount} commits en ${D.hours} h</div></div>`],
+  ]],
+]
+document.getElementById('app').innerHTML = sections.map(([title, key, opts]) => `<section><h2>${title}<code>${key}</code></h2><div class="row">${opts.map(([name, desc, html], i) => `<div class="opt">${html}<p><b>${i + 1} · ${name}</b> : ${desc}</p></div>`).join('')}</div></section>`).join('') + '<div style="height:50px"></div>'
+</script>
+</body>
+</html>

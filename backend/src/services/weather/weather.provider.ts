@@ -1,103 +1,258 @@
 import { Injectable } from '@nestjs/common';
+import { fetchWithTimeout } from '../../common/fetch-timeout.util';
+import { TtlCache } from '../../common/ttl-cache.util';
 import { UNTRUSTED_RULES, clip, languageName } from '../../ai/ai.service';
-import { ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
+import { EnrichContext, ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
 
+// Open-Meteo: free, no API key, no account — so this service works for every
+// user without subscribing to anything (the brief asks for at least one such service).
 const FETCH_TIMEOUT_MS = 10_000;
-const GEOCODE_URL = 'https://geocoding-api.open-meteo.com/v1/search';
+const GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 
+// WMO weather codes (what Open-Meteo returns) grouped into a few conditions.
+// The frontend turns each condition into an icon and a translated label.
+export function conditionOf(code: number): string {
+  if (code === 0) return 'clear';
+  if (code <= 2) return 'partly_cloudy';
+  if (code === 3) return 'cloudy';
+  if (code === 45 || code === 48) return 'fog';
+  if (code >= 51 && code <= 57) return 'drizzle';
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return 'rain';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow';
+  if (code >= 95) return 'thunderstorm';
+  return 'cloudy';
+}
+
+async function fetchJson(url: string, widgetName: string): Promise<any> {
+  let res: Response;
+  try {
+    res = await fetchWithTimeout(url, {}, FETCH_TIMEOUT_MS);
+  } catch (err) {
+    throw new ServiceFetchError('weather', widgetName, `Could not reach the weather API: ${(err as Error).message}`);
+  }
+  if (!res.ok) throw new ServiceFetchError('weather', widgetName, `Weather API returned HTTP ${res.status}`);
+  return res.json();
+}
+
 interface Place {
-  name: string;
+  city: string;
   country: string | null;
   latitude: number;
   longitude: number;
 }
 
-// A city never moves, so geocode each name once per process.
+const GEOCODING_LANGUAGES = ['fr', 'en', 'es'];
+
+export interface CitySuggestion {
+  value: string;
+  label: string;
+  country: string | null;
+  admin1: string | null;
+}
+const searchCache = new TtlCache();
+
+// Type-ahead for the "city" field: live results from the same geocoder the widgets use, so whatever
+// is picked is guaranteed to resolve. Cached briefly — a place's name/population barely changes.
+export async function searchCities(query: string, lang: string, limit = 8): Promise<CitySuggestion[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const language = GEOCODING_LANGUAGES.includes(lang) ? lang : 'en';
+  const count = Math.min(Math.max(Math.floor(limit) || 8, 1), 15);
+  const key = `search:${language}:${count}:${q.toLowerCase()}`;
+  return searchCache.get(
+    key,
+    10 * 60_000,
+    async () => {
+      const data = await fetchJson(`${GEOCODING_URL}?${new URLSearchParams({ name: q, count: String(count), language })}`, 'cities');
+      return ((data?.results ?? []) as any[]).map((r) => ({
+        value: String(r.name),
+        label: [r.name, r.admin1, r.country].filter(Boolean).join(', '),
+        country: r.country ?? null,
+        admin1: r.admin1 ?? null,
+      }));
+    },
+    60 * 60_000,
+  );
+}
+
+// A city never moves, so each name is geocoded once per process.
 const placeCache = new Map<string, Place>();
+export const clearPlaceCache = () => placeCache.clear();
 
-async function fetchJson(url: string): Promise<any> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  let res: Response;
-  try {
-    res = await fetch(url, { signal: controller.signal });
-  } catch (err) {
-    throw new ServiceFetchError('weather', 'forecast', `Could not reach the weather API: ${(err as Error).message}`);
-  } finally {
-    clearTimeout(timeout);
-  }
-  if (!res.ok) {
-    throw new ServiceFetchError('weather', 'forecast', `Weather API returned HTTP ${res.status}`);
-  }
-  return res.json();
-}
-
-async function geocode(city: string): Promise<Place> {
-  const key = city.trim().toLowerCase();
-  const cached = placeCache.get(key);
+// City name → coordinates. The forecast API only understands coordinates.
+async function findCity(config: Record<string, string | number>, widgetName: string): Promise<Place> {
+  const name = String(config.city ?? '').trim();
+  if (!name) throw new ServiceFetchError('weather', widgetName, 'Missing required "city" parameter');
+  const cached = placeCache.get(name.toLowerCase());
   if (cached) return cached;
-
-  const data = await fetchJson(`${GEOCODE_URL}?name=${encodeURIComponent(city)}&count=1&language=en&format=json`);
-  const hit = data?.results?.[0];
-  if (!hit) {
-    throw new ServiceFetchError('weather', 'forecast', `City "${city}" not found`);
-  }
-  const place: Place = { name: hit.name, country: hit.country ?? null, latitude: hit.latitude, longitude: hit.longitude };
-  placeCache.set(key, place);
-  return place;
+  // Search the name in the three app languages and keep the most populated match: the first English
+  // result for "Londres" is a village in Argentina, while the French search finds London.
+  const lists = await Promise.all(
+    GEOCODING_LANGUAGES.map((language) =>
+      fetchJson(`${GEOCODING_URL}?${new URLSearchParams({ name, count: '10', language })}`, widgetName).then((d) => d?.results ?? []),
+    ),
+  );
+  const place = lists.flat().reduce((best: any, p: any) => (!best || (p.population ?? 0) > (best.population ?? 0) ? p : best), null);
+  if (!place) throw new ServiceFetchError('weather', widgetName, `No city found for "${name}"`);
+  const found = { city: place.name, country: place.country ?? null, latitude: place.latitude, longitude: place.longitude };
+  placeCache.set(name.toLowerCase(), found);
+  return found;
 }
 
-const forecast: WidgetDefinition = {
-  name: 'forecast',
-  description: 'Current temperature and the next five days for a city',
-  params: [{ name: 'city', type: 'string', required: true }],
+function parseUnit(config: Record<string, string | number>, widgetName: string): 'celsius' | 'fahrenheit' {
+  const unit = String(config.unit ?? 'celsius').toLowerCase();
+  if (unit !== 'celsius' && unit !== 'fahrenheit') {
+    throw new ServiceFetchError('weather', widgetName, `Unknown unit "${unit}" (use celsius or fahrenheit)`);
+  }
+  return unit;
+}
+
+function clampInt(value: unknown, fallback: number, max: number): number {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? Math.min(n, max) : fallback;
+}
+
+const forecast = (place: Place, unit: string, extra: Record<string, string>, widgetName: string) =>
+  fetchJson(
+    `${FORECAST_URL}?${new URLSearchParams({
+      latitude: String(place.latitude),
+      longitude: String(place.longitude),
+      temperature_unit: unit,
+      timezone: 'auto', // times come back in the city's local time
+      ...extra,
+    })}`,
+    widgetName,
+  );
+
+const round = (n: unknown) => (typeof n === 'number' ? Math.round(n) : null);
+
+// One practical piece of advice + what to wear, from the data the widget already has.
+// Weather is public data: nothing personal is sent to the model.
+async function weatherAdvice(data: unknown, ctx: EnrichContext) {
+  const out = await ctx.ai.completeJson<{ advice?: string; outfit?: string }>({
+    system:
+      `You give one practical piece of weather advice in ${languageName(ctx.language)}. ${UNTRUSTED_RULES} ` +
+      'Schema: {"advice": string (max 160 chars: what to expect and plan for), "outfit": string (max 80 chars: what to wear/bring)}. ' +
+      'Conditions are one of: clear, partly_cloudy, cloudy, fog, drizzle, rain, snow, thunderstorm. Use only the data given.',
+    user: `<data>${JSON.stringify(data)}</data>`,
+    maxTokens: 250,
+    mock: { advice: `${(data as { city?: string })?.city ?? ''}`, outfit: '' },
+  });
+  return { kind: 'weather_advice', advice: clip(out.advice ?? '', 170), outfit: clip(out.outfit ?? '', 90), language: ctx.language };
+}
+
+const currentWeather: WidgetDefinition = {
+  name: 'current_weather',
+  description: 'Display the current temperature, sky, humidity and wind for a city',
+  params: [
+    { name: 'city', type: 'string', required: true, optionsUrl: '/services/weather/cities' },
+    { name: 'unit', type: 'string' },
+  ],
+  // The temperature drives the value history and alerts ("tell me when it goes above 30°")
   primaryMetric: (d) => ((d as { temperature?: unknown })?.temperature as number) ?? null,
-  enrich: async (data, ctx) => {
-    const d = data as { city: string; temperature: number; weatherCode: number; days: { date: string; min: number; max: number; weatherCode: number }[] };
-    const out = await ctx.ai.completeJson<{ advice?: string; outfit?: string }>({
-      system:
-        `You give one practical piece of weather advice in ${languageName(ctx.language)}. ${UNTRUSTED_RULES} ` +
-        'Schema: {"advice": string (max 160 chars: what to expect and plan for), "outfit": string (max 80 chars: what to wear/bring)}. ' +
-        'WMO weather codes: 0 clear, 1-3 cloudy, 45-48 fog, 51-67 drizzle/rain, 71-77 snow, 80-82 showers, 95-99 thunderstorm. Use only the data given.',
-      user: `<data>${JSON.stringify(d)}</data>`,
-      maxTokens: 250,
-      mock: { advice: `${d.city}: ${d.temperature}°C now.`, outfit: '' },
-    });
-    return { kind: 'weather_advice', advice: clip(out.advice ?? '', 170), outfit: clip(out.outfit ?? '', 90), language: ctx.language };
-  },
+  enrich: weatherAdvice,
   async fetchData(config) {
-    const city = String(config.city ?? '').trim();
-    if (!city) {
-      throw new ServiceFetchError('weather', 'forecast', 'Missing required "city" parameter');
-    }
-    const place = await geocode(city);
-
-    const data = await fetchJson(
-      `${FORECAST_URL}?latitude=${place.latitude}&longitude=${place.longitude}` +
-        '&current=temperature_2m,weather_code' +
-        '&daily=weather_code,temperature_2m_max,temperature_2m_min' +
-        '&timezone=auto&forecast_days=6',
+    const unit = parseUnit(config, 'current_weather');
+    const place = await findCity(config, 'current_weather');
+    const data = await forecast(
+      place,
+      unit,
+      {
+        current: 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day',
+        daily: 'temperature_2m_max,temperature_2m_min',
+        forecast_days: '1',
+      },
+      'current_weather',
     );
-    const daily = data?.daily;
-    if (!data?.current || !Array.isArray(daily?.time)) {
-      throw new ServiceFetchError('weather', 'forecast', 'Unexpected response from the weather API');
-    }
-
-    // Index 0 is today; the widget lists the following five days.
-    const days = (daily.time as string[]).slice(1, 6).map((date, i) => ({
-      date,
-      weatherCode: daily.weather_code[i + 1],
-      min: Math.round(daily.temperature_2m_min[i + 1]),
-      max: Math.round(daily.temperature_2m_max[i + 1]),
-    }));
-
+    const c = data?.current ?? {};
     return {
-      city: place.name,
+      city: place.city,
       country: place.country,
-      temperature: Math.round(data.current.temperature_2m),
-      weatherCode: data.current.weather_code,
-      days,
+      unit,
+      temperature: round(c.temperature_2m),
+      feelsLike: round(c.apparent_temperature),
+      humidity: c.relative_humidity_2m ?? null,
+      windKmh: round(c.wind_speed_10m),
+      condition: conditionOf(c.weather_code),
+      isDay: c.is_day === 1,
+      high: round(data?.daily?.temperature_2m_max?.[0]),
+      low: round(data?.daily?.temperature_2m_min?.[0]),
+    };
+  },
+};
+
+const dailyForecast: WidgetDefinition = {
+  name: 'daily_forecast',
+  description: 'Display the forecast for the next days in a city (1 to 16 days)',
+  params: [
+    { name: 'city', type: 'string', required: true, optionsUrl: '/services/weather/cities' },
+    { name: 'days', type: 'integer' },
+    { name: 'unit', type: 'string' },
+  ],
+  primaryMetric: (d) => ((d as { now?: { temperature?: unknown } })?.now?.temperature as number) ?? null,
+  enrich: weatherAdvice,
+  async fetchData(config) {
+    const unit = parseUnit(config, 'daily_forecast');
+    const days = clampInt(config.days, 5, 16);
+    const place = await findCity(config, 'daily_forecast');
+    const data = await forecast(
+      place,
+      unit,
+      {
+        current: 'temperature_2m,weather_code',
+        daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+        // +1 because today is the first day returned, and the list shows the days after it
+        forecast_days: String(days + 1),
+      },
+      'daily_forecast',
+    );
+    const d = data?.daily ?? {};
+    return {
+      city: place.city,
+      country: place.country,
+      unit,
+      now: { temperature: round(data?.current?.temperature_2m), condition: conditionOf(data?.current?.weather_code) },
+      days: (d.time ?? []).slice(1, days + 1).map((date: string, i: number) => ({
+        date,
+        condition: conditionOf(d.weather_code?.[i + 1]),
+        min: round(d.temperature_2m_min?.[i + 1]),
+        max: round(d.temperature_2m_max?.[i + 1]),
+        rainChance: d.precipitation_probability_max?.[i + 1] ?? null,
+      })),
+    };
+  },
+};
+
+const hourlyForecast: WidgetDefinition = {
+  name: 'hourly_forecast',
+  description: 'Display the temperature and chance of rain for the next hours in a city (1 to 48 hours)',
+  params: [
+    { name: 'city', type: 'string', required: true, optionsUrl: '/services/weather/cities' },
+    { name: 'hours', type: 'integer' },
+    { name: 'unit', type: 'string' },
+  ],
+  async fetchData(config) {
+    const unit = parseUnit(config, 'hourly_forecast');
+    const hours = clampInt(config.hours, 12, 48);
+    const place = await findCity(config, 'hourly_forecast');
+    const data = await forecast(
+      place,
+      unit,
+      { hourly: 'temperature_2m,weather_code,precipitation_probability', forecast_hours: String(hours) },
+      'hourly_forecast',
+    );
+    const h = data?.hourly ?? {};
+    return {
+      city: place.city,
+      country: place.country,
+      unit,
+      hours: (h.time ?? []).map((time: string, i: number) => ({
+        time,
+        temperature: round(h.temperature_2m?.[i]),
+        condition: conditionOf(h.weather_code?.[i]),
+        rainChance: h.precipitation_probability?.[i] ?? null,
+      })),
     };
   },
 };
@@ -106,5 +261,5 @@ const forecast: WidgetDefinition = {
 export class WeatherProvider implements ServiceProvider {
   name = 'weather';
   requiresAuth = false;
-  widgets: WidgetDefinition[] = [forecast];
+  widgets: WidgetDefinition[] = [currentWeather, dailyForecast, hourlyForecast];
 }

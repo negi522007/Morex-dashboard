@@ -35,4 +35,29 @@ describe('WorldclockProvider', () => {
     const result: any = await widget.fetchData({ homeTimezone: 'Europe/Paris', cities: 'America/New_York' });
     expect(result.cities[0].label).toBe('New York');
   });
+
+  it('accepts city and country names (any language) and keeps what the user typed as the label', async () => {
+    const result: any = await widget.fetchData({ homeTimezone: 'Cotonou', cities: 'Delhi, Égypte, Bangladesh' });
+    expect(result.home.timezone).toBe('Africa/Porto-Novo');
+    expect(result.cities.map((c: any) => [c.label, c.timezone])).toEqual([
+      ['Delhi', 'Asia/Kolkata'],
+      ['Égypte', 'Africa/Cairo'],
+      ['Bangladesh', 'Asia/Dhaka'],
+    ]);
+  });
+
+  it('names the unknown place in the error instead of a generic failure', async () => {
+    await expect(widget.fetchData({ homeTimezone: 'Paris', cities: 'Atlantide' })).rejects.toThrow(/Unknown place "Atlantide"/);
+  });
+
+  it('advertises the type-ahead dropdown and the multi-value cities param to the frontend', () => {
+    const cities = widget.params.find((p) => p.name === 'cities');
+    expect(cities).toMatchObject({ optionsUrl: '/services/worldclock/places', multiple: true });
+    expect(widget.params.find((p) => p.name === 'homeTimezone')?.optionsUrl).toBe('/services/worldclock/places');
+  });
+  it('gives each city its country code for a flag, and keeps a typed name as the label', async () => {
+    const d: any = await provider.widgets[0].fetchData({ homeTimezone: 'Cotonou', cities: 'Paris, Asia/Tokyo' });
+    expect(d.home).toMatchObject({ timezone: 'Africa/Porto-Novo', label: 'Cotonou', iso2: 'BJ' });
+    expect(d.cities.map((c: any) => [c.label, c.iso2])).toEqual([['Paris', 'FR'], ['Tokyo', 'JP']]);
+  });
 });

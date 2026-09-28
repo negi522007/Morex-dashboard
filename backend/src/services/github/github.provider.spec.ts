@@ -28,6 +28,22 @@ describe('GithubProvider', () => {
     await expect(recentCommits.fetchData({ repo: 'not-a-valid-repo' })).rejects.toBeInstanceOf(ServiceFetchError);
     await expect(openIssues.fetchData({ repo: '' })).rejects.toBeInstanceOf(ServiceFetchError);
     await expect(repoStats.fetchData({})).rejects.toBeInstanceOf(ServiceFetchError);
+    await expect(recentCommits.fetchData({ repo: 'a/b/c' })).rejects.toBeInstanceOf(ServiceFetchError);
+  });
+
+  it('accepts a pasted GitHub URL instead of "owner/name" and normalizes it (so a typo’d config self-heals on the next refresh)', async () => {
+    mockFetchOnce({ ok: true, json: async () => [] });
+    for (const repo of [
+      'https://github.com/negi522007/TEKBOT-WEBSITE',
+      'http://github.com/negi522007/TEKBOT-WEBSITE',
+      'github.com/negi522007/TEKBOT-WEBSITE',
+      'https://www.github.com/negi522007/TEKBOT-WEBSITE/',
+      'https://github.com/negi522007/TEKBOT-WEBSITE.git',
+    ]) {
+      (global.fetch as jest.Mock).mockClear();
+      await recentCommits.fetchData({ repo });
+      expect((global.fetch as jest.Mock).mock.calls[0][0]).toContain('/repos/negi522007/TEKBOT-WEBSITE/commits');
+    }
   });
 
   it('recent_commits maps the GitHub commits shape to title/author/date', async () => {

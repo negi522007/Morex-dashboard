@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex courrier spatial</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .35), rgb(15 12 50 / .6)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1.top { text-align: center; font-weight: 600; margin: 0; padding-top: 34px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .75); margin: 8px auto 26px; max-width: 820px; padding: 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; max-width: 1250px; margin: 0 auto; padding: 0 20px 60px; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .opt > p { margin: 12px 0 0; font-size: 13px; color: rgb(255 255 255 / .75); } .opt > p b { color: #fff; }
+  /* the right half of the auth card */
+  .panel { position: relative; height: 470px; padding: 26px; border-radius: 28px; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .14); backdrop-filter: blur(22px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow: hidden; }
+  .scene { position: relative; width: 100%; height: 210px; margin-bottom: 8px; }
+  .hand { font: 500 23px Caveat, cursive; margin: 4px 0 0; }
+  .mail { display: inline-block; max-width: 100%; margin-top: 8px; padding: 6px 16px; border-radius: 999px; background: rgb(255 255 255 / .1); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn { margin-top: 16px; padding: 10px 22px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .3); background: transparent; color: #fff; font: 600 13.5px Poppins; }
+  .sub { font-size: 12px; opacity: .65; margin-top: 4px; }
+  .stars i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: tw 3s ease-in-out infinite; }
+  @keyframes tw { 50% { opacity: .2; } }
+  .env { font-size: 30px; filter: drop-shadow(0 0 10px rgb(167 139 250 / .8)); }
+
+  /* 1 · comet carrying the letter */
+  .s1 .comet { position: absolute; left: 0; top: 0; offset-path: path('M -40 190 C 80 150, 200 60, 380 20'); offset-rotate: 0deg; animation: comet 3.6s cubic-bezier(.4, 0, .2, 1) infinite; }
+  .s1 .comet::before { content: ''; position: absolute; right: 28px; top: 50%; width: 150px; height: 4px; margin-top: -2px; border-radius: 4px; background: linear-gradient(90deg, transparent, rgb(167 139 250 / .3), #c4b5fd); transform-origin: right; transform: rotate(28deg); filter: blur(1px); }
+  @keyframes comet { 0% { offset-distance: 0%; opacity: 0; } 12% { opacity: 1; } 75% { offset-distance: 100%; opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+  .s1 .inbox { position: absolute; right: 14%; top: 8%; width: 58px; height: 58px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #c4b5fd, #6366f1 60%, #312e81); box-shadow: 0 0 30px rgb(129 140 248 / .7); display: grid; place-items: center; font-size: 22px; animation: glowIn 3.6s infinite; }
+  @keyframes glowIn { 0%, 70% { box-shadow: 0 0 30px rgb(129 140 248 / .6); } 80% { box-shadow: 0 0 60px 14px rgb(196 181 253 / .9); } 100% { box-shadow: 0 0 30px rgb(129 140 248 / .6); } }
+  /* 2 · planet with the letter as its satellite */
+  .s2 .box { position: absolute; left: 50%; top: 50%; width: 240px; height: 210px; margin: -105px -120px; }
+  .s2 .planet { position: absolute; left: 72px; top: 57px; width: 96px; height: 96px; border-radius: 50%; z-index: 2; background: radial-gradient(circle at 32% 28%, #fbcfe8, #a78bfa 45%, #4c1d95 85%); box-shadow: inset -14px -10px 30px rgb(0 0 0 / .45), 0 0 40px rgb(167 139 250 / .5); }
+  .s2 .ring { position: absolute; left: 10px; top: 75px; width: 220px; height: 60px; border-radius: 50%; border: 1.5px dashed rgb(255 255 255 / .35); }
+  .s2 .sat { position: absolute; left: 0; top: 0; font-size: 26px; filter: drop-shadow(0 0 8px #f0abfc); offset-path: path('M 230 105 A 110 30 0 1 1 10 105 A 110 30 0 1 1 230 105'); offset-rotate: 0deg; animation: orb 5s linear infinite; }
+  @keyframes orb { 0% { offset-distance: 0%; z-index: 3; } 49.9% { z-index: 3; } 50% { offset-distance: 50%; z-index: 1; } 99.9% { z-index: 1; } 100% { offset-distance: 100%; z-index: 3; } }
+  /* 3 · constellation drawing an envelope */
+  .s3 svg { width: 100%; height: 100%; }
+  .s3 line { stroke: rgb(196 181 253 / .85); stroke-width: 1.5; stroke-dasharray: 200; stroke-dashoffset: 200; animation: draw 6s ease-in-out infinite; filter: drop-shadow(0 0 3px #a78bfa); }
+  .s3 circle { fill: #fff; filter: drop-shadow(0 0 5px #fff); animation: tw 2.4s ease-in-out infinite; }
+  @keyframes draw { 0% { stroke-dashoffset: 200; } 45%, 85% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 200; opacity: 0; } }
+  .s3 .name { position: absolute; left: 0; right: 0; bottom: 0; font-size: 10px; letter-spacing: .3em; text-transform: uppercase; opacity: .55; }
+  /* 4 · postal rocket */
+  .s4 .earth { position: absolute; right: 12%; top: 12px; width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #bae6fd, #0ea5e9 50%, #075985); box-shadow: inset -10px -8px 18px rgb(0 0 0 / .4), 0 0 26px rgb(56 189 248 / .6); }
+  .s4 .earth::after { content: '📬'; position: absolute; right: -12px; top: -14px; font-size: 22px; }
+  .s4 svg.trail { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .s4 .rocket { position: absolute; left: 0; top: 0; offset-path: path('M 30 190 C 60 110, 150 120, 250 50'); animation: rocket 4s ease-in-out infinite; font-size: 32px; }
+  .s4 .rocket small { position: absolute; left: -10px; top: 20px; font-size: 16px; }
+  @keyframes rocket { 0% { offset-distance: 0%; } 80%, 100% { offset-distance: 92%; } }
+  /* 5 · radio signal */
+  .s5 .dish { position: absolute; left: 50%; top: 50%; margin: -28px 0 0 -28px; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .2); }
+  .s5 .wave { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px; border-radius: 50%; border: 2px solid rgb(196 181 253 / .7); animation: wave 3s ease-out infinite; }
+  .s5 .wave:nth-child(2) { animation-delay: 1s; } .s5 .wave:nth-child(3) { animation-delay: 2s; }
+  @keyframes wave { from { transform: scale(1); opacity: .9; } to { transform: scale(4); opacity: 0; } }
+  .s5 .tag { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); font-size: 10px; letter-spacing: .25em; text-transform: uppercase; color: #c4b5fd; white-space: nowrap; }
+  .s5 .tag i { display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399; animation: tw 1s infinite; }
+  /* 6 · portal */
+  .s6 .portal { position: absolute; left: 50%; top: 50%; width: 170px; height: 170px; margin: -85px; border-radius: 50%;
+    background: conic-gradient(from 0deg, #312e81, #a78bfa, #f0abfc, #38bdf8, #312e81); filter: blur(10px); animation: sp 6s linear infinite; opacity: .85; }
+  .s6 .hole { position: absolute; left: 50%; top: 50%; width: 110px; height: 110px; margin: -55px; border-radius: 50%; background: radial-gradient(circle, #020617 40%, rgb(2 6 23 / .6) 70%, transparent 72%); }
+  .s6 .env { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  @keyframes pulse { 50% { transform: translate(-50%, -50%) scale(.8) rotate(-10deg); opacity: .7; } }
+</style>
+</head>
+<body>
+<h1 class="top">« Cherche ce message », version galaxie</h1>
+<p class="lead">Le même écran sans titre ni logo Gmail, mais la petite scène s’inspire du fond étoilé et de l’orbite du logo Morex. Le texte reste le même partout</p>
+<div class="grid" id="g"></div>
+<script>
+const MAIL = 'axellehossolu690@gmail.com'
+const stars = (n = 18) => `<div class="stars">${Array.from({ length: n }, (_, i) => `<i style="left:${(i * 53) % 100}%;top:${(i * 37) % 100}%;animation-delay:${(i % 6) * .5}s;${i % 5 === 0 ? 'width:3px;height:3px' : ''}"></i>`).join('')}</div>`
+const text = (hand = 'Cherche ce message dans ta boîte', sub = '') => `<p class="hand">${hand}</p>${sub ? `<p class="sub">${sub}</p>` : ''}<span class="mail">${MAIL}</span><button class="btn">Se connecter</button>`
+// constellation: envelope outline + flap
+const C = [[40, 60], [200, 60], [200, 170], [40, 170], [120, 118]]
+const L = [[0, 1], [1, 2], [2, 3], [3, 0], [0, 4], [4, 1]]
+const P = [
+  ['Comète messagère', 'une comète violette traverse le ciel avec ta lettre, et une petite planète « boîte mail » s’illumine quand elle arrive', `<div class="scene s1">${stars()}<span class="inbox">📭</span><span class="comet"><span class="env">✉️</span></span></div>${text('Ton message traverse la galaxie', 'Cherche-le dans ta boîte')}`],
+  ['Planète et satellite', 'la lettre tourne en orbite autour d’une planète rose-violet, comme le petit satellite du logo Morex', `<div class="scene s2">${stars()}<span class="box"><span class="ring"></span><span class="planet"></span><span class="sat">💌</span></span></div>${text()}`],
+  ['Constellation', 'des étoiles se relient une à une et dessinent une enveloppe dans le ciel : « la constellation du Courrier »', `<div class="scene s3">${stars(12)}<svg viewBox="0 0 240 210">${L.map(([a, b], i) => `<line x1="${C[a][0]}" y1="${C[a][1]}" x2="${C[b][0]}" y2="${C[b][1]}" style="animation-delay:${i * .25}s"/>`).join('')}${C.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="3.2" style="animation-delay:${i * .4}s"/>`).join('')}</svg><span class="name">Constellation du Courrier</span></div>${text()}`],
+  ['Fusée postale', 'une fusée file vers une planète bleue en laissant une traînée pointillée, avec la lettre accrochée derrière', `<div class="scene s4">${stars()}<svg class="trail" viewBox="0 0 300 210" preserveAspectRatio="none"><path d="M 30 190 C 60 110, 150 120, 250 50" fill="none" stroke="rgb(255 255 255 / .3)" stroke-width="2" stroke-dasharray="3 7"/></svg><span class="earth"></span><span class="rocket">🚀<small>✉️</small></span></div>${text('Livraison en cours…', 'Cherche le message dans ta boîte')}`],
+  ['Transmission', 'une antenne envoie des ondes dans l’espace, avec un voyant vert « Transmission envoyée » comme dans un vaisseau', `<div class="scene s5">${stars()}<span class="wave"></span><span class="wave"></span><span class="wave"></span><span class="dish">📡</span><span class="tag"><i></i>Transmission envoyée</span></div>${text()}`],
+  ['Portail', 'un portail de lumière tourne comme un trou noir coloré, avec la lettre au centre : cliquer sur « Oui, c’est moi » ouvre le passage', `<div class="scene s6">${stars()}<span class="portal"></span><span class="hole"></span><span class="env">💌</span></div>${text('Ton portail t’attend', 'Clique sur « Oui, c’est moi » dans l’email')}`],
+]
+document.getElementById('g').innerHTML = P.map(([n, d, h], i) => `<div class="opt"><div class="panel">${h}</div><p><b>${i + 1} · ${n}</b> : ${d}</p></div>`).join('')
+</script>
+</body>
+</html>

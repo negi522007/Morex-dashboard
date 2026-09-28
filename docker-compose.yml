@@ -4,8 +4,12 @@ services:
       context: ./backend
     ports:
       - "8080:8080"
+    # .env is optional: with none, safe defaults apply (Mailhog for mail, a generated
+    # encryption key, GitHub/AI/Epitech/YouTube features simply off). Copy
+    # .env.example to .env only to turn those on.
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       # Always the in-network hostname, regardless of .env (.env's own
       # DATABASE_URL is for running the server outside Docker instead — see
@@ -17,9 +21,14 @@ services:
       # Uploaded avatar photos — a named volume so they survive
       # `docker compose down` (not `-v`) and container rebuilds.
       - uploads_data:/app/uploads
+      # Holds the auto-generated TOKEN_ENCRYPTION_KEY when .env doesn't define one.
+      # Deliberately NOT under /app/uploads, which is served publicly.
+      - secrets_data:/app/secrets
     depends_on:
-      - db
-      - mailhog
+      db:
+        condition: service_healthy   # don't run migrations before Postgres accepts connections
+      mailhog:
+        condition: service_started
 
   db:
     image: postgres:16-alpine
@@ -31,6 +40,11 @@ services:
       - "55432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dashboard -d dashboard"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
 
   # Local SMTP catcher so `docker-compose up` works out of the box with no
   # real email account. Swap SMTP_HOST/PORT/USER/PASSWORD in .env to point at
@@ -41,8 +55,17 @@ services:
       - "1025:1025"
       - "8025:8025"
 
-  # frontend service to be added once the frontend build/Dockerfile exists (Phase 1)
+  # The React app (built, served by nginx) on http://localhost:5173. nginx also
+  # forwards the API routes to `server`, so it is same-origin like the dev proxy.
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - server
 
 volumes:
   db_data:
   uploads_data:
+  secrets_data:

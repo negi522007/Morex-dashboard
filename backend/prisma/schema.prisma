@@ -26,6 +26,9 @@ model User {
   // Profile/preferences (Morex dashboard UI) — all optional/defaulted so
   // existing accounts don't need a backfill.
   bio             String?
+  // Optional date of birth (day precision, no time zone). Collected at sign-up and used only to
+  // compute the zodiac sign for the well-being page; never sent anywhere, never shown to others.
+  birthDate       DateTime? @db.Date
   theme           String  @default("galaxy")
   language        String  @default("en")
   widgetSkin      String  @default("glass")
@@ -116,6 +119,9 @@ model WidgetInstance {
   decoration         String?
   lastRefreshedAt    DateTime?
   cachedData         Json?
+  // The exact reason the last refresh failed (e.g. "GitHub API returned HTTP 404"), shown on the card
+  // instead of an indefinite "waiting for data" — cleared back to null the moment a refresh succeeds.
+  lastError          String?
   // Opt-in (per widget) AI enrichment: `insight` holds the model's output next
   // to — never inside — cachedData, so cachedData's shape stays stable.
   // insightHash is a hash of the data the insight was made from: no new AI call
@@ -220,6 +226,14 @@ model AiUsage {
 model ContentDigest {
   key       String   @id
   payload   Json
+  createdAt DateTime @default(now())
+}
+
+// Addresses whose owner clicked "this wasn't me" on a confirmation email: sign-ups with a password are
+// refused for a while, so nobody can keep mailing them.
+model BlockedEmail {
+  email     String   @id
+  until     DateTime
   createdAt DateTime @default(now())
 }
 

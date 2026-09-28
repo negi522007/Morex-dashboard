@@ -1,4 +1,4 @@
-import { RssProvider } from './rss.provider';
+import { RssProvider, decodeEntities } from './rss.provider';
 import { ServiceFetchError } from '../service-provider.interface';
 
 const RSS_XML = `<?xml version="1.0"?>
@@ -85,6 +85,18 @@ describe('RssProvider (article_list widget)', () => {
       { title: 'Entry 1', link: 'https://example.com/e1', publishedAt: '2024-01-01T00:00:00Z', image: null, summary: null, feedTitle: 'Test Atom Feed' },
       { title: 'Entry 2', link: 'https://example.com/e2', publishedAt: '2024-01-02T00:00:00Z', image: null, summary: null, feedTitle: 'Test Atom Feed' },
     ]);
+  });
+
+  it('raises a clear ServiceFetchError when the address returns no articles (e.g. a plain HTML page, not a feed)', async () => {
+    mockFetchOnce({ ok: true, text: () => Promise.resolve('<!doctype html><html><body>Not a feed</body></html>') });
+    await expect(widget.fetchData({ link: 'https://example.com/not-a-feed' })).rejects.toMatchObject({
+      message: expect.stringContaining('No articles found'),
+    });
+  });
+
+  it('raises the same clear error for a well-formed but empty feed', async () => {
+    mockFetchOnce({ ok: true, text: () => Promise.resolve('<?xml version="1.0"?><rss version="2.0"><channel><title>Empty</title></channel></rss>') });
+    await expect(widget.fetchData({ link: 'https://example.com/empty-feed' })).rejects.toBeInstanceOf(ServiceFetchError);
   });
 
   it('raises ServiceFetchError (not a raw error) on a non-2xx response', async () => {
@@ -192,5 +204,11 @@ describe('RssProvider (article_list widget)', () => {
       const out: any = await widget.enrich!(items, c as any);
       expect(out.items[0].summary).toBe('ok');
     });
+  });
+  it('turns HTML entities into letters, even when a feed encodes them twice', () => {
+    expect(decodeEntities('Proc&#xE8;s de Rachida Dati')).toBe('Procès de Rachida Dati');
+    expect(decodeEntities('Visite du pape &#224; Metz &eacute;t&eacute;')).toBe('Visite du pape à Metz été');
+    expect(decodeEntities('Blocus dans des lyc&amp;#xE9;es')).toBe('Blocus dans des lycées');
+    expect(decodeEntities('A &amp; B, &unknown; stays')).toBe('A & B, &unknown; stays');
   });
 });

@@ -135,6 +135,14 @@ describe('WidgetsService', () => {
       expect(data).toMatchObject({ aiEnabled: true, insightHash: null, lastRefreshedAt: null });
     });
 
+    it('refreshes on the next tick when the config changes', async () => {
+      prisma.widgetInstance.findFirst.mockResolvedValue({
+        id: 'w', userId: 'u', serviceName: 'rss', widgetName: 'article_list', config: { link: 'https://a.test/f' },
+      });
+      await svc.update('u', 'w', { config: { link: 'https://b.test/f' } });
+      expect(prisma.widgetInstance.update.mock.calls[0][0].data).toMatchObject({ lastRefreshedAt: null });
+    });
+
     it('never exposes insightHash', async () => {
       prisma.widgetInstance.findMany.mockResolvedValue([
         { id: 'w', serviceName: 'rss', widgetName: 'article_list', config: { link: 'x' }, insightHash: 'h' },
@@ -301,6 +309,7 @@ describe('WidgetsService', () => {
         where: { id: 'w1' },
         data: {
           config: { link: 'https://example.com/other-feed' },
+          lastRefreshedAt: null,
           refreshRateSeconds: 120,
           position: { x: 1, y: 2 },
         },
