@@ -43,7 +43,7 @@ function SampleCard({ entry, lang, config = {}, data }: { entry: CatalogEntry; l
   return (
     <WidgetCard preview lang={lang} widget={{
       serviceName: entry.service, widgetName: entry.widget, config: { ...s.config, ...typed }, cachedData: data ?? s.data, insight: s.insight ?? null,
-      title: null, decoration: null, refreshRateSeconds: 300, lastRefreshedAt: new Date().toISOString(),
+      title: null, decoration: null, refreshRateSeconds: 300, lastRefreshedAt: new Date().toISOString(), lastError: null,
     }} />
   )
 }

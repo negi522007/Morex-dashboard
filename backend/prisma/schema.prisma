@@ -119,6 +119,9 @@ model WidgetInstance {
   decoration         String?
   lastRefreshedAt    DateTime?
   cachedData         Json?
+  // The exact reason the last refresh failed (e.g. "GitHub API returned HTTP 404"), shown on the card
+  // instead of an indefinite "waiting for data" — cleared back to null the moment a refresh succeeds.
+  lastError          String?
   // Opt-in (per widget) AI enrichment: `insight` holds the model's output next
   // to — never inside — cachedData, so cachedData's shape stays stable.
   // insightHash is a hash of the data the insight was made from: no new AI call

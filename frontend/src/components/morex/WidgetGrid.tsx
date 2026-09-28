@@ -7,7 +7,7 @@ import { Decoration } from './Decoration'
 
 // The card frame shared by every widget: edit badges, resize handle, decoration, footer.
 export function WidgetCard({ widget, lang, editing = false, className = '', style, onDelete, onEdit, onConfig, onResizeStart, dragProps, preview, unlinked }: {
-  widget: Pick<WidgetInstance, 'serviceName' | 'widgetName' | 'config' | 'cachedData' | 'insight' | 'title' | 'decoration' | 'refreshRateSeconds' | 'lastRefreshedAt'> & { id?: string }
+  widget: Pick<WidgetInstance, 'serviceName' | 'widgetName' | 'config' | 'cachedData' | 'insight' | 'title' | 'decoration' | 'refreshRateSeconds' | 'lastRefreshedAt' | 'lastError'> & { id?: string }
   lang: Lang
   editing?: boolean
   className?: string
@@ -55,7 +55,7 @@ export function WidgetCard({ widget, lang, editing = false, className = '', styl
           <a href={`/auth/${entry.needs}`} onClick={(e) => e.stopPropagation()}>{entry.needs === 'github' ? W[lang].connectGithub : W[lang].connectEpitech}</a>
         </div>
       ) : view ? (
-        <view.View data={widget.cachedData} insight={widget.insight} config={widget.config} lang={lang} title={widget.title} onConfig={editing ? undefined : onConfig} />
+        <view.View data={widget.cachedData} insight={widget.insight} config={widget.config} lang={lang} title={widget.title} lastError={widget.lastError} onConfig={editing ? undefined : onConfig} />
       ) : (
         <div className="w-title">{widget.serviceName} / {widget.widgetName}</div>
       )}

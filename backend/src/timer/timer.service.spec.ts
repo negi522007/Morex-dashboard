@@ -50,11 +50,11 @@ describe('TimerService', () => {
     expect(fetchDataMock).toHaveBeenCalledWith({ x: 1 }, undefined);
     expect(prisma.widgetInstance.update).toHaveBeenCalledWith({
       where: { id: 'w1' },
-      data: { cachedData: { ok: true }, lastRefreshedAt: expect.any(Date) },
+      data: { cachedData: { ok: true }, lastRefreshedAt: expect.any(Date), lastError: null },
     });
   });
 
-  it('keeps updating lastRefreshedAt but leaves cachedData alone when fetchData throws', async () => {
+  it('keeps updating lastRefreshedAt but leaves cachedData alone when fetchData throws, and records the exact error', async () => {
     fetchDataMock.mockRejectedValue(new Error('boom'));
     prisma.$queryRaw.mockResolvedValue([
       { id: 'w1', userId: 'u1', serviceName: 'test-service', widgetName: 'widget-a', config: {} },
@@ -64,7 +64,7 @@ describe('TimerService', () => {
 
     expect(prisma.widgetInstance.update).toHaveBeenCalledWith({
       where: { id: 'w1' },
-      data: { lastRefreshedAt: expect.any(Date) },
+      data: { lastRefreshedAt: expect.any(Date), lastError: 'boom' },
     });
   });
 
@@ -78,7 +78,7 @@ describe('TimerService', () => {
     expect(fetchDataMock).not.toHaveBeenCalled();
     expect(prisma.widgetInstance.update).toHaveBeenCalledWith({
       where: { id: 'w1' },
-      data: { lastRefreshedAt: expect.any(Date) },
+      data: { lastRefreshedAt: expect.any(Date), lastError: expect.stringContaining('does-not-exist/nope') },
     });
   });
 
@@ -122,7 +122,7 @@ describe('TimerService', () => {
     expect(fetchDataMock).not.toHaveBeenCalled();
     expect(prisma.widgetInstance.update).toHaveBeenCalledWith({
       where: { id: 'w1' },
-      data: { cachedData: expect.anything(), lastRefreshedAt: expect.any(Date) },
+      data: { cachedData: expect.anything(), lastRefreshedAt: expect.any(Date), lastError: expect.stringContaining('not connected anymore') },
     });
   });
 

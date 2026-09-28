@@ -50,6 +50,8 @@ export interface WidgetInstance {
   lastRefreshedAt: string | null
   // What the service returned at the last refresh (null until the first one succeeds)
   cachedData: unknown
+  // Exact reason the last refresh failed, null once one succeeds (stale cachedData is kept regardless)
+  lastError: string | null
   userId: string
   createdAt: string
   updatedAt: string

@@ -12,6 +12,7 @@ export interface ViewProps {
   config: Record<string, string | number>
   lang: Lang
   title: string | null // title chosen by the user in the edit modal, if any
+  lastError?: string | null // exact reason the last refresh failed, shown instead of the generic "waiting" text while there is no data yet
   footer?: ReactNode // "Every 5 min · 14:32", when the design has one
   onConfig?: (patch: Record<string, string | number>) => void // in-card controls (fx period)
 }
@@ -20,7 +21,7 @@ type Any = Record<string, any> // eslint-disable-line @typescript-eslint/no-expl
 const obj = (v: unknown): Any => (v && typeof v === 'object' ? (v as Any) : {})
 const arr = (v: unknown): Any[] => (Array.isArray(v) ? v : [])
 
-const Waiting = ({ lang }: { lang: Lang }) => <div className="muted" style={{ margin: 'auto', fontSize: 13, textAlign: 'center' }}>{W[lang].waiting}</div>
+const Waiting = ({ lang, error }: { lang: Lang; error?: string | null }) => <div className="muted" style={{ margin: 'auto', fontSize: 13, textAlign: 'center' }}>{error || W[lang].waiting}</div>
 
 const AiStar = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z" /></svg>
 const GithubLogo = () => (
@@ -43,9 +44,9 @@ const sparkPath = (vals: number[], w: number, h: number, pd = 6) => {
 }
 
 // ---------- RSS: newspaper + AI recap ----------
-export function RssView({ data, insight, config, lang, title }: ViewProps) {
+export function RssView({ data, insight, config, lang, title, lastError }: ViewProps) {
   const items = arr(data), w = W[lang]
-  if (!items.length) return <Waiting lang={lang} />
+  if (!items.length) return <Waiting lang={lang} error={lastError} />
   const lead = items[0]
   const ai = arr(obj(insight).items).find((x) => x.link === lead.link)
   const feed = (title || lead.feedTitle || hostOf(config.link) || 'RSS').split(/ [-–—|] /)[0]
@@ -82,13 +83,13 @@ export function RssView({ data, insight, config, lang, title }: ViewProps) {
 
 // ---------- Market: exchange rate as a trading card with 24h / 7d / 30d tabs ----------
 const TICK: Record<string, string> = { bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL', dogecoin: 'DOGE', ripple: 'XRP', cardano: 'ADA', litecoin: 'LTC' }
-export function FxView({ data, config, lang, onConfig }: ViewProps) {
+export function FxView({ data, config, lang, onConfig, lastError }: ViewProps) {
   const d = obj(data), w = W[lang], gid = useId().replace(/:/g, '')
   // The tab shows the chosen period right away; the curve follows at the backend's next refresh
   const [period, setPeriod] = useState(String(config.days ?? d.days ?? 7))
   useEffect(() => setPeriod(String(config.days ?? d.days ?? 7)), [config.days, d.days])
   const hist = arr(d.history)
-  if (!hist.length || d.rate == null) return <Waiting lang={lang} />
+  if (!hist.length || d.rate == null) return <Waiting lang={lang} error={lastError} />
   const vals = hist.map((p) => Number(p.rate ?? p.price)), up = Number(d.changePct) >= 0, color = up ? '#34d399' : '#f87171'
   const path = sparkPath(vals, 300, 90)
   const base = String(d.base ?? config.base ?? ''), quote = String(d.quote ?? config.quote ?? '')
@@ -117,9 +118,9 @@ export function FxView({ data, config, lang, onConfig }: ViewProps) {
 
 // ---------- Market: price history with the spinning coin ----------
 const COIN: Record<string, string> = { bitcoin: '₿', ethereum: 'Ξ', solana: '◎', dogecoin: 'Ð', litecoin: 'Ł' }
-export function PriceView({ data, config, lang, title }: ViewProps) {
+export function PriceView({ data, config, lang, title, lastError }: ViewProps) {
   const pts = arr(data), w = W[lang], gid = useId().replace(/:/g, '')
-  if (pts.length < 2) return <Waiting lang={lang} />
+  if (pts.length < 2) return <Waiting lang={lang} error={lastError} />
   const pv = pts.map((p) => Number(p.price)), chg = ((pv.at(-1)! - pv[0]) / pv[0]) * 100, line = sparkPath(pv, 300, 110)
   const asset = String(config.asset ?? 'bitcoin'), cur = String(config.currency ?? 'usd').toLowerCase()
   const days = Number(config.days) || Math.max(1, Math.round((new Date(pts.at(-1)!.timestamp).getTime() - new Date(pts[0].timestamp).getTime()) / 864e5))
@@ -142,7 +143,7 @@ export function PriceView({ data, config, lang, title }: ViewProps) {
 }
 
 // ---------- GitHub: latest commits typed in a terminal ----------
-export function TermView({ data, config, lang, title }: ViewProps) {
+export function TermView({ data, config, lang, title, lastError }: ViewProps) {
   const commits = arr(data)
   const repo = String(config.repo ?? ''), name = repo.split('/').pop() || 'repo'
   const lines: ReactNode[] = [
@@ -163,19 +164,19 @@ export function TermView({ data, config, lang, title }: ViewProps) {
           {lines.slice(0, Math.min(step, lines.length)).map((l, i) => <div key={i} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l}</div>)}
           <span className="cur" />
         </pre>
-      ) : <Waiting lang={lang} />}
+      ) : <Waiting lang={lang} error={lastError} />}
     </>
   )
 }
 
 // ---------- GitHub: open issues as pinned post-its ----------
-export function IssuesView({ data, config, lang, title, footer }: ViewProps) {
+export function IssuesView({ data, config, lang, title, footer, lastError }: ViewProps) {
   const issues = arr(data), repo = String(config.repo ?? '')
   return (
     <>
       <Head icon={<GithubLogo />} title={title || (lang === 'fr' ? 'Issues ouvertes' : lang === 'es' ? 'Issues abiertas' : 'Open issues')} sub={repo} />
       <div className="postits">
-        {data == null ? <Waiting lang={lang} /> : !issues.length ? <div className="muted" style={{ margin: 'auto', fontSize: 13 }}>{W[lang].noIssues}</div> :
+        {data == null ? <Waiting lang={lang} error={lastError} /> : !issues.length ? <div className="muted" style={{ margin: 'auto', fontSize: 13 }}>{W[lang].noIssues}</div> :
           issues.map((i) => (
             <a key={i.number} className="postit" href={`https://github.com/${repo}/issues/${i.number}`} target="_blank" rel="noopener noreferrer">
               <b>{i.title}</b><small>#{i.number} · {i.author} · {ago(i.createdAt, lang)}</small>
@@ -188,7 +189,7 @@ export function IssuesView({ data, config, lang, title, footer }: ViewProps) {
 }
 
 // ---------- GitHub: repo stats on a starry sky ----------
-export function StatsView({ data, config, lang, title }: ViewProps) {
+export function StatsView({ data, config, lang, title, lastError }: ViewProps) {
   const d = obj(data), w = W[lang]
   return (
     <>
@@ -196,7 +197,7 @@ export function StatsView({ data, config, lang, title }: ViewProps) {
         {Array.from({ length: 20 }, (_, i) => <i key={i} style={{ left: `${(i * 41) % 96}%`, top: `${(i * 29) % 90}%`, fontSize: 7 + (i % 4) * 3, animationDelay: `-${i * 0.3}s` }}>★</i>)}
       </div>
       <Head icon={<GithubLogo />} title={title || (lang === 'fr' ? 'Statistiques' : lang === 'es' ? 'Estadísticas' : 'Stats')} sub={String(config.repo ?? '')} />
-      {d.stars == null ? <Waiting lang={lang} /> : (
+      {d.stars == null ? <Waiting lang={lang} error={lastError} /> : (
         <>
           <div className="odo">
             {Number(d.stars).toLocaleString(LOCALE[lang]).split('').map((ch, i) => (/\d/.test(ch) ? <span key={i} style={{ animationDelay: `${i * 0.08}s` }}>{ch}</span> : <span key={i} className="sep" />))}
@@ -212,13 +213,13 @@ export function StatsView({ data, config, lang, title }: ViewProps) {
 // ---------- GitHub: what changed, as a notebook page + AI stand-up ----------
 const PASTEL = ['#f9a8d4', '#93c5fd', '#fde68a', '#c4b5fd', '#86efac', '#fdba74']
 const colorOf = (n: string) => PASTEL[[...n].reduce((a, ch) => a + ch.charCodeAt(0), 0) % PASTEL.length]
-export function DailyView({ data, insight, config, lang, title }: ViewProps) {
+export function DailyView({ data, insight, config, lang, title, lastError }: ViewProps) {
   const d = obj(data), w = W[lang], standup = String(obj(insight).summary ?? '')
   const hours = Number(d.hours ?? config.hours ?? 24)
   return (
     <>
       <Head icon={<GithubLogo />} iconClass="gh-ico" title={title || (lang === 'fr' ? 'Carnet de bord' : lang === 'es' ? 'Cuaderno de bitácora' : 'Logbook')} sub={`${d.repo ?? config.repo ?? ''} · ${hours} h`} />
-      {data == null ? <Waiting lang={lang} /> : (
+      {data == null ? <Waiting lang={lang} error={lastError} /> : (
         <div className="logbook">
           <div className="left">
             <div className="count"><b>{d.commitCount ?? 0}</b><span>{w.commitsIn(hours)}</span></div>
@@ -258,7 +259,7 @@ function zoned(now: Date, tz: string) {
     return null
   }
 }
-export function WorldView({ data, lang, title }: ViewProps) {
+export function WorldView({ data, lang, title, lastError }: ViewProps) {
   const t = tr(lang), d = obj(data), now = useNow(30_000)
   const home = String(obj(d.home).timezone ?? '')
   const me = home ? zoned(now, home) : null
@@ -289,7 +290,7 @@ export function WorldView({ data, lang, title }: ViewProps) {
       <div className="wl-line">
         <div className="bar" />
         <div className="hrs"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
-        {!rows.length && <Waiting lang={lang} />}
+        {!rows.length && <Waiting lang={lang} error={lastError} />}
         {rows.map((r, i) => (
           <div key={r.tz} className={`wl-pin ${i % 2 ? 'down' : 'up'}${r.isMe ? ' me' : ''}`} style={{ left: `${at[i]}%` }}>
             <div className="lbl" style={shift[i] ? { position: 'relative', left: `${shift[i]}cqw` } : undefined}>{r.isMe ? '📍' : r.iso2 ? flagOf(r.iso2) : FLAGS[r.tz] ?? '🌐'} {r.label}<br /><b>{r.hm}</b> {r.isDay ? '☀️' : '🌙'}
@@ -306,10 +307,10 @@ export function WorldView({ data, lang, title }: ViewProps) {
 const WXI: Record<string, string> = { clear: '☀️', partly_cloudy: '⛅', cloudy: '☁️', fog: '🌫️', drizzle: '🌦️', rain: '🌧️', snow: '❄️', thunderstorm: '⛈️' }
 const deg = (unit: unknown) => (unit === 'fahrenheit' ? '°F' : '°')
 
-export function WeekView({ data, lang, title }: ViewProps) {
+export function WeekView({ data, lang, title, lastError }: ViewProps) {
   const d = obj(data), days = arr(d.days), w = W[lang], gid = useId().replace(/:/g, '')
   const head = <Head icon="📅" title={title || (lang === 'fr' ? 'Météo de la semaine' : lang === 'es' ? 'Tiempo de la semana' : 'Weekly weather')} sub={d.city ? `${d.city} · ${w.nDays(days.length)}` : undefined} />
-  if (!days.length) return <>{head}<Waiting lang={lang} /></>
+  if (!days.length) return <>{head}<Waiting lang={lang} error={lastError} /></>
   const lo = Math.min(...days.map((x) => x.min)), span = Math.max(1, Math.max(...days.map((x) => x.max)) - lo)
   const y = (t: number) => 132 - ((t - lo) / span) * 92, x = (i: number) => 24 + (i * 252) / Math.max(1, days.length - 1)
   return (
@@ -331,7 +332,7 @@ export function WeekView({ data, lang, title }: ViewProps) {
   )
 }
 
-export function NowView({ data, insight, lang, title, footer }: ViewProps) {
+export function NowView({ data, insight, lang, title, footer, lastError }: ViewProps) {
   const c = obj(data), w = W[lang], adv = obj(insight)
   const cloudy = ['partly_cloudy', 'cloudy', 'fog', 'drizzle', 'rain', 'thunderstorm'].includes(c.condition)
   const outfit = String(adv.outfit ?? '').split(/[,;·•]|\s+(?:et|and|y)\s+/).map((s) => s.trim()).filter(Boolean)
@@ -346,7 +347,7 @@ export function NowView({ data, insight, lang, title, footer }: ViewProps) {
         </div>
       )}
       <div className="wx-now">
-        {c.temperature == null ? <Waiting lang={lang} /> : (
+        {c.temperature == null ? <Waiting lang={lang} error={lastError} /> : (
           <>
             <div className="big">{c.temperature}{deg(c.unit)}</div>
             <div style={{ fontWeight: 600 }}>{w.wx[c.condition] ?? c.condition} · ↑{c.high}° ↓{c.low}°</div>
@@ -363,12 +364,12 @@ export function NowView({ data, insight, lang, title, footer }: ViewProps) {
   )
 }
 
-export function HoursView({ data, lang, title, footer }: ViewProps) {
+export function HoursView({ data, lang, title, footer, lastError }: ViewProps) {
   const d = obj(data), hours = arr(d.hours), w = W[lang]
   return (
     <>
       <Head icon="⛅" title={title || (lang === 'fr' ? 'Météo heure par heure' : lang === 'es' ? 'Tiempo por horas' : 'Hourly weather')} sub={d.city} />
-      {!hours.length ? <Waiting lang={lang} /> : (
+      {!hours.length ? <Waiting lang={lang} error={lastError} /> : (
         <ul className="wx-chips">
           {hours.map((h, i) => {
             const hr = new Date(h.time).getHours(), day = hr >= 6 && hr < 19
@@ -388,11 +389,11 @@ function dayLabel(iso: string, lang: Lang) {
   return diff === 0 ? W[lang].today : diff === 1 ? W[lang].tomorrow : new Date(iso).toLocaleDateString(LOCALE[lang], { weekday: 'long', day: 'numeric', month: 'long' })
 }
 const hm = (iso: string, lang: Lang) => new Date(iso).toLocaleTimeString(LOCALE[lang], { hour: '2-digit', minute: '2-digit' })
-export function CalView({ data, config, lang, title }: ViewProps) {
+export function CalView({ data, config, lang, title, lastError }: ViewProps) {
   const w = W[lang], now = useNow(30_000)
   const all = arr(obj(data).events), E = all.filter((e) => new Date(e.end ?? e.start).getTime() > now.getTime())
   const head = <Head icon="📅" iconClass="cal-ico" title={title || 'Agenda'} sub={data == null ? undefined : `${w.events(all.length)} · ${config.days ?? 14} ${w.days}`} />
-  if (data == null) return <>{head}<Waiting lang={lang} /></>
+  if (data == null) return <>{head}<Waiting lang={lang} error={lastError} /></>
   if (!E.length) return <>{head}<div className="cd"><span className="cd-lbl">{w.nothing}</span></div></>
   const nx = E[0], ms = Math.max(0, new Date(nx.start).getTime() - now.getTime())
   const dd = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24, mm = Math.floor(ms / 6e4) % 60
@@ -413,7 +414,7 @@ export function CalView({ data, config, lang, title }: ViewProps) {
 }
 
 // ---------- My Epitech: today's planning on an 8 h – 19 h ruler, and the profile ----------
-export function PlanView({ data, lang, title }: ViewProps) {
+export function PlanView({ data, lang, title, lastError }: ViewProps) {
   const w = W[lang], now = useNow(60_000), H0 = 8, H1 = 19
   const pos = (d: Date) => ((d.getHours() + d.getMinutes() / 60 - H0) / (H1 - H0)) * 100
   const today = arr(obj(data).events).filter((e) => !e.allDay && new Date(e.start).toDateString() === now.toDateString())
@@ -421,7 +422,7 @@ export function PlanView({ data, lang, title }: ViewProps) {
   return (
     <>
       <Head icon="EPI" iconClass="epi-ico" title={title || 'Planning'} sub={data == null ? undefined : w.activities(today.length)} />
-      {data == null ? <Waiting lang={lang} /> : (
+      {data == null ? <Waiting lang={lang} error={lastError} /> : (
         <div className="epi-rail">
           {[8, 10, 12, 14, 16, 18].map((h) => <span key={h} className="hr" style={{ top: `${((h - H0) / (H1 - H0)) * 100}%` }}>{h} h</span>)}
           {!today.length && <span className="cd-lbl" style={{ position: 'absolute', left: 16, top: '46%', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', opacity: 0.65 }}>{w.noActivity}</span>}
@@ -442,12 +443,12 @@ export function PlanView({ data, lang, title }: ViewProps) {
   )
 }
 
-export function ProfView({ data, lang, title }: ViewProps) {
+export function ProfView({ data, lang, title, lastError }: ViewProps) {
   const P = obj(data), w = W[lang]
   return (
     <>
       <Head icon="EPI" iconClass="epi-ico" title={title || tr(lang).myProfile} sub="My Epitech" />
-      {data == null ? <Waiting lang={lang} /> : (
+      {data == null ? <Waiting lang={lang} error={lastError} /> : (
         <div className="epi-prof">
           <div className="av"><div>{initials(String(P.name ?? P.login ?? '?'))}</div></div>
           <h3>{P.name ?? P.login}</h3>
@@ -464,13 +465,13 @@ export function ProfView({ data, lang, title }: ViewProps) {
 }
 
 // ---------- Custom API: one value on an LCD screen, a list as a ranking ----------
-export function ValueView({ data, lang, title }: ViewProps) {
+export function ValueView({ data, lang, title, lastError }: ViewProps) {
   const V = obj(data), w = W[lang]
   useNow(30_000)
   return (
     <>
       <Head icon="{ }" iconClass="api-ico" title={title || V.label || w.customApi} sub={w.customApi} />
-      {data == null ? <Waiting lang={lang} /> : (
+      {data == null ? <Waiting lang={lang} error={lastError} /> : (
         <>
           <div className="api-lcd"><div className="l">{V.label}</div><div className="v">{String(V.value)}{V.unit && <small>{V.unit}</small>}</div></div>
           <div className="api-leds"><i /><span>{w.liveAgo} · {ago(V.fetchedAt, lang)}</span></div>
@@ -480,12 +481,12 @@ export function ValueView({ data, lang, title }: ViewProps) {
   )
 }
 
-export function ListView({ data, lang, title }: ViewProps) {
+export function ListView({ data, lang, title, lastError }: ViewProps) {
   const items = arr(obj(data).items), w = W[lang]
   return (
     <>
       <Head icon="[ ]" iconClass="api-ico" title={title || w.myList} sub={data == null ? w.customApi : `${w.customApi} · ${w.items(items.length)}`} />
-      {data == null ? <Waiting lang={lang} /> : (
+      {data == null ? <Waiting lang={lang} error={lastError} /> : (
         <ol className="api-rank">{items.map((x, i) => <li key={i}><div><b>{x.title}</b>{x.subtitle && <span>{x.subtitle}</span>}</div></li>)}</ol>
       )}
     </>
@@ -494,12 +495,12 @@ export function ListView({ data, lang, title }: ViewProps) {
 
 // ---------- YouTube ----------
 const YtImg = ({ src }: { src: string }) => <img src={src} alt="" referrerPolicy="no-referrer" loading="lazy" />
-export function ChannelView({ data, config, lang, title, footer }: ViewProps) {
+export function ChannelView({ data, config, lang, title, footer, lastError }: ViewProps) {
   const c = obj(data), w = W[lang]
   return (
     <>
       <Head icon={<YtLogo />} title={title || (lang === 'fr' ? 'Statistiques de la chaîne' : lang === 'es' ? 'Estadísticas del canal' : 'Channel stats')} sub={c.handle ?? config.channel} />
-      {data == null ? <Waiting lang={lang} /> : (
+      {data == null ? <Waiting lang={lang} error={lastError} /> : (
         <div className="yt-channel">
           {c.avatar && <YtImg src={c.avatar} />}<div className="w-title">{c.title}</div>
           <div className="n">{Number(c.subscribers).toLocaleString(LOCALE[lang])}</div><div className="l">{w.subscribers}</div>
@@ -511,12 +512,12 @@ export function ChannelView({ data, config, lang, title, footer }: ViewProps) {
   )
 }
 
-export function LatestView({ data, config, lang, title, footer }: ViewProps) {
+export function LatestView({ data, config, lang, title, footer, lastError }: ViewProps) {
   const vids = arr(data), w = W[lang]
   return (
     <>
       <Head icon={<YtLogo />} title={title || (lang === 'fr' ? 'Dernières vidéos' : lang === 'es' ? 'Últimos vídeos' : 'Latest videos')} sub={vids[0]?.channel ?? config.channel} />
-      {!vids.length ? <Waiting lang={lang} /> : (
+      {!vids.length ? <Waiting lang={lang} error={lastError} /> : (
         <div className="yt-latest">
           {vids.map((x, i) => (
             <a key={x.id} href={x.url} target="_blank" rel="noopener noreferrer">
@@ -531,7 +532,7 @@ export function LatestView({ data, config, lang, title, footer }: ViewProps) {
   )
 }
 
-export function TrendView({ data, config, lang, title, footer }: ViewProps) {
+export function TrendView({ data, config, lang, title, footer, lastError }: ViewProps) {
   const vids = arr(data), w = W[lang], [story, setStory] = useState(0)
   useEffect(() => {
     if (!vids.length) return
@@ -542,7 +543,7 @@ export function TrendView({ data, config, lang, title, footer }: ViewProps) {
   return (
     <>
       <Head icon={<YtLogo />} title={title || (lang === 'fr' ? 'Tendances' : lang === 'es' ? 'Tendencias' : 'Trending')} sub={String(config.country ?? '').toUpperCase()} />
-      {!x ? <Waiting lang={lang} /> : (
+      {!x ? <Waiting lang={lang} error={lastError} /> : (
         <div className="yt-trend">
           <div className="bars">{vids.map((_, i) => <i key={`${i}-${i === story ? story : ''}`} className={i < story ? 'done' : i === story ? 'on' : ''} />)}</div>
           <a className="big" href={x.url} target="_blank" rel="noopener noreferrer"><YtImg src={x.thumbnail} />
@@ -554,12 +555,12 @@ export function TrendView({ data, config, lang, title, footer }: ViewProps) {
   )
 }
 
-export function VideoView({ data, lang, title, footer }: ViewProps) {
+export function VideoView({ data, lang, title, footer, lastError }: ViewProps) {
   const v = obj(data), w = W[lang]
   return (
     <>
       <Head icon={<YtLogo />} title={title || (lang === 'fr' ? 'Statistiques de la vidéo' : lang === 'es' ? 'Estadísticas del vídeo' : 'Video stats')} sub={v.channel ?? 'YouTube'} />
-      {data == null ? <Waiting lang={lang} /> : (
+      {data == null ? <Waiting lang={lang} error={lastError} /> : (
         <div className="yt-video">
           <a className="th" href={v.url} target="_blank" rel="noopener noreferrer"><YtImg src={v.thumbnail} /></a>
           <div className="yt-t">{v.title}</div>
@@ -572,7 +573,7 @@ export function VideoView({ data, lang, title, footer }: ViewProps) {
 }
 
 // ---------- Well-being: quote typed like on a typewriter ----------
-export function QuoteView({ data, lang, title }: ViewProps) {
+export function QuoteView({ data, lang, title, lastError }: ViewProps) {
   const Q = obj(data), w = W[lang], full = String(obj(Q.text)[lang] ?? '')
   const [n, setN] = useState(0)
   // Types the quote once, letter by letter, then the cursor keeps blinking
@@ -586,7 +587,7 @@ export function QuoteView({ data, lang, title }: ViewProps) {
   return (
     <>
       <Head icon="⌨" title={title || w.quoteTitle} sub={date} />
-      {!full ? <Waiting lang={lang} /> : (
+      {!full ? <Waiting lang={lang} error={lastError} /> : (
         <>
           <div className="tw-text">{full.slice(0, n)}</div>
           <div className="tw-by">— {Q.author}</div>
@@ -598,9 +599,9 @@ export function QuoteView({ data, lang, title }: ViewProps) {
 
 // ---------- Well-being: "did you know?" card that turns over to show the fact ----------
 const TOPIC_ICON: Record<string, string> = { nature: '🌿', space: '🔭', science: '🧪', history: '🏛️', tech: '💻', body: '🫀' }
-export function FactView({ data, lang, title }: ViewProps) {
+export function FactView({ data, lang, title, lastError }: ViewProps) {
   const F = obj(data), w = W[lang], [open, setOpen] = useState(false), text = obj(F.text)[lang]
-  if (!text) return <Waiting lang={lang} />
+  if (!text) return <Waiting lang={lang} error={lastError} />
   return (
     <div className={`fact${open ? ' open' : ''}`} role="button" tabIndex={0} aria-pressed={open}
       onClick={() => setOpen((o) => !o)} onKeyDown={(e) => e.key === 'Enter' && setOpen((o) => !o)}>
@@ -614,10 +615,10 @@ export function FactView({ data, lang, title }: ViewProps) {
 
 // ---------- Well-being: horoscope as a nebula card; tap it to turn it over and see the day in detail ----------
 const AREAS: [string, string, 'love' | 'work' | 'energy'][] = [['❤', '#f472b6', 'love'], ['✎', '#38bdf8', 'work'], ['✺', '#fde047', 'energy']]
-export function HoroView({ data, insight, lang }: ViewProps) {
+export function HoroView({ data, insight, lang, lastError }: ViewProps) {
   const H = obj(data), w = W[lang], [back, setBack] = useState(false)
   const sign = ZODIAC[String(H.sign)]
-  if (!sign) return <Waiting lang={lang} />
+  if (!sign) return <Waiting lang={lang} error={lastError} />
   // With AI switched on, its freshly written text replaces the library sentence
   const ai = obj(insight)
   const msg = ai.source === 'ai' && ai.text ? String(ai.text) : obj(H.text)[lang]

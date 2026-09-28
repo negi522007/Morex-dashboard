@@ -211,9 +211,11 @@ export class RssProvider implements ServiceProvider {
     }
 
     const feedTitle = feedTitleOf(parsed);
-    return extractRawItems(parsed)
-      .slice(0, limit)
-      .map((raw) => normalizeItem(raw, feedTitle, res.url || link));
+    const rawItems = extractRawItems(parsed);
+    if (rawItems.length === 0) {
+      throw new ServiceFetchError('rss', 'article_list', 'No articles found at this address — check it is a real RSS/Atom feed link');
+    }
+    return rawItems.slice(0, limit).map((raw) => normalizeItem(raw, feedTitle, res.url || link));
   }
 
   private async readArticle(link: string): Promise<Article | null> {

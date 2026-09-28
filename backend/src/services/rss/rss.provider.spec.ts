@@ -87,6 +87,18 @@ describe('RssProvider (article_list widget)', () => {
     ]);
   });
 
+  it('raises a clear ServiceFetchError when the address returns no articles (e.g. a plain HTML page, not a feed)', async () => {
+    mockFetchOnce({ ok: true, text: () => Promise.resolve('<!doctype html><html><body>Not a feed</body></html>') });
+    await expect(widget.fetchData({ link: 'https://example.com/not-a-feed' })).rejects.toMatchObject({
+      message: expect.stringContaining('No articles found'),
+    });
+  });
+
+  it('raises the same clear error for a well-formed but empty feed', async () => {
+    mockFetchOnce({ ok: true, text: () => Promise.resolve('<?xml version="1.0"?><rss version="2.0"><channel><title>Empty</title></channel></rss>') });
+    await expect(widget.fetchData({ link: 'https://example.com/empty-feed' })).rejects.toBeInstanceOf(ServiceFetchError);
+  });
+
   it('raises ServiceFetchError (not a raw error) on a non-2xx response', async () => {
     mockFetchOnce({ ok: false, status: 404 });
     await expect(widget.fetchData({ link: 'https://example.com/missing' })).rejects.toBeInstanceOf(
