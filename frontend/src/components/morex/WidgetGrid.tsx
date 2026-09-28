@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { LOCALE, W, tr, type Lang } from '../../lib/i18n'
 import { entryFor, rateLabel } from '../../lib/catalog'
 import type { WidgetInstance } from '../../lib/types'
@@ -25,9 +25,18 @@ export function WidgetCard({ widget, lang, editing = false, className = '', styl
   const kind = entry?.kind ?? 'unknown'
   const view = VIEWS[kind]
   const at = widget.lastRefreshedAt ? new Date(widget.lastRefreshedAt).toLocaleTimeString(LOCALE[lang], { hour: '2-digit', minute: '2-digit' }) : ''
-  const footer = view?.foot ? <div className="w-foot"><span>{W[lang].every} {rateLabel(widget.refreshRateSeconds)}</span><span>{at}</span></div> : undefined
+  const { left, phase } = useRefreshClock(widget.lastRefreshedAt, widget.refreshRateSeconds, !preview && !editing && !unlinked)
+  const clock = (
+    <>
+      <span className="rf-cd"><Comet f={left == null ? 1 : left / widget.refreshRateSeconds} phase={phase} />
+        {phase === 'busy' ? <span className="rf-spin">↻</span> : phase === 'ok' ? <span className="rf-ok">✓</span> : left != null && countdown(left)}</span>
+      <span className="rf-at">{at}</span>
+    </>
+  )
+  const rateTitle = `${W[lang].every} ${rateLabel(widget.refreshRateSeconds)}`
   return (
-    <div className={`glass w ${view?.cls ?? ''} ${className}`} data-kind={kind} data-id={widget.id} style={style} {...dragProps}>
+    <div className={`glass w ${view?.cls ?? ''} ${phase ? `rf-${phase}` : ''} ${className}`} data-kind={kind} data-id={widget.id}
+      style={phase === 'hot' && left != null ? { ...style, ['--rf-k' as string]: 6 - left } : style} {...dragProps}>
       {!preview && <Decoration name={widget.decoration} />}
       {!preview && (
         <>
@@ -46,11 +55,56 @@ export function WidgetCard({ widget, lang, editing = false, className = '', styl
           <a href={`/auth/${entry.needs}`} onClick={(e) => e.stopPropagation()}>{entry.needs === 'github' ? W[lang].connectGithub : W[lang].connectEpitech}</a>
         </div>
       ) : view ? (
-        <view.View data={widget.cachedData} insight={widget.insight} config={widget.config} lang={lang} title={widget.title} footer={footer} onConfig={editing ? undefined : onConfig} />
+        <view.View data={widget.cachedData} insight={widget.insight} config={widget.config} lang={lang} title={widget.title} onConfig={editing ? undefined : onConfig} />
       ) : (
         <div className="w-title">{widget.serviceName} / {widget.widgetName}</div>
       )}
+      {/* Every card shows its countdown the same way: a small pill on its bottom edge */}
+      {view && !unlinked && left != null && <div className="rf-tab" title={rateTitle}>{clock}</div>}
     </div>
+  )
+}
+
+// Seconds before the next refresh, from the widget's last refresh and its rate. The phases drive the card's look:
+// 'hot' the last 5 s (a violet halo that breathes a bit stronger each second), 'busy' when due and waiting for the
+// new data (or when there is no last refresh yet, e.g. right after a settings change), 'ok' for 1.5 s once it has
+// arrived (green glow and ✓).
+type RefreshPhase = '' | 'hot' | 'busy' | 'ok'
+function useRefreshClock(last: string | null | undefined, rate: number, on: boolean): { left: number | null; phase: RefreshPhase } {
+  const [now, setNow] = useState(() => Date.now())
+  const [okUntil, setOkUntil] = useState(0)
+  const prev = useRef(last)
+  useEffect(() => {
+    if (!on) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [on])
+  useEffect(() => {
+    if (last && last !== prev.current) { const t = Date.now(); setNow(t); setOkUntil(t + 1500) }
+    prev.current = last
+  }, [last])
+  if (!on) return { left: null, phase: '' }
+  // No last refresh (brand-new widget, or its settings just changed): a refresh is on its way
+  if (!last) return { left: 0, phase: 'busy' }
+  const left = Math.max(0, Math.ceil((new Date(last).getTime() + rate * 1000 - now) / 1000))
+  return { left, phase: now < okUntil ? 'ok' : left <= 0 ? 'busy' : left <= 5 ? 'hot' : '' }
+}
+
+const countdown = (s: number) => s < 60 ? `${s} s` : s < 3600 ? `${Math.ceil(s / 60)} min` : `${Math.floor(s / 3600)} h ${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}`
+
+// The "comet" ring: empties as the next refresh gets close, with a glowing bead at its tip
+function Comet({ f, phase }: { f: number; phase: RefreshPhase }) {
+  const id = useId()
+  const r = 10, C = 2 * Math.PI * r, full = phase === 'busy' || phase === 'ok'
+  const k = full ? 1 : Math.min(1, Math.max(0, f)), a = 2 * Math.PI * k
+  const stroke = phase === 'ok' ? '#34d399' : phase === 'hot' ? '#fde047' : `url(#${CSS.escape(id)})`
+  return (
+    <svg className="rf-ring" viewBox="0 0 26 26" aria-hidden="true">
+      <defs><linearGradient id={id}><stop offset="0" stopColor="#38bdf8" /><stop offset="1" stopColor="#a78bfa" /></linearGradient></defs>
+      <circle className="rf-bg" cx="13" cy="13" r={r} />
+      <circle className="rf-fg" cx="13" cy="13" r={r} stroke={stroke} strokeDasharray={C} strokeDashoffset={full ? 0 : C * (1 - k)} />
+      {!full && <><circle cx={13 + r * Math.cos(a)} cy={13 + r * Math.sin(a)} r="5" className="rf-glow" /><circle cx={13 + r * Math.cos(a)} cy={13 + r * Math.sin(a)} r="3" fill="#fff" /></>}
+    </svg>
   )
 }
 
