@@ -103,6 +103,9 @@ export function AiBubble({ user, lang, onCreate }: {
           </div>
           {msgs.map((m, i) => <div key={i} className={`ai-m ${m.from}`}>{m.body}</div>)}
           {busy && <div className="ai-m it ai-dots"><i /><i /><i /></div>}
+          {msgs.length > 0 && !busy && (
+            <button type="button" className="hc-new" onClick={() => { setMsgs([]); setMode('help'); setQ('') }}>{w.newChat}</button>
+          )}
         </div>
         <form className="ai-cmp" onSubmit={(e) => { e.preventDefault(); send() }}>
           <input value={q} maxLength={400} placeholder={mode === 'widgets' ? w.aiPhWidgets : w.helpAsk} onChange={(e) => setQ(e.target.value)} />

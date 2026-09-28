@@ -28,6 +28,8 @@ export function DashboardPage() {
   const [collapsed, setCollapsed] = useState(true)
   const [editing, setEditing] = useState(false)
   const [modal, setModal] = useState<ModalName | null>(null)
+  // A question the help chat asks by itself when it opens ("why is my widget empty?" from an empty card)
+  const [helpAsk, setHelpAsk] = useState('')
   const [editWidget, setEditWidget] = useState<WidgetInstance | null>(null)
   const [drawer, setDrawer] = useState<{ open: boolean; preset: CatalogEntry | null; service?: string | null }>({ open: false, preset: null })
   const [landing, setLanding] = useState<string | null>(null)
@@ -167,7 +169,7 @@ export function DashboardPage() {
           <Toolbar user={user} lang={lang} theme={theme} skin={skin} onLang={(l) => savePrefs({ language: l })} onTheme={(t) => savePrefs({ theme: t })} onSkin={(s) => savePrefs({ widgetSkin: s })} onOpen={setModal} />
           <Hero user={user} lang={lang} onAvatar={() => setModal('avatar')} onBio={() => setModal('bio')} onJournal={() => setModal('journal')} />
           <SearchBar lang={lang} widgets={visible} onGoWidget={goToWidget} onAdd={(e) => setDrawer({ open: true, preset: e })} />
-          <WidgetGrid widgets={visible} lang={lang} linked={{ github: user.githubLinked, epitech: !!user.epitech }} editing={editing} setEditing={setEditing} landing={landing}
+          <WidgetGrid widgets={visible} lang={lang} linked={{ github: user.githubLinked, epitech: !!user.epitech }} onWhy={() => { setHelpAsk(W[lang].whyEmpty); setModal('help') }} editing={editing} setEditing={setEditing} landing={landing}
             onAdd={() => setDrawer({ open: true, preset: null })} onDelete={removeWithUndo} onEdit={setEditWidget}
             onConfig={(w, patch) => { patchWidget(w, { config: { ...w.config, ...patch } }).then(pollSoon).catch(() => {}) }}
             onReorder={reorder} onResize={resize} />
@@ -186,7 +188,7 @@ export function DashboardPage() {
         <EditWidgetModal widget={editWidget} about={about} user={user} lang={lang} onClose={() => setEditWidget(null)}
           onSave={async (patch) => { await patchWidget(editWidget, patch); if (patch.config || patch.aiEnabled) pollSoon() }} />
       )}
-      {modal === 'help' && <HelpModal lang={lang} onClose={() => setModal(null)} />}
+      {modal === 'help' && <HelpModal lang={lang} initialQuestion={helpAsk} onClose={() => { setModal(null); setHelpAsk('') }} />}
       {modal === 'logout' && <LogoutModal lang={lang} onClose={() => setModal(null)} onLogout={logout} />}
       {modal === 'journal' && <JournalModal lang={lang} onClose={() => setModal(null)} />}
       {modal === 'profile' && (

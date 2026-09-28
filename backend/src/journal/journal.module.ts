@@ -7,5 +7,6 @@ import { AuthModule } from '../auth/auth.module';
   imports: [AuthModule],
   controllers: [JournalController],
   providers: [JournalService],
+  exports: [JournalService],
 })
 export class JournalModule {}

@@ -102,7 +102,7 @@ interface AskResult { mode: 'ai' | 'search'; answer: string; sources: { id: stri
 type Turn = { role: 'user' | 'assistant'; content: string; result?: AskResult }
 const HELP_STARTERS = ['guide-add-widget', 'guide-empty-widget', 'guide-connect-accounts', 'guide-birthdate']
 
-export function HelpModal({ lang, onClose }: { lang: Lang; onClose: () => void }) {
+export function HelpModal({ lang, initialQuestion, onClose }: { lang: Lang; initialQuestion?: string; onClose: () => void }) {
   const w = W[lang]
   const [turns, setTurns] = useState<Turn[]>([])
   const [starters, setStarters] = useState<{ id: string; title: string }[]>([])
@@ -117,6 +117,9 @@ export function HelpModal({ lang, onClose }: { lang: Lang; onClose: () => void }
     setTimeout(() => input.current?.focus(), 100)
   }, [lang])
   useEffect(() => { box.current?.scrollTo({ top: box.current.scrollHeight, behavior: 'smooth' }) }, [turns, busy])
+  // Opened from an empty widget: ask "why is my widget empty?" straight away
+  const asked = useRef(false)
+  useEffect(() => { if (initialQuestion && !asked.current) { asked.current = true; ask(initialQuestion) } }, [initialQuestion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function ask(question: string) {
     const text = question.trim()
@@ -154,6 +157,9 @@ export function HelpModal({ lang, onClose }: { lang: Lang; onClose: () => void }
           </div>
         ))}
         {busy && <div className="hc-msg it hc-typing"><i /><i /><i /></div>}
+        {turns.length > 0 && !busy && (
+          <button type="button" className="hc-new" onClick={() => { setTurns([]); setQ(''); input.current?.focus() }}>{w.newChat}</button>
+        )}
       </div>
       <form className="hc-compose" onSubmit={(e) => { e.preventDefault(); ask(q) }}>
         <input ref={input} value={q} maxLength={400} placeholder={w.helpAsk} onChange={(e) => setQ(e.target.value)} />
@@ -279,10 +285,44 @@ function ConnectedAccounts({ user, lang, onSaved }: { user: User; lang: Lang; on
 }
 
 // ---------- Profile page ----------
+// Account deletion, confirmed with the password (or the email, for an account that has no password).
+// On success the session is gone server-side, so the page goes back to the login screen.
+function DeleteAccount({ user, lang, onCancel, error, setError }: { user: User; lang: Lang; onCancel: () => void; error: string; setError: (e: string) => void }) {
+  const t = tr(lang)
+  const withPw = user.hasPassword !== false
+  const [value, setValue] = useState(''), [busy, setBusy] = useState(false)
+  async function go() {
+    if (!value.trim() || busy) return
+    setBusy(true); setError('')
+    try {
+      await api.del('/auth/me', withPw ? { password: value } : { email: value })
+      window.location.replace('/login')
+    } catch (err) {
+      setError(translateError((err as Error).message, lang)); setBusy(false)
+    }
+  }
+  return (
+    <div className="del-box">
+      <b>{t.delTitle}</b>
+      <p>{t.delText}</p>
+      <label className="field"><span>{withPw ? t.delPw : t.delEmail}</span>
+        <input type={withPw ? 'password' : 'email'} value={value} autoFocus autoComplete={withPw ? 'current-password' : 'off'}
+          placeholder={withPw ? '••••••••' : user.email} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') go() }} />
+      </label>
+      {error && <p className="del-err">{error}</p>}
+      <div className="del-acts">
+        <button className="soft" onClick={onCancel}>{t.cancel}</button>
+        <button className="btn-danger solid" onClick={go} disabled={!value.trim() || busy}>{busy ? t.delBusy : t.delGo}</button>
+      </div>
+    </div>
+  )
+}
+
 export function ProfileModal({ user, lang, theme, onClose, onSaved, onLang, onTheme, onAvatar }: {
   user: User; lang: Lang; theme: string; onClose: () => void; onSaved: (u: User) => void
   onLang: (l: Lang) => void; onTheme: (t: string) => void; onAvatar: () => void
 }) {
+  const [del, setDel] = useState(false), [delErr, setDelErr] = useState('')
   const t = tr(lang) as unknown as Record<string, string>
   const [firstName, setFirst] = useState(user.firstName ?? ''), [lastName, setLast] = useState(user.lastName ?? '')
   const [birthDate, setBirth] = useState(user.birthDate ?? '')
@@ -359,9 +399,11 @@ export function ProfileModal({ user, lang, theme, onClose, onSaved, onLang, onTh
           <h4>{t.pfData}</h4>
           <p>{t.pfDataSub}</p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
-            <button className="soft" disabled>⬇ <span>{t.export}</span><span className="soon">{t.soon}</span></button>
-            <button className="btn-danger" disabled>🗑 <span>{t.deleteAcc}</span><span className="soon">{t.soon}</span></button>
+            {/* A real link: the server answers with a JSON file (Content-Disposition: attachment), so the browser downloads it */}
+            <a className="soft" href="/auth/me/export" download style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>⬇ <span>{t.export}</span></a>
+            <button className="btn-danger" onClick={() => { setDel(!del); setDelErr('') }}>🗑 <span>{t.deleteAcc}</span></button>
           </div>
+          {del && <DeleteAccount user={user} lang={lang} onCancel={() => setDel(false)} error={delErr} setError={setDelErr} />}
         </section>
         {error && <p style={{ color: '#fca5a5', fontSize: 13, margin: 0 }}>{error}</p>}
         <div className="pf-actions">

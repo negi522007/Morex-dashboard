@@ -1,12 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { LOCALE, W, tr, type Lang } from '../../lib/i18n'
+import { LOCALE, W, refreshErrorText, tr, type Lang } from '../../lib/i18n'
 import { entryFor, rateLabel } from '../../lib/catalog'
 import type { WidgetInstance } from '../../lib/types'
 import { VIEWS } from './widgetViews'
 import { Decoration } from './Decoration'
 
 // The card frame shared by every widget: edit badges, resize handle, decoration, footer.
-export function WidgetCard({ widget, lang, editing = false, className = '', style, onDelete, onEdit, onConfig, onResizeStart, dragProps, preview, unlinked }: {
+export function WidgetCard({ widget, lang, editing = false, className = '', style, onDelete, onEdit, onConfig, onResizeStart, dragProps, preview, unlinked, onWhy }: {
   widget: Pick<WidgetInstance, 'serviceName' | 'widgetName' | 'config' | 'cachedData' | 'insight' | 'title' | 'decoration' | 'refreshRateSeconds' | 'lastRefreshedAt' | 'lastError'> & { id?: string }
   lang: Lang
   editing?: boolean
@@ -20,6 +20,8 @@ export function WidgetCard({ widget, lang, editing = false, className = '', styl
   preview?: boolean
   // The account this widget reads (GitHub) is not connected: the card asks to connect it instead of waiting
   unlinked?: boolean
+  // Opens the help chat on "why is my widget empty?"
+  onWhy?: () => void
 }) {
   const entry = entryFor(widget.serviceName, widget.widgetName)
   const kind = entry?.kind ?? 'unknown'
@@ -34,8 +36,11 @@ export function WidgetCard({ widget, lang, editing = false, className = '', styl
     </>
   )
   const rateTitle = `${W[lang].every} ${rateLabel(widget.refreshRateSeconds)}`
+  // lastError: never worked yet (no data) → the "missing stars" card; worked before → keep the data, add a gold ribbon
+  const neverWorked = !preview && !unlinked && widget.cachedData == null && !!widget.lastError
+  const stale = !preview && !unlinked && widget.cachedData != null && !!widget.lastError
   return (
-    <div className={`glass w ${view?.cls ?? ''} ${phase ? `rf-${phase}` : ''} ${className}`} data-kind={kind} data-id={widget.id}
+    <div className={`glass w ${view?.cls ?? ''} ${phase ? `rf-${phase}` : ''} ${stale ? 'w-stale' : ''} ${className}`} data-kind={kind} data-id={widget.id}
       style={phase === 'hot' && left != null ? { ...style, ['--rf-k' as string]: 6 - left } : style} {...dragProps}>
       {!preview && <Decoration name={widget.decoration} />}
       {!preview && (
@@ -54,11 +59,26 @@ export function WidgetCard({ widget, lang, editing = false, className = '', styl
           <small>{W[lang].unlinkedText}</small>
           <a href={`/auth/${entry.needs}`} onClick={(e) => e.stopPropagation()}>{entry.needs === 'github' ? W[lang].connectGithub : W[lang].connectEpitech}</a>
         </div>
+      ) : neverWorked ? (
+        <div className="w-empty">
+          <b className="w-empty-name">{widget.title || entry?.name[lang] || widget.widgetName}</b>
+          <svg className="w-empty-sky" viewBox="0 0 90 58" aria-hidden="true">
+            <line x1="10" y1="10" x2="45" y2="8" /><line x1="45" y1="8" x2="80" y2="22" /><line x1="80" y1="22" x2="62" y2="50" />
+            <circle cx="10" cy="10" r="2.6" /><circle cx="45" cy="8" r="2.6" /><circle cx="80" cy="22" r="2.6" /><circle className="off" cx="62" cy="50" r="2.6" /><circle className="off" cx="22" cy="46" r="2.6" />
+          </svg>
+          <strong>{W[lang].emptyTitle}</strong>
+          <small title={widget.lastError ?? ''}>{refreshErrorText(widget.lastError ?? '', lang)}</small>
+          <div className="w-empty-acts">
+            <button type="button" className="on" onClick={(e) => { e.stopPropagation(); onWhy?.() }}>{W[lang].understand}</button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); onEdit?.() }}>{W[lang].modify}</button>
+          </div>
+        </div>
       ) : view ? (
         <view.View data={widget.cachedData} insight={widget.insight} config={widget.config} lang={lang} title={widget.title} lastError={widget.lastError} onConfig={editing ? undefined : onConfig} />
       ) : (
         <div className="w-title">{widget.serviceName} / {widget.widgetName}</div>
       )}
+      {stale && <div className="w-stale-note" title={widget.lastError ?? ''}>⚠ {W[lang].staleNow} · {refreshErrorText(widget.lastError ?? '', lang)}</div>}
       {/* Every card shows its countdown the same way: a small pill on its bottom edge */}
       {view && !unlinked && left != null && <div className="rf-tab" title={rateTitle}>{clock}</div>}
     </div>
@@ -113,10 +133,11 @@ const spanStyle = (w: WidgetInstance): React.CSSProperties => ({
   ...(w.position?.rows ? { gridRow: `span ${w.position.rows}` } : {}),
 })
 
-export function WidgetGrid({ widgets, lang, linked, editing, setEditing, landing, onAdd, onDelete, onEdit, onConfig, onReorder, onResize }: {
+export function WidgetGrid({ widgets, lang, linked, onWhy, editing, setEditing, landing, onAdd, onDelete, onEdit, onConfig, onReorder, onResize }: {
   widgets: WidgetInstance[]
   // Which accounts are connected (from GET /auth/me), for the widgets that need one
   linked: { github: boolean; epitech: boolean }
+  onWhy: () => void
   lang: Lang
   editing: boolean
   setEditing: (on: boolean) => void
@@ -203,7 +224,7 @@ export function WidgetGrid({ widgets, lang, linked, editing, setEditing, landing
         return (
           <WidgetCard key={w.id} widget={w} lang={lang} editing={editing} className={cls} style={style}
             unlinked={(entryFor(w.serviceName, w.widgetName)?.needs === 'github' && !linked.github) || (entryFor(w.serviceName, w.widgetName)?.needs === 'epitech' && !linked.epitech)}
-            onDelete={() => onDelete(w)} onEdit={() => onEdit(w)} onConfig={(p) => onConfig(w, p)} onResizeStart={(e) => startResize(e, w)}
+            onWhy={onWhy} onDelete={() => onDelete(w)} onEdit={() => onEdit(w)} onConfig={(p) => onConfig(w, p)} onResizeStart={(e) => startResize(e, w)}
             dragProps={{ ...dragProps(w.id), onPointerDown: (e) => onPointerDown(e, w.id), onPointerMove, onPointerUp: cancelPress, onPointerCancel: cancelPress }} />
         )
       })}

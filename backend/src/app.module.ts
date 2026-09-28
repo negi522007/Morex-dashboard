@@ -16,6 +16,7 @@ import { AssistantModule } from './assistant/assistant.module';
 import { HelpdeskModule } from './helpdesk/helpdesk.module';
 import { AiModule } from './ai/ai.module';
 import { InsightsModule } from './insights/insights.module';
+import { ExportModule } from './export/export.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { InsightsModule } from './insights/insights.module';
     BriefModule,
     AssistantModule,
     HelpdeskModule,
+    ExportModule,
   ],
 })
 export class AppModule {}

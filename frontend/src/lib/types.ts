@@ -81,6 +81,8 @@ export interface User {
   avatarConfig: Record<string, string> | null
   avatarPhotoUrl: string | null
   githubLinked: boolean
+  // false = the account signs in only with GitHub / Microsoft / Epitech (no password)
+  hasPassword?: boolean
   epitech: EpitechProfile | null
   microsoft: { name: string | null; email: string; tenant: string } | null
   // "YYYY-MM-DD", and the zodiac sign the backend computes from it (both null when unknown)

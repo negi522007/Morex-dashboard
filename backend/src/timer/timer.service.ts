@@ -13,6 +13,9 @@ import { decryptToken } from '../common/token-encryption.util';
 const TICK_MS = 5_000;
 // Widgets refreshed at the same time: one slow or unreachable service no longer holds up everyone else's
 const CONCURRENCY = 8;
+// Hard cap for one widget's refresh. Each fetch has its own timeout, but a step outside them (a DNS lookup that
+// never answers, a stuck AI call) must never keep the round running forever and freeze every other widget.
+export const REFRESH_LIMIT_MS = 45_000;
 
 interface DueWidgetInstance {
   id: string;
@@ -59,10 +62,18 @@ export class TimerService {
       const worker = async () => {
         while (next < due.length) {
           const instance = due[next++];
+          let timer: NodeJS.Timeout | undefined;
           try {
-            await this.refreshInstance(instance);
+            await Promise.race([
+              this.refreshInstance(instance),
+              new Promise<never>((_, reject) => {
+                timer = setTimeout(() => reject(new Error(`gave up after ${REFRESH_LIMIT_MS / 1000} s`)), REFRESH_LIMIT_MS);
+              }),
+            ]);
           } catch (err) {
             this.logger.error(`Refresh crashed for instance ${instance.id}: ${(err as Error).message}`);
+          } finally {
+            clearTimeout(timer);
           }
         }
       };

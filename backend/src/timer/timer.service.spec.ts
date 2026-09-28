@@ -1,4 +1,4 @@
-import { TimerService } from './timer.service';
+import { REFRESH_LIMIT_MS, TimerService } from './timer.service';
 import type { ServiceProvider } from '../services/service-provider.interface';
 import { encryptToken } from '../common/token-encryption.util';
 
@@ -141,6 +141,26 @@ describe('TimerService', () => {
     expect(fetchDataMock).toHaveBeenCalledTimes(12);
     expect(maxInFlight).toBeGreaterThan(1);
     expect(maxInFlight).toBeLessThanOrEqual(8);
+  });
+
+  it('gives up on a widget whose refresh never ends, so the round finishes and the next ticks run again', async () => {
+    jest.useFakeTimers();
+    try {
+      fetchDataMock.mockImplementation((cfg: { hang?: boolean }) => (cfg.hang ? new Promise(() => undefined) : Promise.resolve({ ok: true })));
+      prisma.$queryRaw.mockResolvedValue([
+        { id: 'stuck', userId: 'u1', serviceName: 'test-service', widgetName: 'widget-a', config: { hang: true } },
+        { id: 'fine', userId: 'u1', serviceName: 'test-service', widgetName: 'widget-a', config: {} },
+      ]);
+      const tick = service.handleTick();
+      await jest.advanceTimersByTimeAsync(REFRESH_LIMIT_MS + 10);
+      await tick;
+      expect(prisma.widgetInstance.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'fine' } }));
+      prisma.$queryRaw.mockResolvedValue([]);
+      await service.handleTick(); // not skipped: the stuck widget no longer holds the loop
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('skips a tick that starts while the previous one is still running', async () => {

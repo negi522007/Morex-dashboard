@@ -173,12 +173,12 @@ export class AuthController {
   @UseGuards(SessionGuard)
   @ApiCookieAuth('dashboard_session')
   @ApiOperation({ summary: 'Get the currently logged-in user — useful to check auth state on app load' })
-  @ApiResponse({ status: 200, description: 'The current user, plus githubLinked and `epitech` and `microsoft` (linked-account profiles or null)' })
+  @ApiResponse({ status: 200, description: 'The current user, plus githubLinked, hasPassword (false = OAuth sign-in only) and `epitech` and `microsoft` (linked-account profiles or null)' })
   @ApiResponse({ status: 401, description: 'No valid session' })
   async me(@CurrentUser() user: PublicUser) {
-    const githubLinked = await this.authService.hasLinkedGithub(user.id);
+    const [githubLinked, hasPassword] = await Promise.all([this.authService.hasLinkedGithub(user.id), this.authService.hasPassword(user.id)]);
     const [epitech, microsoft] = await Promise.all([this.epitechOidc.profileOf(user.id), this.microsoftOidc.profileOf(user.id)]);
-    return { ...user, githubLinked, epitech, microsoft };
+    return { ...user, githubLinked, hasPassword, epitech, microsoft };
   }
 
   @Patch('me')
@@ -254,6 +254,22 @@ export class AuthController {
       throw new BadRequestException('No photo uploaded, or it was not a jpeg/png/webp/gif under 5MB');
     }
     return this.authService.setAvatarPhoto(user.id, `/uploads/avatars/${file.filename}`);
+  }
+
+  @Delete('me')
+  @HttpCode(204)
+  @UseGuards(SessionGuard)
+  @ApiCookieAuth('dashboard_session')
+  @ApiOperation({ summary: 'Delete your account and everything in it, for good. Body: { password } — or { email } for an account without a password (GitHub / Microsoft / Epitech sign-in only).' })
+  @ApiResponse({ status: 204, description: 'Account deleted, session cookie cleared' })
+  @ApiResponse({ status: 403, description: 'Wrong password (or email) — nothing was deleted' })
+  async deleteMe(
+    @CurrentUser() user: { id: string },
+    @Body() body: { password?: string; email?: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.authService.deleteAccount(user.id, { password: body?.password, email: body?.email });
+    res.clearCookie(this.config.get<string>('SESSION_COOKIE_NAME') ?? 'dashboard_session');
   }
 
   @Delete('me/avatar')

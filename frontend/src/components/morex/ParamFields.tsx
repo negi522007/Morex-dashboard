@@ -64,7 +64,24 @@ const KNOWN_REPOS = ['facebook/react', 'microsoft/vscode', 'nestjs/nest', 'vitej
 const RANGES: Record<string, [number, number]> = {
   'article_list.number': [1, 10], 'recent_commits.number': [1, 20], 'open_issues.number': [1, 20], 'price_history.days': [1, 90],
   'daily_forecast.days': [1, 16], 'hourly_forecast.hours': [1, 48], 'upcoming_events.days': [1, 60], 'upcoming_events.number': [1, 30],
-  'planning.days': [1, 60], 'planning.number': [1, 30], 'json_list.number': [1, 30], 'latest_videos.number': [1, 10], 'trending.number': [1, 10], 'recent_games.number': [1, 10],
+  'planning.days': [1, 60], 'planning.number': [1, 30], 'json_list.number': [1, 30], 'latest_videos.number': [1, 10], 'trending.number': [1, 10],
+}
+// What each slider actually counts, so it reads "Nombre d’articles · 4 articles" instead of a vague "Nombre · 4 nombre".
+// [field label, unit for 1, unit for several]
+const COUNTS: Record<string, [L3, L3, L3]> = {
+  'article_list.number': [{ fr: 'Nombre d’articles', en: 'Number of articles', es: 'Número de artículos' }, { fr: 'article', en: 'article', es: 'artículo' }, { fr: 'articles', en: 'articles', es: 'artículos' }],
+  'recent_commits.number': [{ fr: 'Nombre de commits', en: 'Number of commits', es: 'Número de commits' }, { fr: 'commit', en: 'commit', es: 'commit' }, { fr: 'commits', en: 'commits', es: 'commits' }],
+  'open_issues.number': [{ fr: 'Nombre d’issues', en: 'Number of issues', es: 'Número de issues' }, { fr: 'issue', en: 'issue', es: 'issue' }, { fr: 'issues', en: 'issues', es: 'issues' }],
+  'price_history.days': [{ fr: 'Période du graphique', en: 'Chart period', es: 'Periodo del gráfico' }, { fr: 'jour', en: 'day', es: 'día' }, { fr: 'jours', en: 'days', es: 'días' }],
+  'daily_forecast.days': [{ fr: 'Jours de prévision', en: 'Forecast days', es: 'Días de previsión' }, { fr: 'jour', en: 'day', es: 'día' }, { fr: 'jours', en: 'days', es: 'días' }],
+  'hourly_forecast.hours': [{ fr: 'Heures de prévision', en: 'Forecast hours', es: 'Horas de previsión' }, { fr: 'heure', en: 'hour', es: 'hora' }, { fr: 'heures', en: 'hours', es: 'horas' }],
+  'upcoming_events.days': [{ fr: 'Regarder sur', en: 'Look ahead', es: 'Mirar durante' }, { fr: 'jour', en: 'day', es: 'día' }, { fr: 'jours', en: 'days', es: 'días' }],
+  'upcoming_events.number': [{ fr: 'Nombre d’événements', en: 'Number of events', es: 'Número de eventos' }, { fr: 'événement', en: 'event', es: 'evento' }, { fr: 'événements', en: 'events', es: 'eventos' }],
+  'planning.days': [{ fr: 'Regarder sur', en: 'Look ahead', es: 'Mirar durante' }, { fr: 'jour', en: 'day', es: 'día' }, { fr: 'jours', en: 'days', es: 'días' }],
+  'planning.number': [{ fr: 'Nombre d’activités', en: 'Number of activities', es: 'Número de actividades' }, { fr: 'activité', en: 'activity', es: 'actividad' }, { fr: 'activités', en: 'activities', es: 'actividades' }],
+  'json_list.number': [{ fr: 'Nombre d’éléments', en: 'Number of items', es: 'Número de elementos' }, { fr: 'élément', en: 'item', es: 'elemento' }, { fr: 'éléments', en: 'items', es: 'elementos' }],
+  'latest_videos.number': [{ fr: 'Nombre de vidéos', en: 'Number of videos', es: 'Número de vídeos' }, { fr: 'vidéo', en: 'video', es: 'vídeo' }, { fr: 'vidéos', en: 'videos', es: 'vídeos' }],
+  'trending.number': [{ fr: 'Nombre de vidéos', en: 'Number of videos', es: 'Número de vídeos' }, { fr: 'vidéo', en: 'video', es: 'vídeo' }, { fr: 'vidéos', en: 'videos', es: 'vídeos' }],
 }
 const SEGMENTS: Record<string, [string, L3][]> = {
   'exchange_rate.days': [['1', { fr: '24 h', en: '24 h', es: '24 h' }], ['7', { fr: '7 jours', en: '7 days', es: '7 días' }], ['30', { fr: '30 jours', en: '30 days', es: '30 días' }]],
@@ -312,7 +329,8 @@ export function ParamFields({ entry, params, cfg, setCfg, lang, user, editing = 
     }
     if (p.type === 'integer' && RANGES[key]) {
       const [min, max] = RANGES[key]
-      return <Range min={min} max={max} value={Number(v || ex || min)} onChange={onChange} unit={paramLabel(p.name, lang).toLowerCase()} />
+      const n = Number(v || ex || min), c = COUNTS[key]
+      return <Range min={min} max={max} value={n} onChange={onChange} unit={c ? (n === 1 ? c[1] : c[2])[lang] : paramLabel(p.name, lang).toLowerCase()} />
     }
     if (w === 'video_stats' && p.name === 'video') {
       const id = youtubeId(v)
@@ -337,7 +355,7 @@ export function ParamFields({ entry, params, cfg, setCfg, lang, user, editing = 
     <>
       {params.map((p) => (
         <div key={p.name} className="dw-field pf-field">
-          <span className="pf-label">{paramLabel(p.name, lang)}{p.required ? ' *' : ''}{p.secret ? ' 🔒' : ''}</span>
+          <span className="pf-label">{COUNTS[`${entry.widget}.${p.name}`]?.[0][lang] ?? paramLabel(p.name, lang)}{p.required ? ' *' : ''}{p.secret ? ' 🔒' : ''}</span>
           {control(p)}
         </div>
       ))}

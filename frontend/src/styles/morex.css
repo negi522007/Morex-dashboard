@@ -330,7 +330,7 @@ body[data-wskin] .w[data-kind="rss"] { box-shadow: 0 20px 40px -18px rgb(0 0 0 /
 
 /* GitHub: repo stats on a starry sky */
 .w[data-kind="gh-stats"] { grid-row: span 3; background: linear-gradient(170deg, #0b1026, #1e1b4b) !important; }
-.w[data-kind="gh-stats"] > :not(.stars-bg):not(.badge):not(.resize):not(.deco):not(.rf-tab) { position: relative; z-index: 1; }
+.w[data-kind="gh-stats"] > :not(.stars-bg):not(.badge):not(.resize):not(.deco):not(.rf-tab):not(.w-stale-note) { position: relative; z-index: 1; }
 .stars-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
 .stars-bg i { position: absolute; font-style: normal; color: #fde047; text-shadow: 0 0 8px #fde047; animation: twinkle 2.4s ease-in-out infinite; }
 .odo { margin-top: auto; display: flex; gap: 3px; justify-content: center; }
@@ -427,7 +427,7 @@ body .w.term-card { background: rgb(2 6 23 / .82); font-family: 'JetBrains Mono'
 .wx-advice .ai { display: flex; align-items: center; gap: 5px; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: #ddd6fe; margin-bottom: 4px; }
 .wx-advice .ai svg { width: 9px; height: 9px; fill: #c4b5fd; }
 .wx-advice .wear { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; } .wx-advice .wear span { font-size: 10.5px; padding: 2px 8px; border-radius: 999px; background: rgb(255 255 255 / .15); }
-.w[data-kind="wx-now"] > :not(.sky-layer):not(.badge):not(.resize):not(.deco):not(.rf-tab) { position: relative; z-index: 1; }
+.w[data-kind="wx-now"] > :not(.sky-layer):not(.badge):not(.resize):not(.deco):not(.rf-tab):not(.w-stale-note) { position: relative; z-index: 1; }
 .sky-layer { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
 .sky-day { background: linear-gradient(170deg, #0284c7, #38bdf8 60%, #fcd34d 135%); }
 .sky-night { background: linear-gradient(170deg, #0b1026, #312e81 70%, #7c3aed 140%); }
@@ -1072,3 +1072,31 @@ body.morex.editing .w-unlinked a { pointer-events: none; }
 .lk-confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 61; }
 .lk-confetti i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; animation: lkFall 3s linear infinite; }
 @keyframes lkFall { to { transform: translateY(110vh) rotate(600deg); } }
+
+/* A widget that never worked yet: a constellation with missing stars, the reason, and two ways forward */
+.w-empty { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; text-align: center; }
+.w-empty-name { align-self: flex-start; font-size: 13px; opacity: .8; }
+.w-empty-sky { width: 90px; height: 58px; margin-top: 4px; }
+.w-empty-sky line { stroke: rgb(196 181 253 / .6); stroke-width: 1.3; stroke-dasharray: 3 3; }
+.w-empty-sky circle { fill: #fff; filter: drop-shadow(0 0 3px #fff); } .w-empty-sky circle.off { fill: rgb(255 255 255 / .22); filter: none; }
+.w-empty strong { font-size: 14px; font-weight: 600; } .w-empty small { font-size: 12px; opacity: .7; max-width: 260px; line-height: 1.4; }
+.w-empty-acts { display: flex; gap: 8px; margin-top: 6px; }
+.w-empty-acts button { padding: 7px 14px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .3); background: transparent; color: #fff; font: 600 12px Poppins, sans-serif; cursor: pointer; }
+.w-empty-acts button.on { background: #fff; border-color: #fff; color: #1e1b4b; }
+body.editing .w-empty-acts { visibility: hidden; }
+/* A widget that worked before but whose last refresh failed: its data stays, slightly faded, with a gold ribbon */
+.w.w-stale > :not(.badge):not(.resize):not(.deco):not(.rf-tab):not(.w-stale-note) { opacity: .6; }
+.w-stale-note { position: absolute; z-index: 3; left: 14px; right: 14px; bottom: 20px; padding: 7px 11px; border-radius: 12px; font-size: 11.5px; line-height: 1.35; color: #fde68a;
+  background: rgb(30 27 75 / .92); border: 1px solid rgb(251 191 36 / .35); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.w.w-stale .rf-tab { border-color: rgb(251 191 36 / .55); }
+/* "New conversation" in the help chat */
+.hc-new { align-self: center; margin-top: 4px; padding: 7px 16px; border-radius: 999px; border: 1px dashed rgb(255 255 255 / .3); background: transparent; color: rgb(255 255 255 / .8); font: 500 12px Poppins, sans-serif; cursor: pointer; }
+.hc-new:hover { background: rgb(255 255 255 / .08); color: #fff; }
+
+/* Profile → delete the account: the confirmation box under the button */
+.del-box { margin-top: 14px; padding: 14px 16px; border-radius: 16px; background: rgb(127 29 29 / .25); border: 1px solid rgb(248 113 113 / .4); display: flex; flex-direction: column; gap: 8px; }
+.del-box b { font-size: 14px; } .del-box p { margin: 0; font-size: 12.5px; opacity: .85; line-height: 1.5; }
+.del-err { color: #fca5a5 !important; opacity: 1 !important; }
+.del-acts { display: flex; gap: 8px; justify-content: flex-end; }
+.btn-danger.solid { background: #dc2626; border-color: #dc2626; color: #fff; }
+.btn-danger.solid:disabled { opacity: .5; cursor: not-allowed; }

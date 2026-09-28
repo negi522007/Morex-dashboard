@@ -717,4 +717,28 @@ describe('AuthService', () => {
       expect(result.avatarPhotoUrl).toBeNull();
     });
   });
+  describe('deleteAccount', () => {
+    it('deletes the user (everything else follows by cascade) when the password is right', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', email: 'a@b.c', passwordHash: await hashPassword('correct-horse'), avatarPhotoPath: null });
+      prisma.oAuthAccount.findFirst.mockResolvedValue(null);
+      await service.deleteAccount('user-1', { password: 'correct-horse' });
+      expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
+    });
+
+    it('refuses a wrong password and deletes nothing', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', email: 'a@b.c', passwordHash: await hashPassword('correct-horse') });
+      await expect(service.deleteAccount('user-1', { password: 'nope-nope' })).rejects.toThrow(ForbiddenException);
+      await expect(service.deleteAccount('user-1', {})).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.delete).not.toHaveBeenCalled();
+    });
+
+    it('asks an account without a password (GitHub / Microsoft sign-in) to type its email instead', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', email: 'Ada@Example.com', passwordHash: null });
+      prisma.oAuthAccount.findFirst.mockResolvedValue(null);
+      await expect(service.deleteAccount('user-1', { email: 'someone@else.com' })).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.delete).not.toHaveBeenCalled();
+      await service.deleteAccount('user-1', { email: ' ada@example.com ' });
+      expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
+    });
+  });
 });
