@@ -493,6 +493,13 @@ export class AuthService {
   // "Link" vs "Unlink" instead of always "Link"). Not folded into
   // toPublicUser/PublicUser itself, since register/login/getUserBySession
   // don't need the extra query this requires.
+  // Whether the account can sign in with a password (false = GitHub / Microsoft / Epitech sign-in only).
+  // Tells the frontend what to ask before a sensitive action such as deleting the account.
+  async hasPassword(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
+    return !!user?.passwordHash;
+  }
+
   async hasLinkedGithub(userId: string): Promise<boolean> {
     const account = await this.prisma.oAuthAccount.findFirst({ where: { userId, provider: 'github' } });
     return account !== null;
@@ -622,6 +629,30 @@ export class AuthService {
     const updated = await this.prisma.user.update({ where: { id: userId }, data: { avatarPhotoPath: publicPath } });
     await this.deleteUploadedFile(existing?.avatarPhotoPath ?? null);
     return toPublicUser(updated);
+  }
+
+  // Deletes the account for good. Proof that it's really the owner: their password, or — for an account
+  // that signs in only with GitHub / Microsoft / Epitech (no password) — their email typed again. Everything
+  // tied to the user (sessions, widgets, journal, alerts, briefs, linked accounts…) goes with it through the
+  // schema's onDelete: Cascade; the uploaded photo file and the GitHub grant are cleaned up on the way.
+  async deleteAccount(userId: string, proof: { password?: string; email?: string }): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    if (user.passwordHash) {
+      if (!proof.password || !(await verifyPassword(proof.password, user.passwordHash))) {
+        throw new ForbiddenException('Current password is incorrect');
+      }
+    } else if ((proof.email ?? '').trim().toLowerCase() !== user.email.toLowerCase()) {
+      throw new ForbiddenException('Type your email address to confirm');
+    }
+
+    const github = await this.prisma.oAuthAccount.findFirst({ where: { userId, provider: 'github' } });
+    if (github) await this.revokeGithubGrant(github.accessTokenEncrypted);
+
+    await this.prisma.user.delete({ where: { id: userId } });
+    await this.deleteUploadedFile(user.avatarPhotoPath ?? null);
   }
 
   async removeAvatarPhoto(userId: string): Promise<PublicUser> {
