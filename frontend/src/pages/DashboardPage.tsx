@@ -14,7 +14,7 @@ import { AvatarModal, BioModal, EditWidgetModal, HelpModal, JournalModal, Logout
 import '../styles/morex.css'
 
 // The widgets' data is refreshed server-side by the Timer; the page just re-reads GET /widgets.
-const POLL_INTERVAL_MS = 15_000
+const POLL_INTERVAL_MS = 5_000
 type ModalName = 'profile' | 'avatar' | 'journal' | 'help' | 'logout' | 'bio'
 
 const byOrder = (a: WidgetInstance, b: WidgetInstance) =>

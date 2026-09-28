@@ -53,3 +53,12 @@
   -webkit-box-shadow: 0 0 0 1000px rgb(49 46 129 / 0.55) inset;
   transition: background-color 9999s ease-out 0s;
 }
+
+/* The sign-up "look for this message" sky: stars link up one by one and draw an envelope */
+.sent-sky { display: block; width: 240px; max-width: 100%; margin: 0 auto 14px; overflow: visible; }
+.sent-sky line { stroke: rgb(196 181 253 / .85); stroke-width: 1.5; stroke-dasharray: 200; stroke-dashoffset: 200; filter: drop-shadow(0 0 3px #a78bfa); animation: skyDraw 6s ease-in-out infinite; }
+.sent-sky .star { fill: #fff; filter: drop-shadow(0 0 5px #fff); animation: skyTwinkle 2.4s ease-in-out infinite; }
+.sent-sky .dust { fill: #fff; animation: skyTwinkle 3s ease-in-out infinite; }
+@keyframes skyDraw { 0% { stroke-dashoffset: 200; opacity: 1; } 45%, 85% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+@keyframes skyTwinkle { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .sent-sky line { animation: none; stroke-dashoffset: 0; } .sent-sky .star, .sent-sky .dust { animation: none; } }

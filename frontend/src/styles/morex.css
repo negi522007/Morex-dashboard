@@ -135,6 +135,29 @@ body:not(.editing) .w:hover { transform: translateY(-4px); box-shadow: 0 20px 40
 .big-num { font-size: 40px; font-weight: 600; letter-spacing: -.02em; }
 .delta { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: rgb(52 211 153 / .15); color: #6ee7b7; }
 .w-foot { margin-top: auto; font-size: 12px; color: rgb(255 255 255 / .45); display: flex; justify-content: space-between; }
+.w-foot.rf { align-items: center; font-size: 12.5px; }
+.rf-cd { display: flex; align-items: center; gap: 8px; font-weight: 600; color: rgb(255 255 255 / .75); }
+.rf-at { font-weight: 600; color: rgb(255 255 255 / .7); }
+.rf-ring { width: 24px; height: 24px; flex: none; transform: rotate(-90deg); overflow: visible; }
+.rf-ring circle { fill: none; stroke-width: 2.5; } .rf-ring .rf-bg { stroke: rgb(255 255 255 / .12); }
+.rf-ring .rf-fg { stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke .4s; }
+.rf-ring .rf-glow { fill: rgb(56 189 248 / .35); stroke: none; } .rf-hot .rf-ring .rf-glow { fill: rgb(253 224 71 / .4); }
+.rf-ring circle[fill="#fff"] { stroke: none; }
+.rf-spin { display: inline-block; animation: aiSpin .9s linear infinite; } .rf-ok { color: #34d399; }
+.w.rf-hot .rf-cd { color: #fde68a; }
+.rf-tab { position: absolute; z-index: 3; left: 50%; bottom: -13px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 2px 12px 2px 3px; border-radius: 999px; white-space: nowrap;
+  font-size: 11.5px; background: rgb(15 23 42 / .92); border: 1px solid rgb(255 255 255 / .14); box-shadow: 0 6px 16px rgb(0 0 0 / .35); backdrop-filter: blur(10px); pointer-events: auto; }
+.rf-tab .rf-ring { width: 20px; height: 20px; } .rf-tab .rf-cd { gap: 6px; } .rf-tab .rf-at { font-weight: 500; color: rgb(255 255 255 / .55); }
+.w.rf-hot .rf-tab { border-color: rgb(253 224 71 / .45); } .w.rf-ok .rf-tab { border-color: rgb(52 211 153 / .5); }
+body.editing .rf-tab { display: none; }
+/* Last 5 seconds: a violet halo breathes around the card, a little stronger each second (--rf-k 1 → 5) */
+.w.rf-hot { animation: rfBreathe 1s ease-in-out infinite; }
+@keyframes rfBreathe {
+  0%, 100% { box-shadow: 0 0 calc(var(--rf-k, 1) * 6px) rgb(167 139 250 / .35); }
+  50% { box-shadow: 0 0 calc(var(--rf-k, 1) * 14px) calc(var(--rf-k, 1) * 2px) rgb(167 139 250 / .6); }
+}
+.w.rf-ok { box-shadow: 0 0 50px 8px rgb(52 211 153 / .4); }
+@media (prefers-reduced-motion: reduce) { .w.rf-hot { animation: none; box-shadow: 0 0 24px 4px rgb(167 139 250 / .5); } .rf-spin { animation: none; } }
 .add { border-style: dashed; align-items: center; justify-content: center; text-align: center; min-height: 220px; cursor: pointer; color: rgb(255 255 255 / .7); }
 .add .plus { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; font-weight: 300;
   background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .2); }
@@ -158,7 +181,7 @@ body:not(.editing) .w:hover { transform: translateY(-4px); box-shadow: 0 20px 40
 
 /* News: newspaper + AI recap */
 .w[data-kind="rss"] { grid-column: span 2; grid-row: span 4; background: #f5efe3 !important; color: #1f1a17; border: 0 !important; backdrop-filter: none !important; }
-.w[data-kind="rss"] .w-foot { color: #8a7d70; }
+.w[data-kind="rss"] .w-foot, .w[data-kind="rss"] .w-foot .rf-cd, .w[data-kind="rss"] .w-foot .rf-at { color: #8a7d70; }
 .np { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
 .np a { color: inherit; text-decoration: none; }
 .np .mast { text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 800; border-bottom: 3px double #1f1a17; padding-bottom: 4px; }
@@ -307,7 +330,7 @@ body[data-wskin] .w[data-kind="rss"] { box-shadow: 0 20px 40px -18px rgb(0 0 0 /
 
 /* GitHub: repo stats on a starry sky */
 .w[data-kind="gh-stats"] { grid-row: span 3; background: linear-gradient(170deg, #0b1026, #1e1b4b) !important; }
-.w[data-kind="gh-stats"] > :not(.stars-bg):not(.badge):not(.resize):not(.deco) { position: relative; z-index: 1; }
+.w[data-kind="gh-stats"] > :not(.stars-bg):not(.badge):not(.resize):not(.deco):not(.rf-tab) { position: relative; z-index: 1; }
 .stars-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
 .stars-bg i { position: absolute; font-style: normal; color: #fde047; text-shadow: 0 0 8px #fde047; animation: twinkle 2.4s ease-in-out infinite; }
 .odo { margin-top: auto; display: flex; gap: 3px; justify-content: center; }
@@ -404,7 +427,7 @@ body .w.term-card { background: rgb(2 6 23 / .82); font-family: 'JetBrains Mono'
 .wx-advice .ai { display: flex; align-items: center; gap: 5px; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: #ddd6fe; margin-bottom: 4px; }
 .wx-advice .ai svg { width: 9px; height: 9px; fill: #c4b5fd; }
 .wx-advice .wear { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; } .wx-advice .wear span { font-size: 10.5px; padding: 2px 8px; border-radius: 999px; background: rgb(255 255 255 / .15); }
-.w[data-kind="wx-now"] > :not(.sky-layer):not(.badge):not(.resize):not(.deco) { position: relative; z-index: 1; }
+.w[data-kind="wx-now"] > :not(.sky-layer):not(.badge):not(.resize):not(.deco):not(.rf-tab) { position: relative; z-index: 1; }
 .sky-layer { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
 .sky-day { background: linear-gradient(170deg, #0284c7, #38bdf8 60%, #fcd34d 135%); }
 .sky-night { background: linear-gradient(170deg, #0b1026, #312e81 70%, #7c3aed 140%); }

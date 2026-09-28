@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex messages galaxie</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .35), rgb(15 12 50 / .6)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1.top { text-align: center; font-weight: 600; margin: 0; padding-top: 34px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .75); margin: 8px auto 20px; max-width: 860px; padding: 0 16px; }
+  .msgs { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; padding: 0 16px; }
+  .msgs button { font: inherit; font-size: 13px; padding: 8px 16px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .25); background: transparent; color: #fff; cursor: pointer; }
+  .msgs button.on { background: #fff; color: #1e1b4b; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; max-width: 1250px; margin: 0 auto; padding: 0 20px 60px; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; max-width: 460px; } }
+  .opt > p { margin: 12px 0 0; font-size: 13px; color: rgb(255 255 255 / .75); } .opt > p b { color: #fff; }
+  /* the form side of the login card */
+  .panel { padding: 28px 26px; border-radius: 28px; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .14); backdrop-filter: blur(22px); }
+  .panel h2 { margin: 0 0 18px; font-size: 26px; font-weight: 600; }
+  .field { margin-bottom: 12px; } .field label { display: block; font-size: 12px; opacity: .75; margin-bottom: 5px; }
+  .field div { height: 42px; border-radius: 14px; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .18); padding: 0 14px; display: flex; align-items: center; font-size: 13px; opacity: .85; }
+  .field.bad div { border-color: rgb(251 113 133 / .6); }
+  .submit { margin-top: 14px; height: 44px; border-radius: 999px; background: #fff; color: #1e1b4b; display: grid; place-items: center; font-weight: 600; font-size: 14px; }
+  /* the message */
+  .note { margin-top: 14px; border-radius: 22px; padding: 12px 16px 14px; text-align: center; background: rgb(2 6 23 / .35); border: 1px solid rgb(255 255 255 / .12); }
+  .note.rose { border-color: rgb(251 113 133 / .35); } .note.amber { border-color: rgb(253 224 71 / .35); }
+  .note svg { display: block; width: 230px; height: 118px; margin: 0 auto 2px; overflow: visible; }
+  .note b { display: block; font: 600 22px/1.15 Caveat, cursive; } .note small { display: block; margin-top: 3px; font-size: 12px; line-height: 1.45; opacity: .75; }
+  .dust { fill: #fff; animation: tw 3s ease-in-out infinite; }
+  @keyframes tw { 50% { opacity: .2; } }
+  /* A · constellations */
+  .A line { stroke: rgb(196 181 253 / .85); stroke-width: 1.5; stroke-dasharray: 160; stroke-dashoffset: 160; filter: drop-shadow(0 0 3px #a78bfa); animation: draw 5s ease-in-out infinite; }
+  .A .st { fill: #fff; filter: drop-shadow(0 0 4px #fff); animation: tw 2.4s ease-in-out infinite; }
+  .A .red { fill: #fb7185; filter: drop-shadow(0 0 6px #fb7185); animation: blinkR 1s ease-in-out infinite; }
+  .A .yel { fill: #fde047; filter: drop-shadow(0 0 6px #fde047); animation: blinkR 1.2s ease-in-out infinite; }
+  @keyframes blinkR { 50% { opacity: .25; transform-origin: center; } }
+  @keyframes draw { 0% { stroke-dashoffset: 160; opacity: 1; } 45%, 85% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+  .A .broken { animation: flick 2.2s steps(1) infinite; } @keyframes flick { 0%, 100% { opacity: 1; } 30% { opacity: .1; } 36% { opacity: 1; } 60% { opacity: .2; } 64% { opacity: 1; } }
+  /* B · planets */
+  .B .pl { transform-box: fill-box; transform-origin: center; }
+  .B .sat { offset-rotate: 0deg; animation: orb 4s linear infinite; }
+  @keyframes orb { to { offset-distance: 100%; } }
+  .B .bump { animation: bump 2.4s ease-in-out infinite; transform-box: fill-box; }
+  @keyframes bump { 0%, 100% { transform: translate(-40px, 10px); opacity: 0; } 15% { opacity: 1; } 45% { transform: translate(0, 0); } 50% { transform: translate(-6px, 3px) rotate(-30deg); } 80% { transform: translate(-40px, -18px) rotate(-120deg); opacity: 0; } }
+  .B .shake { animation: shake 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes shake { 0%, 44%, 60%, 100% { transform: none; } 47% { transform: translate(-2px, 1px); } 50% { transform: translate(2px, -1px); } 53% { transform: translate(-1px, 0); } }
+  .B .crash { animation: crash 2.4s ease-in infinite; }
+  @keyframes crash { 0% { transform: translate(-70px, -40px); opacity: 0; } 10% { opacity: 1; } 45% { transform: translate(0, 0); opacity: 1; } 50%, 100% { transform: translate(0, 0); opacity: 0; } }
+  .B .boom { animation: boom 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; opacity: 0; }
+  @keyframes boom { 0%, 45% { opacity: 0; transform: scale(.2); } 55% { opacity: 1; transform: scale(1); } 80%, 100% { opacity: 0; transform: scale(1.6); } }
+  /* C · signals */
+  .C .sweep { transform-origin: 90px 56px; animation: sweep 2.4s linear infinite; }
+  @keyframes sweep { to { transform: rotate(360deg); } }
+  .C .wave { fill: none; stroke-width: 1.8; transform-box: fill-box; transform-origin: center; animation: wave 2.4s ease-out infinite; }
+  .C .wave:nth-of-type(2) { animation-delay: .8s; } .C .wave:nth-of-type(3) { animation-delay: 1.6s; }
+  @keyframes wave { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.4); opacity: 0; } }
+  .C .static rect { animation: noise .25s steps(2) infinite; } .C .static rect:nth-child(odd) { animation-delay: .12s; }
+  @keyframes noise { 50% { opacity: .15; } }
+  .C .led { animation: tw 1s infinite; }
+</style>
+</head>
+<body>
+<h1 class="top">Les messages, version galaxie</h1>
+<p class="lead">Les messages qui s’affichent sous le formulaire de connexion. Même esprit que la constellation choisie : petite scène céleste, titre écrit à la main, une phrase pour dire quoi faire. Choisis le message en haut</p>
+<div class="msgs" id="m"></div>
+<div class="grid" id="g"></div>
+<script>
+const dust = (n = 10) => Array.from({ length: n }, (_, i) => `<circle class="dust" cx="${(i * 47) % 180}" cy="${(i * 29) % 92}" r="${i % 3 ? .7 : 1.1}" style="animation-delay:${(i % 5) * .5}s"/>`).join('')
+const cons = (pts, links, special = {}) => links.map(([a, b], i) => `<line x1="${pts[a][0]}" y1="${pts[a][1]}" x2="${pts[b][0]}" y2="${pts[b][1]}" style="animation-delay:${i * .2}s"/>`).join('') + pts.map(([x, y], i) => `<circle class="${special[i] ?? 'st'}" cx="${x}" cy="${y}" r="${special[i] ? 3.8 : 2.8}" style="animation-delay:${i * .3}s"/>`).join('')
+// shapes (180 x 92)
+const KEY = [[40, 46], [56, 30], [72, 46], [56, 62], [140, 46], [140, 60], [124, 46], [124, 58]]
+const KEY_L = [[0, 1], [1, 2], [2, 3], [3, 0], [2, 4], [4, 5], [6, 7]]
+const ENV = [[50, 18], [130, 18], [130, 74], [50, 74], [90, 48]]
+const ENV_L = [[0, 1], [1, 2], [2, 3], [3, 0], [0, 4], [4, 1]]
+const BRK = [[30, 60], [60, 30], [90, 50], [120, 24], [150, 54]]
+const BRK_L = [[0, 1], [1, 2], [3, 4]]
+const MSG = {
+  wrong: { label: '🔑 Mauvais mot de passe', title: 'Oups, ce mot de passe ne nous dit rien', text: 'Vérifie ton e-mail et ton mot de passe, puis réessaie.', tone: 'rose', bad: true },
+  confirm: { label: '✉️ Email pas encore confirmé', title: 'Ton lien de confirmation t’attend', text: 'Ouvre l’e-mail « Un petit mot de Morex » et clique sur « Oui, c’est moi ». Pense aux spams !', tone: 'amber' },
+  error: { label: '☄️ Petit souci', title: 'Petit souci de notre côté', text: 'Le serveur ne répond pas pour le moment. Réessaie dans quelques instants.', tone: 'rose' },
+}
+const SCENES = {
+  A: ['Constellations', 'la même famille que l’écran d’inscription : les étoiles dessinent une clé, une enveloppe ou une ligne cassée ; une étoile rouge ou dorée clignote pour dire ce qui bloque', {
+    wrong: () => dust() + cons(KEY, KEY_L, { 5: 'red' }),
+    confirm: () => dust() + cons(ENV, ENV_L, { 4: 'yel' }),
+    error: () => dust() + `<g class="broken">${cons(BRK, BRK_L, { 2: 'red', 3: 'red' })}</g>`,
+  }],
+  B: ['Petites planètes', 'une planète violette en scène : une météorite rebondit dessus (mauvais mot de passe), une lettre tourne autour (email en attente), une comète la percute (souci)', {
+    wrong: () => dust() + `<circle class="pl" cx="100" cy="48" r="24" fill="url(#pg)"/><g class="bump"><circle cx="72" cy="36" r="6" fill="#94a3b8"/><circle cx="70" cy="34" r="1.6" fill="#64748b"/></g>`,
+    confirm: () => dust() + `<ellipse cx="90" cy="48" rx="64" ry="16" fill="none" stroke="rgb(255 255 255 / .3)" stroke-dasharray="3 4"/><circle class="pl" cx="90" cy="48" r="22" fill="url(#pg)"/><text class="sat" font-size="16" style="offset-path: path('M 154 52 A 64 16 0 1 1 26 52 A 64 16 0 1 1 154 52')">💌</text>`,
+    error: () => dust() + `<g class="shake"><circle cx="100" cy="50" r="24" fill="url(#pg)"/></g><g class="crash"><line x1="62" y1="26" x2="86" y2="40" stroke="#fda4af" stroke-width="3" stroke-linecap="round" opacity=".6"/><circle cx="86" cy="40" r="4" fill="#fff"/></g><g class="boom"><text x="80" y="46" font-size="20">💥</text></g>`,
+  }],
+  C: ['Signaux du vaisseau', 'on est aux commandes d’un vaisseau : un radar qui dit « accès refusé », une antenne qui attend ton signal, un écran qui grésille', {
+    wrong: () => `<circle cx="90" cy="56" r="32" fill="none" stroke="rgb(251 113 133 / .35)"/><circle cx="90" cy="56" r="18" fill="none" stroke="rgb(251 113 133 / .25)"/><path class="sweep" d="M 90 56 L 122 56 A 32 32 0 0 0 112.6 33.4 Z" fill="rgb(251 113 133 / .35)"/><circle cx="104" cy="42" r="3.5" fill="#fb7185" class="led"/><text x="90" y="14" text-anchor="middle" font-size="8.5" letter-spacing="2" fill="#fda4af" font-family="Poppins">ACCÈS REFUSÉ</text>`,
+    confirm: () => dust(6) + `<circle class="wave" cx="90" cy="52" r="34" stroke="#fde047"/><circle class="wave" cx="90" cy="52" r="34" stroke="#fde047"/><circle class="wave" cx="90" cy="52" r="34" stroke="#fde047"/><text x="90" y="60" text-anchor="middle" font-size="24">📡</text><text x="90" y="90" text-anchor="middle" font-size="8" letter-spacing="2" fill="#fde68a" font-family="Poppins">EN ATTENTE DE TON SIGNAL</text>`,
+    error: () => `<rect x="40" y="14" width="100" height="62" rx="10" fill="rgb(15 23 42 / .8)" stroke="rgb(255 255 255 / .25)"/><g class="static">${Array.from({ length: 36 }, (_, i) => `<rect x="${46 + (i % 9) * 10}" y="${20 + Math.floor(i / 9) * 12}" width="${4 + (i * 7) % 6}" height="3" fill="rgb(255 255 255 / ${.2 + (i % 4) * .15})"/>`).join('')}</g><text x="90" y="88" text-anchor="middle" font-size="8.5" letter-spacing="2" fill="#fda4af" font-family="Poppins">PERTE DE SIGNAL</text>`,
+  }],
+}
+let cur = 'wrong'
+const defs = '<defs><radialGradient id="pg" cx="35%" cy="30%"><stop offset="0" stop-color="#fbcfe8"/><stop offset=".5" stop-color="#a78bfa"/><stop offset="1" stop-color="#4c1d95"/></radialGradient></defs>'
+function draw() {
+  const m = MSG[cur]
+  document.getElementById('m').innerHTML = Object.entries(MSG).map(([k, v]) => `<button class="${k === cur ? 'on' : ''}" data-k="${k}">${v.label}</button>`).join('')
+  document.getElementById('g').innerHTML = Object.entries(SCENES).map(([k, [n, d, f]], i) => `<div class="opt"><div class="panel ${k}"><h2>Connexion</h2><div class="field ${m.bad ? 'bad' : ''}"><label>E-mail</label><div>axellehossolu690@gmail.com</div></div><div class="field ${m.bad ? 'bad' : ''}"><label>Mot de passe</label><div>••••••••••</div></div><div class="submit">Se connecter</div>
+    <div class="note ${m.tone}"><svg viewBox="0 0 180 92">${defs}${f[cur]()}</svg><b>${m.title}</b><small>${m.text}</small></div></div><p><b>${i + 1} · ${n}</b> : ${d}</p></div>`).join('')
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b) { cur = b.dataset.k; draw() } })
+draw()
+</script>
+</body>
+</html>

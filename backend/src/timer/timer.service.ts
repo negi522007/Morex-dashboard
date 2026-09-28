@@ -9,7 +9,8 @@ import { decryptSecrets } from '../common/secret-config.util';
 import { RefreshHooksService } from '../insights/refresh-hooks.service';
 import { decryptToken } from '../common/token-encryption.util';
 
-const TICK_MS = 15_000;
+// Short enough that a widget is refreshed a few seconds after its countdown (shown on its card) ends
+const TICK_MS = 5_000;
 // Widgets refreshed at the same time: one slow or unreachable service no longer holds up everyone else's
 const CONCURRENCY = 8;
 
