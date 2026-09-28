@@ -156,6 +156,16 @@ unit test used `make(undefined)`, which (JS default-parameter quirk) silently fe
 instead of testing the "no key" path, and `custom_api`'s `path` was wrongly required, breaking APIs whose
 answer is a bare list or value at the root.
 
+**Sept 29** — Two real, hands-on bug reports, both fixed and verified live against the running app: a
+GitHub widget config saved as a full pasted URL (`https://github.com/owner/repo`) instead of `owner/repo`
+was silently 404ing forever, and a `market_data` widget saved with a free-typed crypto name ("Ether")
+instead of its CoinGecko id ("ethereum") did the same — both now self-heal on the next refresh (the GitHub
+one normalizes a pasted URL; the market one resolves the name via the existing suggestion search and
+retries once), no need to delete and recreate the widget. Also: **Steam was built, then removed** — Valve
+only issues a Web API key to an account that has spent at least $5 real money once (a "Limited Account"
+policy, unrelated to owning free games), which isn't testable here, so it was pulled rather than shipped
+unverified (see API.md → *Deliberately not built*). YouTube confirmed working end to end with a real key.
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |

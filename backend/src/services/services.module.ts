@@ -19,8 +19,6 @@ import { CustomApiModule } from './custom-api/custom-api.module';
 import { CustomApiProvider } from './custom-api/custom-api.provider';
 import { YoutubeModule } from './youtube/youtube.module';
 import { YoutubeProvider } from './youtube/youtube.provider';
-import { SteamModule } from './steam/steam.module';
-import { SteamProvider } from './steam/steam.provider';
 import { WellbeingModule } from './wellbeing/wellbeing.module';
 import { WellbeingProvider } from './wellbeing/wellbeing.provider';
 
@@ -30,7 +28,7 @@ import { WellbeingProvider } from './wellbeing/wellbeing.provider';
 // below, and add it to the returned array — nothing else changes.
 @Global()
 @Module({
-  imports: [RssModule, MarketDataModule, GithubModule, WorldclockModule, WeatherModule, CalendarModule, EpitechModule, CustomApiModule, YoutubeModule, SteamModule, WellbeingModule],
+  imports: [RssModule, MarketDataModule, GithubModule, WorldclockModule, WeatherModule, CalendarModule, EpitechModule, CustomApiModule, YoutubeModule, WellbeingModule],
   providers: [
     {
       provide: SERVICE_PROVIDERS,
@@ -44,12 +42,11 @@ import { WellbeingProvider } from './wellbeing/wellbeing.provider';
         epitech: EpitechProvider,
         customApi: CustomApiProvider,
         youtube: YoutubeProvider,
-        steam: SteamProvider,
         wellbeing: WellbeingProvider,
-      ): ServiceProvider[] => [rss, marketData, github, worldclock, weather, calendar, epitech, customApi, youtube, steam, wellbeing],
+      ): ServiceProvider[] => [rss, marketData, github, worldclock, weather, calendar, epitech, customApi, youtube, wellbeing],
       inject: [
         RssProvider, MarketDataProvider, GithubProvider, WorldclockProvider, WeatherProvider,
-        CalendarProvider, EpitechProvider, CustomApiProvider, YoutubeProvider, SteamProvider, WellbeingProvider,
+        CalendarProvider, EpitechProvider, CustomApiProvider, YoutubeProvider, WellbeingProvider,
       ],
     },
   ],

@@ -25,7 +25,6 @@ list), see [README.md](./README.md).
       /calendar      # done: any .ics feed (Google Calendar secret iCal address)
       /epitech       # done: planning (calendar token) + identity card (OIDC profile)
       /custom-api    # done: json_value / json_list on any public JSON API
-      /steam         # not started (Morayo)
       /maps          # not started (Morayo)
     /widgets     # widget instance CRUD (add/reconfigure/move/delete) + history
     /timer       # refresh scheduler

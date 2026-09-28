@@ -343,7 +343,7 @@ assistant can ask a clarifying question before it has enough to act. Build it as
 - States: a typing indicator while waiting, `400` (too long / empty) as an inline error, `available: false`
   → hide the panel entirely.
 
-## Confirmation page, birth date, well-being widgets, Steam, Microsoft (specs — backend done)
+## Confirmation page, birth date, well-being widgets, Microsoft (specs — backend done)
 
 ### A. The confirmation email page ("Is this you?")
 
@@ -394,15 +394,15 @@ Suggested default refresh rate for the three: 3600 s (they change once a day). T
 card itself always shows the widget's own `cachedData`. Help entries: `wellbeing`, `wellbeing/daily_quote`,
 `wellbeing/did_you_know`, `wellbeing/horoscope` (see the help assistant spec).
 
-### D. Steam widgets (`steam/*`)
+### D. Steam — removed, please delete your Steam pieces
 
-Three new catalog entries, drawn from `cachedData` (shapes in API.md):
-- `steam/profile`: avatar, name, a status dot (`online` green, `busy` red, `away`/`snooze` yellow, `offline` grey,
-  `looking_*` blue), the `currentGame` line when playing, level badge, "member since".
-- `steam/recent_games`: rows with `header`/`icon`, name, "12 h in the last 2 weeks · 340 h total" (minutes ÷ 60).
-- `steam/library_stats`: big numbers (`gameCount`, `totalHours`, "N never played"), and the `topGames` list.
-Form: one field `steamId`, with a "?" opening help entry `term-steam-id`. If the card stays empty, the reason is in
-the server log — common ones: no `STEAM_API_KEY` on the server, private profile ("Game details" must be Public).
+Steam is dropped project-wide (Sept 29): Valve only issues the API key to a Steam account that has spent
+real money once (a "Limited Account" restriction), which isn't testable here — see API.md → *Deliberately
+not built*. The backend service, its widgets, its `optionsUrl` endpoints and its help entries are gone
+(a `serviceName: "steam"` widget can no longer be created; `/about.json` no longer lists it). Please remove
+on your side, whenever convenient: the `steam` entries in `catalog.ts`, the Steam card views/samples, and
+any Steam-specific picker in `ParamFields.tsx` (`steamId`, etc.) — nothing else depends on them.
+`apparences-steam.html` can stay as a design artifact or go, your call.
 
 ### E. Login / register: "Continue with Microsoft" (school account)
 

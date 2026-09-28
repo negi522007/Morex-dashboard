@@ -9,7 +9,6 @@ import { RssProvider } from '../services/rss/rss.provider';
 import { WellbeingProvider } from '../services/wellbeing/wellbeing.provider';
 import { WeatherProvider } from '../services/weather/weather.provider';
 import { WorldclockProvider } from '../services/worldclock/worldclock.provider';
-import { SteamProvider } from '../services/steam/steam.provider';
 import { YoutubeProvider } from '../services/youtube/youtube.provider';
 import { KNOWLEDGE, LANGS } from './kb';
 import { HelpdeskService } from './helpdesk.service';
@@ -28,7 +27,7 @@ describe('knowledge base', () => {
   const providers: any[] = [
     new RssProvider(), new MarketDataProvider(), new GithubProvider(), new WorldclockProvider(), new WeatherProvider(),
     new YoutubeProvider({ get: () => undefined } as any), new CalendarProvider(), new EpitechProvider(), new CustomApiProvider(),
-    new SteamProvider({ get: () => undefined } as any), new WellbeingProvider(),
+    new WellbeingProvider(),
   ];
   const ids = new Set(KNOWLEDGE.map((e) => e.id));
 
@@ -74,7 +73,6 @@ describe('search', () => {
     expect(svc.search('meteo', 'fr')[0].id).toMatch(/^weather/);
     expect(svc.search('calendrier google', 'fr').map((e) => e.id)).toEqual(expect.arrayContaining(['calendar', 'term-ics']));
     expect(svc.search('oauth', 'en')[0].id).toBe('term-oauth');
-    expect(svc.search('how do I find my steamid', 'en').map((e) => e.id)).toContain('term-steam-id');
     expect(svc.search('horoscope', 'fr')[0].id).toBe('wellbeing/horoscope');
     expect(svc.search('citation du jour', 'fr')[0].id).toBe('wellbeing/daily_quote');
     expect(svc.search('le saviez vous', 'fr')[0].id).toBe('wellbeing/did_you_know');

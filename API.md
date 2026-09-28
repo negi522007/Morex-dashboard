@@ -296,9 +296,6 @@ List the current user's widget instances (for rendering the dashboard).
 | **new** `calendar/upcoming_events` | `{ events: [{ title, start, end, allDay, location }], generatedAt }` — params `url` (**secret**: a Google Calendar "secret address in iCal format", or any `.ics`/`webcal://` link), `days` (default 14, max 60), `number` (default 8, max 30). `start`/`end` are ISO instants; all-day events start at 00:00 UTC of their date. Recurring events are expanded. **Private widget: cannot be shared.** |
 | **new** `epitech/planning` | same shape as the calendar — param `calendarToken` (**secret**, the token from My Epitech → calendar link), `days`, `number`. **Private, cannot be shared.** |
 | **new** `epitech/profile` | `{ login, name, email, campus, promotion, cursus, groups[] }` — no params; needs a linked My Epitech account (`needsAccount`, see below). Private. |
-| `steam/profile` | `{ steamId, name, avatar, url, status: "offline"\|"online"\|"busy"\|"away"\|"snooze"\|"looking_to_trade"\|"looking_to_play", currentGame, level, memberSince, country, isPublic }` — param `steamId` (SteamID64, profile link or custom name). Server needs `STEAM_API_KEY`; the player's profile must be public. Level drives history/alerts. |
-| `steam/recent_games` | `[{ appId, name, minutesLast2Weeks, minutesTotal, icon, header, url }]` — params `steamId`, `number` (default 5, max 10). Needs "Game details" public; otherwise the log explains how to fix it. |
-| `steam/library_stats` | `{ steamId, gameCount, playedCount, neverPlayedCount, totalMinutes, totalHours, topGames: [game] }` — param `steamId`. `totalHours` drives history/alerts. |
 | **new** `custom_api/json_value` | `{ label, unit, value, fetchedAt }` — params `url` (**secret**), `path` (optional, e.g. `data.items[0].price`; empty = the response itself is the value), `label`, `unit`. Public JSON APIs only (no auth headers are ever sent). Numeric values feed history and alerts. |
 | **new** `custom_api/json_list` | `{ items: [{ title, subtitle }], fetchedAt }` — params `url` (**secret**), `path` (optional, to an array; empty = the response itself is the list), `titleField` (required), `subtitleField`, `number`. |
 | `weather/current_weather` | `{ city, country, unit, temperature, feelsLike, humidity, windKmh, condition, isDay, high, low }` — params `city` (required), `unit` (`celsius` default \| `fahrenheit`). Open-Meteo, no key. |
@@ -605,7 +602,7 @@ Body: any of `{ "mood": "😴", "text": "Updated text" }` (at least one required
 
 Service-specific endpoints that aren't widget data itself: type-ahead suggestions for widget form fields, and GitHub's repo picker.
 
-**`optionsUrl` in `about.json`:** a param carrying `"optionsUrl"` should be rendered as a combobox — a text field with a dropdown of suggestions fed by that URL — not a plain free-text input, and not (except where noted below) a *closed* dropdown: typing something not in the list is still allowed, unless the field only makes sense as an exact match (`worldclock`'s places, `wellbeing`'s sign, `youtube`'s country, GitHub's repo). This now covers **every service that has a field worth suggesting** — a URL/path/repo/city/channel/asset/etc. field ought to offer something to pick instead of an empty box; a handful of fields genuinely can't (a secret calendar link, a Steam id, a video id) and are documented as such below.
+**`optionsUrl` in `about.json`:** a param carrying `"optionsUrl"` should be rendered as a combobox — a text field with a dropdown of suggestions fed by that URL — not a plain free-text input, and not (except where noted below) a *closed* dropdown: typing something not in the list is still allowed, unless the field only makes sense as an exact match (`worldclock`'s places, `wellbeing`'s sign, `youtube`'s country, GitHub's repo). This now covers **every service that has a field worth suggesting** — a URL/path/repo/city/channel/asset/etc. field ought to offer something to pick instead of an empty box; a handful of fields genuinely can't (a secret calendar link, a video id) and are documented as such below.
 
 - Call it as `GET <optionsUrl>?q=<what the user typed>&lang=<ui language>&limit=<n>`, debounced (~200 ms). Empty `q` should still be called on focus where noted (worldclock, market_data fiat list, youtube countries, rss feeds): it returns a sane starting list, not an error.
 - `optionsUrl` may already contain a query string (e.g. `/services/market_data/assets?kind=crypto`) — **append** your own params with `&`, never replace it.
@@ -689,9 +686,9 @@ finished typing yet, except a genuinely missing `url` (`400`).
 - `calendar.url`, `epitech.calendarToken` — the value **is** the credential (a personal calendar
   link/token); there is nothing public to suggest, and suggesting past values would mean storing them
   unencrypted somewhere.
-- `steam.steamId`, `youtube.channel`, `youtube.video` — no public, free "search accounts/videos" endpoint
-  exists without spending extra API quota per keystroke; paste the profile/channel/video link or id
-  directly (see the `term-steam-id` / `term-youtube-ids` help entries for exactly what's accepted).
+- `youtube.channel`, `youtube.video` — no public, free "search accounts/videos" endpoint exists
+  without spending extra API quota per keystroke; paste the channel/video link or id directly (see the
+  `term-youtube-ids` help entry for exactly what's accepted).
 - `custom_api.url` — arbitrary by definition; nothing to suggest until a URL exists (see `inspect` above
   for what happens once it does).
 
@@ -877,6 +874,11 @@ keeps working unchanged. Do these in order of value:
   here. Google **Calendar** is covered instead by `calendar/upcoming_events` (secret iCal address — no OAuth,
   no credentials stored).
 - **Epitech credits / XP / streaks / notifications** — see *My Epitech* above.
+- **Steam** — built (`profile`, `recent_games`, `library_stats`), then removed. Valve only issues a Web API
+  key to an account that has spent at least $5 (real money, once, ever) on the Steam store — a "Limited
+  Account" restriction, unrelated to owning free games. Untestable without spending money, so it was pulled
+  rather than shipped unverified. If your own account clears that bar later, the code is in git history
+  (the commit that added it) and can be restored; nothing else in the app depends on it.
 
 ---
 
