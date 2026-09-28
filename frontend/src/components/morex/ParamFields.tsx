@@ -33,7 +33,6 @@ const T: Record<string, L3> = {
   noJson: { fr: 'Pas de JSON lisible à cette adresse : tu peux écrire le chemin toi-même', en: 'No readable JSON at this address: you can type the path yourself', es: 'No hay JSON legible en esta dirección: puedes escribir la ruta tú mismo' },
   videoOk: { fr: 'Vidéo reconnue', en: 'Video recognised', es: 'Vídeo reconocido' },
   channelHint: { fr: 'Colle le lien de la chaîne ou son @ (ex. @Squeezie)', en: 'Paste the channel link or its @ (e.g. @Squeezie)', es: 'Pega el enlace del canal o su @ (p. ej. @Squeezie)' },
-  steamHint: { fr: 'Colle le lien de ton profil Steam (il doit être public)', en: 'Paste your Steam profile link (it must be public)', es: 'Pega el enlace de tu perfil de Steam (debe ser público)' },
   secretKept: { fr: 'Laisse vide pour garder la valeur actuelle', en: 'Leave empty to keep the current value', es: 'Déjalo vacío para mantener el valor actual' },
 }
 const CAL_STEPS: Record<'google' | 'outlook' | 'apple', L3[]> = {
@@ -301,9 +300,8 @@ export function ParamFields({ entry, params, cfg, setCfg, lang, user, editing = 
         <input className="pf-in" type={p.type === 'integer' ? 'number' : p.secret ? 'password' : 'text'} value={v} autoComplete="off"
           placeholder={p.secret && editing ? '••••••••' : ex} onChange={(e) => onChange(e.target.value)} />
         {p.name === 'channel' && <small>{T.channelHint[lang]}</small>}
-        {p.name === 'steamId' && <small>{T.steamHint[lang]}</small>}
         {p.secret && editing && <small>{T.secretKept[lang]}</small>}
-        {!p.secret && !editing && entry.hints[p.name] && p.name !== 'channel' && p.name !== 'steamId' && <small>{entry.hints[p.name][0][lang]}{ex ? `, ${W[lang].eg} ${ex}` : ''}</small>}
+        {!p.secret && !editing && entry.hints[p.name] && p.name !== 'channel' && <small>{entry.hints[p.name][0][lang]}{ex ? `, ${W[lang].eg} ${ex}` : ''}</small>}
       </>
     )
   }

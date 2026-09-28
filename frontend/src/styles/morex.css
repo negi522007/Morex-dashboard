@@ -899,33 +899,6 @@ body.morex.editing .w:not(.add) a, body.morex.editing .w:not(.add) img { pointer
 .acc-row .soft { padding: 8px 16px; text-decoration: none; color: inherit; }
 .acc-row .soft:disabled { opacity: .45; cursor: not-allowed; }
 
-/* Steam: player card, recent games "featured", library podium */
-.w[data-kind^="steam"] { background: linear-gradient(160deg, #1b2838, #171a21 70%) !important; }
-.w[data-kind="steam-prof"], .w[data-kind="steam-recent"], .w[data-kind="steam-lib"] { grid-row: span 3; }
-.st-ico { background: linear-gradient(135deg, #1b2838, #2a475e) !important; }
-.st-prof { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; color: inherit; text-decoration: none; }
-.st-ring { position: relative; width: 112px; height: 112px; border-radius: 50%; padding: 4px; background: conic-gradient(#57cbde, #4c8bf5, #57cbde); animation: stSpin 6s linear infinite; }
-.st-ring.off { background: #4b5563; animation: none; }
-.st-ring img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid #171a21; animation: stSpin 6s linear infinite reverse; }
-.st-ring.off img { animation: none; }
-@keyframes stSpin { to { transform: rotate(360deg); } }
-.st-lvl { position: absolute; right: -4px; bottom: 4px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 13px; background: #171a21; border: 2px solid #e5b54a; color: #e5b54a; animation: stSpin 6s linear infinite reverse; }
-.st-ring.off .st-lvl { animation: none; }
-.st-name { font-size: 20px; font-weight: 700; margin-top: 4px; }
-.st-playing { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgb(144 186 60 / .18); color: #a4d007; font-size: 12.5px; }
-.st-dot { width: 8px; height: 8px; border-radius: 50%; background: #a4d007; box-shadow: 0 0 10px #a4d007; animation: stPulse 1.4s infinite; } @keyframes stPulse { 50% { opacity: .3; } }
-.st-feat { position: relative; flex: 1; min-height: 90px; border-radius: 16px; overflow: hidden; color: #fff; text-decoration: none; }
-.st-feat img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.st-cap { position: absolute; inset: auto 0 0 0; padding: 26px 14px 12px; background: linear-gradient(transparent, rgb(0 0 0 / .92)); }
-.st-cap b { font-size: 17px; display: block; } .st-cap span { font-size: 12px; color: #a4d007; }
-.st-thumbs { display: flex; gap: 8px; } .st-thumbs a { flex: 1; min-width: 0; color: inherit; text-decoration: none; }
-.st-thumbs img { width: 100%; height: 46px; object-fit: cover; border-radius: 8px; display: block; } .st-thumbs small { font-size: 10.5px; color: #8f98a0; }
-.st-pod { flex: 1; display: flex; align-items: flex-end; gap: 8px; }
-.st-pod a { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; color: inherit; text-decoration: none; }
-.st-pod img { width: 100%; height: 44px; object-fit: cover; border-radius: 8px; display: block; }
-.st-pod small { font-size: 10.5px; color: #c7d5e0; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; } .st-pod b { font-size: 11px; color: #66c0f4; }
-.st-step { width: 100%; border-radius: 12px 12px 0 0; display: grid; place-items: center; font-size: 22px; font-weight: 800; }
-
 /* Drawer previews: every tile the same size; the card inside is drawn at its dashboard size then scaled as a whole */
 .fit { position: absolute; inset: 8px 8px 30px; pointer-events: none; }
 .dw-live .fit { inset: 10px; }

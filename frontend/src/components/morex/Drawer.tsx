@@ -13,7 +13,7 @@ import { ParamFields } from './ParamFields'
 const SPAN: Record<string, [number, number]> = {
   world: [2, 2], weather: [2, 3], rss: [2, 4], gh: [2, 2], 'gh-daily': [2, 3], 'yt-latest': [2, 2], 'yt-trend': [2, 2], 'wx-hours': [2, 2],
   'wx-now': [1, 3], 'yt-channel': [1, 3], 'yt-video': [1, 3], 'gh-issues': [1, 3], 'gh-stats': [1, 3], cal: [1, 3], 'epi-plan': [1, 3], 'epi-prof': [1, 3],
-  'api-list': [1, 3], horo: [1, 3], 'steam-prof': [1, 3], 'steam-recent': [1, 3], 'steam-lib': [1, 3],
+  'api-list': [1, 3], horo: [1, 3],
 }
 const COL_W = 290, ROW_H = 128, GAP = 24
 function FitCard({ kind, children }: { kind: string; children: ReactNode }) {

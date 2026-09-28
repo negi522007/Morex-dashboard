@@ -571,60 +571,6 @@ export function VideoView({ data, lang, title, footer }: ViewProps) {
   )
 }
 
-// ---------- Steam: player card, recent games "featured", library podium ----------
-const SteamLogo = () => (
-  <svg viewBox="0 0 24 24" style={{ width: 20, height: 20 }} fill="#c7d5e0"><path d="M12 2a10 10 0 0 0-9.96 9.08l5.36 2.22a2.83 2.83 0 0 1 1.6-.5h.16l2.38-3.45v-.05a3.77 3.77 0 1 1 3.77 3.77h-.09l-3.4 2.43v.13a2.83 2.83 0 0 1-5.6.57L2.4 14.66A10 10 0 1 0 12 2Zm-3.75 15.2-1.23-.51a2.13 2.13 0 1 0 1.17-2.93l1.27.53a1.57 1.57 0 1 1-1.2 2.91Zm9.2-7.9a2.51 2.51 0 1 0-2.5 2.52 2.51 2.51 0 0 0 2.5-2.51Zm-4.39 0a1.89 1.89 0 1 1 1.89 1.89 1.89 1.89 0 0 1-1.89-1.89Z" /></svg>
-)
-const hours = (m: unknown, lang: Lang) => Math.round(Number(m ?? 0) / 60).toLocaleString(LOCALE[lang])
-export function SteamProfView({ data, lang }: ViewProps) {
-  const P = obj(data), w = W[lang]
-  if (!P.name) return <Waiting lang={lang} />
-  const online = P.status !== 'offline'
-  return (
-    <a className="st-prof" href={P.url} target="_blank" rel="noopener noreferrer">
-      <div className={`st-ring${online ? '' : ' off'}`}>{P.avatar && <img src={P.avatar} alt="" referrerPolicy="no-referrer" />}{P.level != null && <span className="st-lvl">{P.level}</span>}</div>
-      <div className="st-name">{P.name}</div>
-      <div className="w-sub">{w.steamStatus[P.status] ?? P.status}{P.country ? ` · ${flagOf(P.country)}` : ''}{P.memberSince ? ` · ${w.since} ${new Date(P.memberSince).getFullYear()}` : ''}</div>
-      {P.currentGame && <div className="st-playing"><span className="st-dot" />{w.playing} {P.currentGame}</div>}
-    </a>
-  )
-}
-export function SteamRecentView({ data, lang, title }: ViewProps) {
-  const G = arr(data), w = W[lang], top = G[0]
-  return (
-    <>
-      <Head icon={<SteamLogo />} iconClass="st-ico" title={title || (lang === 'fr' ? 'Jeux récents' : lang === 'es' ? 'Juegos recientes' : 'Recent games')} sub={w.last2w} />
-      {data == null ? <Waiting lang={lang} /> : !top ? <div className="muted" style={{ margin: 'auto', fontSize: 13 }}>{w.noRecent}</div> : (
-        <>
-          <a className="st-feat" href={top.url} target="_blank" rel="noopener noreferrer"><img src={top.header} alt="" referrerPolicy="no-referrer" />
-            <span className="st-cap"><b>{top.name}</b><span>🔥 {hours(top.minutesLast2Weeks, lang)} h {w.this2w}</span></span></a>
-          {G.length > 1 && <div className="st-thumbs">{G.slice(1, 4).map((g) => (
-            <a key={g.appId} href={g.url} target="_blank" rel="noopener noreferrer" title={g.name}><img src={g.header} alt="" referrerPolicy="no-referrer" /><small>{hours(g.minutesLast2Weeks, lang)} h</small></a>
-          ))}</div>}
-        </>
-      )}
-    </>
-  )
-}
-export function SteamLibView({ data, lang, title }: ViewProps) {
-  const L = obj(data), w = W[lang], top = arr(L.topGames)
-  // Podium order: 2nd, 1st, 3rd
-  const podium = [top[1], top[0], top[2]].map((g, i) => g && { g, h: [70, 96, 54][i], medal: ['🥈', '🥇', '🥉'][i], color: ['#c0c7d0', '#e5b54a', '#cd7f32'][i] })
-  return (
-    <>
-      <Head icon={<SteamLogo />} iconClass="st-ico" title={title || (lang === 'fr' ? 'Ma bibliothèque' : lang === 'es' ? 'Mi biblioteca' : 'My library')} sub={L.totalHours != null ? w.hTotal(Number(L.totalHours).toLocaleString(LOCALE[lang])) : undefined} />
-      {!top.length ? <Waiting lang={lang} /> : (
-        <div className="st-pod">
-          {podium.map((p, i) => p && (
-            <a key={i} href={p.g.url} target="_blank" rel="noopener noreferrer"><img src={p.g.header} alt="" referrerPolicy="no-referrer" /><small>{p.g.name}</small><b>{hours(p.g.minutesTotal, lang)} h</b>
-              <span className="st-step" style={{ height: p.h, background: `linear-gradient(${p.color}, rgb(255 255 255 / .05))` }}>{p.medal}</span></a>
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
-
 // ---------- Well-being: quote typed like on a typewriter ----------
 export function QuoteView({ data, lang, title }: ViewProps) {
   const Q = obj(data), w = W[lang], full = String(obj(Q.text)[lang] ?? '')
@@ -717,6 +663,6 @@ export const VIEWS: Record<string, { View: (p: ViewProps) => ReactNode; foot?: b
   gh: { View: TermView, cls: 'term-card' }, 'gh-issues': { View: IssuesView, foot: true }, 'gh-stats': { View: StatsView }, 'gh-daily': { View: DailyView },
   world: { View: WorldView }, weather: { View: WeekView }, 'wx-now': { View: NowView, foot: true }, 'wx-hours': { View: HoursView, foot: true },
   cal: { View: CalView }, 'epi-plan': { View: PlanView }, 'epi-prof': { View: ProfView }, 'api-value': { View: ValueView }, 'api-list': { View: ListView },
-  horo: { View: HoroView }, 'steam-prof': { View: SteamProfView }, 'steam-recent': { View: SteamRecentView }, 'steam-lib': { View: SteamLibView }, quote: { View: QuoteView }, fact: { View: FactView },
+  horo: { View: HoroView }, quote: { View: QuoteView }, fact: { View: FactView },
   'yt-channel': { View: ChannelView, foot: true }, 'yt-latest': { View: LatestView, foot: true }, 'yt-trend': { View: TrendView, foot: true }, 'yt-video': { View: VideoView, foot: true },
 }
