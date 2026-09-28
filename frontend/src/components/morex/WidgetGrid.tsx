@@ -6,7 +6,7 @@ import { VIEWS } from './widgetViews'
 import { Decoration } from './Decoration'
 
 // The card frame shared by every widget: edit badges, resize handle, decoration, footer.
-export function WidgetCard({ widget, lang, editing = false, className = '', style, onDelete, onEdit, onConfig, onResizeStart, dragProps, preview }: {
+export function WidgetCard({ widget, lang, editing = false, className = '', style, onDelete, onEdit, onConfig, onResizeStart, dragProps, preview, unlinked }: {
   widget: Pick<WidgetInstance, 'serviceName' | 'widgetName' | 'config' | 'cachedData' | 'insight' | 'title' | 'decoration' | 'refreshRateSeconds' | 'lastRefreshedAt'> & { id?: string }
   lang: Lang
   editing?: boolean
@@ -18,6 +18,8 @@ export function WidgetCard({ widget, lang, editing = false, className = '', styl
   onResizeStart?: (e: React.PointerEvent) => void
   dragProps?: React.HTMLAttributes<HTMLDivElement> & { draggable?: boolean }
   preview?: boolean
+  // The account this widget reads (GitHub) is not connected: the card asks to connect it instead of waiting
+  unlinked?: boolean
 }) {
   const entry = entryFor(widget.serviceName, widget.widgetName)
   const kind = entry?.kind ?? 'unknown'
@@ -36,7 +38,14 @@ export function WidgetCard({ widget, lang, editing = false, className = '', styl
           </button>
         </>
       )}
-      {view ? (
+      {unlinked && entry?.needs ? (
+        <div className="w-unlinked">
+          <span aria-hidden="true">🔌</span>
+          <b>{W[lang].unlinkedTitle(entry.needs === 'github' ? 'GitHub' : 'My Epitech')}</b>
+          <small>{W[lang].unlinkedText}</small>
+          <a href={`/auth/${entry.needs}`} onClick={(e) => e.stopPropagation()}>{entry.needs === 'github' ? W[lang].connectGithub : W[lang].connectEpitech}</a>
+        </div>
+      ) : view ? (
         <view.View data={widget.cachedData} insight={widget.insight} config={widget.config} lang={lang} title={widget.title} footer={footer} onConfig={editing ? undefined : onConfig} />
       ) : (
         <div className="w-title">{widget.serviceName} / {widget.widgetName}</div>
@@ -50,8 +59,10 @@ const spanStyle = (w: WidgetInstance): React.CSSProperties => ({
   ...(w.position?.rows ? { gridRow: `span ${w.position.rows}` } : {}),
 })
 
-export function WidgetGrid({ widgets, lang, editing, setEditing, landing, onAdd, onDelete, onEdit, onConfig, onReorder, onResize }: {
+export function WidgetGrid({ widgets, lang, linked, editing, setEditing, landing, onAdd, onDelete, onEdit, onConfig, onReorder, onResize }: {
   widgets: WidgetInstance[]
+  // Which accounts are connected (from GET /auth/me), for the widgets that need one
+  linked: { github: boolean; epitech: boolean }
   lang: Lang
   editing: boolean
   setEditing: (on: boolean) => void
@@ -137,6 +148,7 @@ export function WidgetGrid({ widgets, lang, editing, setEditing, landing, onAdd,
         const cls = [pressing === w.id && 'pressing', dragging === w.id && 'dragging', resizing === w.id && 'resizing', landing === w.id && 'landing'].filter(Boolean).join(' ')
         return (
           <WidgetCard key={w.id} widget={w} lang={lang} editing={editing} className={cls} style={style}
+            unlinked={(entryFor(w.serviceName, w.widgetName)?.needs === 'github' && !linked.github) || (entryFor(w.serviceName, w.widgetName)?.needs === 'epitech' && !linked.epitech)}
             onDelete={() => onDelete(w)} onEdit={() => onEdit(w)} onConfig={(p) => onConfig(w, p)} onResizeStart={(e) => startResize(e, w)}
             dragProps={{ ...dragProps(w.id), onPointerDown: (e) => onPointerDown(e, w.id), onPointerMove, onPointerUp: cancelPress, onPointerCancel: cancelPress }} />
         )

@@ -9,6 +9,7 @@ import { Hero, SearchBar, Sidebar, Toolbar } from '../components/morex/Chrome'
 import { WidgetGrid } from '../components/morex/WidgetGrid'
 import { AiBubble } from '../components/morex/AiBubble'
 import { Drawer } from '../components/morex/Drawer'
+import { LinkedCard, readLinkResult, type LinkResult } from '../components/morex/LinkedCard'
 import { AvatarModal, BioModal, EditWidgetModal, HelpModal, JournalModal, LogoutModal, ProfileModal } from '../components/morex/Modals'
 import '../styles/morex.css'
 
@@ -28,12 +29,16 @@ export function DashboardPage() {
   const [editing, setEditing] = useState(false)
   const [modal, setModal] = useState<ModalName | null>(null)
   const [editWidget, setEditWidget] = useState<WidgetInstance | null>(null)
-  const [drawer, setDrawer] = useState<{ open: boolean; preset: CatalogEntry | null }>({ open: false, preset: null })
+  const [drawer, setDrawer] = useState<{ open: boolean; preset: CatalogEntry | null; service?: string | null }>({ open: false, preset: null })
   const [landing, setLanding] = useState<string | null>(null)
   // Deleting waits 5 s so "Undo" can bring the card back without re-creating it (secrets stay stored)
   const [removed, setRemoved] = useState<{ widget: WidgetInstance; timer: number } | null>(null)
   const removedRef = useRef(removed)
   removedRef.current = removed
+  // Back from connecting GitHub / My Epitech / Microsoft: the result is in the address. It is read once, then
+  // removed from the address so a reload does not show the card again.
+  const [linkResult, setLinkResult] = useState<LinkResult | null>(() => readLinkResult(window.location.search))
+  useEffect(() => { if (linkResult) window.history.replaceState(null, '', window.location.pathname) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const lang: Lang = LANGS.includes(user?.language as Lang) ? (user!.language as Lang) : 'fr'
   const theme = user?.theme ?? 'galaxy', skin = user?.widgetSkin ?? 'glass'
@@ -162,7 +167,7 @@ export function DashboardPage() {
           <Toolbar user={user} lang={lang} theme={theme} skin={skin} onLang={(l) => savePrefs({ language: l })} onTheme={(t) => savePrefs({ theme: t })} onSkin={(s) => savePrefs({ widgetSkin: s })} onOpen={setModal} />
           <Hero user={user} lang={lang} onAvatar={() => setModal('avatar')} onBio={() => setModal('bio')} onJournal={() => setModal('journal')} />
           <SearchBar lang={lang} widgets={visible} onGoWidget={goToWidget} onAdd={(e) => setDrawer({ open: true, preset: e })} />
-          <WidgetGrid widgets={visible} lang={lang} editing={editing} setEditing={setEditing} landing={landing}
+          <WidgetGrid widgets={visible} lang={lang} linked={{ github: user.githubLinked, epitech: !!user.epitech }} editing={editing} setEditing={setEditing} landing={landing}
             onAdd={() => setDrawer({ open: true, preset: null })} onDelete={removeWithUndo} onEdit={setEditWidget}
             onConfig={(w, patch) => { patchWidget(w, { config: { ...w.config, ...patch } }).then(pollSoon).catch(() => {}) }}
             onReorder={reorder} onResize={resize} />
@@ -171,14 +176,14 @@ export function DashboardPage() {
 
       <AiBubble user={user} lang={lang} onCreate={create} />
 
-      <Drawer open={drawer.open} lang={lang} about={about} user={user} preset={drawer.preset} onClose={() => setDrawer({ open: false, preset: null })} onCreate={create} />
+      <Drawer open={drawer.open} lang={lang} about={about} user={user} preset={drawer.preset} service={drawer.service} onClose={() => setDrawer({ open: false, preset: null })} onCreate={create} />
 
       <div className={`dw-toast${removed ? ' show' : ''}`} role="status">
         <span>{W[lang].removed(removedName)}</span><button onClick={undo}>{W[lang].undo}</button><span className="bar" key={removed?.widget.id} />
       </div>
 
       {editWidget && (
-        <EditWidgetModal widget={editWidget} about={about} lang={lang} onClose={() => setEditWidget(null)}
+        <EditWidgetModal widget={editWidget} about={about} user={user} lang={lang} onClose={() => setEditWidget(null)}
           onSave={async (patch) => { await patchWidget(editWidget, patch); if (patch.config || patch.aiEnabled) pollSoon() }} />
       )}
       {modal === 'help' && <HelpModal lang={lang} onClose={() => setModal(null)} />}
@@ -190,6 +195,10 @@ export function DashboardPage() {
       )}
       {modal === 'bio' && <BioModal user={user} lang={lang} onClose={() => setModal(null)} onSaved={setUser} />}
       {modal === 'avatar' && <AvatarModal user={user} lang={lang} onClose={() => setModal(null)} onSaved={setUser} />}
+      {linkResult && (
+        <LinkedCard result={linkResult} lang={lang} onClose={() => setLinkResult(null)}
+          onAddWidget={() => { setLinkResult(null); setDrawer({ open: true, preset: null, service: 'github' }) }} />
+      )}
     </>
   )
 }

@@ -27,6 +27,7 @@ export function AiBubble({ user, lang, onCreate }: {
   const chat = useRef<HTMLDivElement>(null)
   useEffect(() => { chat.current?.scrollTo({ top: chat.current.scrollHeight, behavior: 'smooth' }) }, [msgs, busy])
 
+
   const say = (from: Msg['from'], body: ReactNode) => setMsgs((m) => [...m, { from, body }])
   const run = async (fn: () => Promise<ReactNode>) => {
     setBusy(true)
@@ -110,7 +111,17 @@ export function AiBubble({ user, lang, onCreate }: {
       </div>
       <div className="ai-star">
         <span className="ai-orbit" />
-        <button type="button" className="ai-core" aria-label={w.aiName} aria-expanded={open} onClick={() => setOpen((o) => !o)} />
+        <button type="button" className="ai-core" aria-label={w.aiName} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          {/* A small robot waving hello, so people see they can talk to it */}
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="15" y="3" width="2" height="4" className="ai-ink" /><circle cx="16" cy="3" r="1.8" className="ai-ink" />
+            <rect x="6" y="7" width="18" height="15" rx="6" className="ai-ink" />
+            <circle cx="11.5" cy="13.5" r="2" className="ai-eye" /><circle cx="18.5" cy="13.5" r="2" className="ai-eye" />
+            <path d="M12 18q3 2.2 6 0" stroke="#fde047" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+            <g className="ai-wave"><rect x="25" y="12" width="3.2" height="9" rx="1.6" className="ai-ink" transform="rotate(-20 26 20)" /><circle cx="29" cy="11" r="2.4" className="ai-ink" /></g>
+            <rect x="9" y="23" width="12" height="5" rx="2.5" className="ai-ink" />
+          </svg>
+        </button>
       </div>
     </div>
   )
