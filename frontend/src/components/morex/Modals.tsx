@@ -32,7 +32,6 @@ export function EditWidgetModal({ widget, about, user, lang, onClose, onSave }: 
   const [title, setTitle] = useState(widget.title ?? '')
   const [rate, setRate] = useState(widget.refreshRateSeconds)
   const [deco, setDeco] = useState(widget.decoration ?? 'none')
-  const [ai, setAi] = useState(widget.aiEnabled)
   // Secrets come back masked: the field starts empty and an empty value keeps the stored one
   const [cfg, setCfg] = useState<Record<string, string>>(() =>
     Object.fromEntries(params.map((p) => [p.name, p.secret ? '' : String(widget.config[p.name] ?? '')])))
@@ -55,7 +54,6 @@ export function EditWidgetModal({ widget, about, user, lang, onClose, onSave }: 
     if ((widget.title ?? '') !== title.trim()) patch.title = title.trim() || null
     if (rate !== widget.refreshRateSeconds) patch.refreshRateSeconds = rate
     if ((widget.decoration ?? 'none') !== deco) patch.decoration = deco === 'none' ? null : deco
-    if (ai !== widget.aiEnabled) patch.aiEnabled = ai
     const next: Record<string, string | number> = {}
     let changed = false
     for (const p of params) {
@@ -85,12 +83,6 @@ export function EditWidgetModal({ widget, about, user, lang, onClose, onSave }: 
           {isWorld && <CityPicker lang={lang} home={home} cities={cities} onChange={setWorld} />}
           {!isWorld && entry && <ParamFields entry={entry} params={params} cfg={cfg} setCfg={setCfg} lang={lang} user={user} editing />}
         </div>
-      )}
-      {entry?.ai && (
-        <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-          <input type="checkbox" checked={ai} onChange={(e) => setAi(e.target.checked)} style={{ width: 18, height: 18, padding: 0 }} />
-          <span>✨ {w.aiLabel}<small style={{ display: 'block' }}>{w.aiHint}</small></span>
-        </label>
       )}
       <div className="field"><span>{t.decoLabel}</span>
         <div className="deco-pick">
