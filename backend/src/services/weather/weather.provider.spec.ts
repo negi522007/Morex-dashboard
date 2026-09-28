@@ -154,3 +154,26 @@ describe('WeatherProvider', () => {
     await expect(widget('current_weather').fetchData({ city: 'Cotonou' })).rejects.toThrow(/HTTP 503/);
   });
 });
+
+describe('searchCities', () => {
+  it('returns [] under 2 characters, and results with a readable label otherwise', async () => {
+    const { searchCities } = await import('./weather.provider');
+    expect(await searchCities('a', 'en')).toEqual([]);
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ results: [{ name: 'Paris', admin1: 'Ile-de-France', country: 'France', population: 2000000, latitude: 1, longitude: 1 }] }),
+    }) as any;
+    const r = await searchCities('par', 'fr', 5);
+    expect(r).toEqual([{ value: 'Paris', label: 'Paris, Ile-de-France, France', country: 'France', admin1: 'Ile-de-France' }]);
+  });
+
+  it('falls back to "en" for an unsupported language and clamps the limit', async () => {
+    const { searchCities } = await import('./weather.provider');
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ results: [] }) });
+    global.fetch = fetchMock as any;
+    await searchCities('tokyo', 'de', 999);
+    const url = new URL((fetchMock.mock.calls[0][0] as string));
+    expect(url.searchParams.get('language')).toBe('en');
+    expect(url.searchParams.get('count')).toBe('15');
+  });
+});

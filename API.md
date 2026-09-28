@@ -299,8 +299,8 @@ List the current user's widget instances (for rendering the dashboard).
 | `steam/profile` | `{ steamId, name, avatar, url, status: "offline"\|"online"\|"busy"\|"away"\|"snooze"\|"looking_to_trade"\|"looking_to_play", currentGame, level, memberSince, country, isPublic }` — param `steamId` (SteamID64, profile link or custom name). Server needs `STEAM_API_KEY`; the player's profile must be public. Level drives history/alerts. |
 | `steam/recent_games` | `[{ appId, name, minutesLast2Weeks, minutesTotal, icon, header, url }]` — params `steamId`, `number` (default 5, max 10). Needs "Game details" public; otherwise the log explains how to fix it. |
 | `steam/library_stats` | `{ steamId, gameCount, playedCount, neverPlayedCount, totalMinutes, totalHours, topGames: [game] }` — param `steamId`. `totalHours` drives history/alerts. |
-| **new** `custom_api/json_value` | `{ label, unit, value, fetchedAt }` — params `url` (**secret**), `path` (e.g. `data.items[0].price`), `label`, `unit`. Public JSON APIs only (no auth headers are ever sent). Numeric values feed history and alerts. |
-| **new** `custom_api/json_list` | `{ items: [{ title, subtitle }], fetchedAt }` — params `url` (**secret**), `path` (to an array), `titleField`, `subtitleField`, `number`. |
+| **new** `custom_api/json_value` | `{ label, unit, value, fetchedAt }` — params `url` (**secret**), `path` (optional, e.g. `data.items[0].price`; empty = the response itself is the value), `label`, `unit`. Public JSON APIs only (no auth headers are ever sent). Numeric values feed history and alerts. |
+| **new** `custom_api/json_list` | `{ items: [{ title, subtitle }], fetchedAt }` — params `url` (**secret**), `path` (optional, to an array; empty = the response itself is the list), `titleField` (required), `subtitleField`, `number`. |
 | `weather/current_weather` | `{ city, country, unit, temperature, feelsLike, humidity, windKmh, condition, isDay, high, low }` — params `city` (required), `unit` (`celsius` default \| `fahrenheit`). Open-Meteo, no key. |
 | `weather/daily_forecast` | `{ city, country, unit, now: { temperature, condition }, days: [{ date, condition, min, max, rainChance }] }` — params `city`, `days` (default 5, max 16), `unit`. `days` are the days *after* today. |
 | `weather/hourly_forecast` | `{ city, country, unit, hours: [{ time, temperature, condition, rainChance }] }` — params `city`, `hours` (default 12, max 48), `unit`. `time` is local to the city. |
@@ -493,78 +493,32 @@ default 60); when it is reached, insights simply stop updating and the raw data 
 off, quota is reached, or no widget has AI on with data). Suggested UX: show the card when `brief` exists;
 otherwise a "Generate my brief" button calling `POST`.
 
-### `POST /assistant/widgets`
+### `POST /assistant/widgets` — a conversation, not a one-shot command
 
-🔒 Natural-language widget creation. Body `{ "prompt": "follow bitcoin and tech news" }` (≤ 500 chars).
+🔒 Natural-language widget creation, as a real back-and-forth: the assistant can ask a clarifying
+question before it has enough to act, exactly like a person would, instead of guessing from one message.
+
+Body `{ "prompt": "I want to follow some cool stuff", "history"?: [{ "role": "user"|"assistant", "content": string }] }`
+(`prompt` ≤ 500 chars; `history` = the conversation so far, oldest first — send back what the API returned
+as `reply` as an `"assistant"` turn, and what the user typed as `"user"` turns; the last 8 are kept).
 
 ```json
-{ "available": true, "suggestions": [{
+{ "available": true, "reply": "What kind of content are you into — news, a market, GitHub, the weather?", "suggestions": [] }
+```
+or, once it has enough:
+```json
+{ "available": true, "reply": "Sure — here's a Bitcoin widget.", "suggestions": [{
     "serviceName": "market_data", "widgetName": "price_history", "title": "Bitcoin",
     "config": { "asset": "bitcoin", "days": 7 }, "refreshRateSeconds": 300,
     "reason": "Bitcoin price over the last week", "needsAccount": null, "missingSecrets": [] }] }
 ```
-**Nothing is created.** Show the drafts, and when the user confirms, send the draft to the normal
-`POST /widgets` (`serviceName`, `widgetName`, `config`, `refreshRateSeconds`, optional `title`) — every draft
-was already validated with those exact rules. `needsAccount` = a service name the user must link first;
-`missingSecrets` = params (e.g. a calendar URL) the user must type, never guessed by the model.
-`{ available: false, suggestions: [] }` when AI is off.
-
-## Microsoft sign-in (school account)
-
-"Sign in with your school Microsoft account" — for Epitech students this is the same Microsoft login they
-already use for My Epitech, **and it needs nobody at Epitech**: you register the app yourself, like the
-GitHub OAuth App. It gives identity only (name, `@epitech.eu` address); it is not My Epitech's student data.
-
-| Route | What |
-|---|---|
-| `GET /auth/microsoft/status` | Public. `{ configured }` — hide the button when `false`. |
-| `GET /auth/microsoft/login` | **Browser navigation**: sign in / create the account (first use) / attach to the account with the same address. |
-| `GET /auth/microsoft` 🔒 | **Browser navigation**: link Microsoft to the logged-in account. |
-| `DELETE /auth/microsoft` 🔒 | Unlink (`409` if it is the only way in). |
-| `GET /auth/microsoft/callback` | Microsoft's redirect target; the browser lands on `FRONTEND_URL`: `/dashboard`, `/dashboard?microsoft=linked`, or `/login?error=…` / `/dashboard?microsoft_error=…`. |
-
-**Security rule (why it is restricted to one organisation).** In a multi-tenant Microsoft app, the `email`
-of an account from *any* organisation is whatever that organisation's admin typed — an attacker could run
-their own tenant with an `@epitech.eu` address. So the server only accepts accounts whose signed `tid`
-(tenant id) is the tenant that owns `MICROSOFT_ALLOWED_DOMAIN` (default `epitech.eu`, looked up from
-Microsoft's public metadata) *and* whose address ends with that domain. PKCE, `state`, `nonce` and the
-RS256 signature/issuer/audience of the `id_token` are verified as for My Epitech.
-
-**Register the app (free, ~10 minutes)** at <https://entra.microsoft.com> → *App registrations* → *New registration*:
-1. **Name** `Morex Dashboard`. **Redirect URI**: type *Web*, `http://localhost:8080/auth/microsoft/callback` (add your public URL's callback too for a deployment).
-2. **Supported account types** — two ways, try the first:
-   - **A. Register it with your own `@epitech.eu` account** (sign in to the portal with it). If "users can register applications" is enabled in Epitech's directory (it is by default), the app then lives *inside* Epitech's tenant: choose *"Accounts in this organizational directory only"*. No consent problem at all, since it is Epitech's own directory. If the portal says you lack permission, use B.
-   - **B. Register it in your own free directory** (any Microsoft account) with *"Accounts in any organizational directory (Multitenant)"*. Then Epitech's tenant must allow its users to consent to the app; if Epitech restricts user consent, students see *"Need admin approval"* and only Epitech's IT can approve it (they can, by opening the consent URL as admin). Publisher verification is not possible for a personal project.
-3. **Certificates & secrets** → *New client secret* → copy the **Value** (shown once).
-4. **Overview** → copy **Application (client) ID**.
-5. `.env`: `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_CALLBACK_URL` (must match the redirect URI exactly), then `docker compose up -d --force-recreate server`.
-
-This flow is tested here against a simulated Microsoft (signatures, tenant and domain checks, account
-creation/linking); it has **not** been run against the real Microsoft login, which needs your app
-registration — so do the first real sign-in yourself before the defense.
-
-## Well-being (a group of three widgets)
-
-Not a page: a **service group "Well-being"** (`wellbeing` in `/about.json`) with three free widgets you add like any
-other — a quote, a fact and a horoscope. No account, no key, no server setup.
-
-| Widget | Params | `cachedData` |
-|---|---|---|
-| `wellbeing/daily_quote` (Quote of the day / Citation du jour) | none | `{ date, author, text: { en, fr, es } }` — a real, attributed quote (a few are proverbs); one per day |
-| `wellbeing/did_you_know` (Did you know? / Le saviez-vous ?) | none | `{ date, topic: "nature"\|"space"\|"science"\|"history"\|"tech"\|"body", text: { en, fr, es } }` — a short, well-established fact; one per day |
-| `wellbeing/horoscope` | `sign` (required; has `optionsUrl: "/services/wellbeing/signs"`) | `{ sign, forDate, text: { en, fr, es }, source: "library", disclaimer: { en, fr, es } }` |
-
-- **Language:** the three texts are all in `cachedData`; **show the one for the interface language** (`user.language` / the
-  UI switch), so switching language needs no refetch.
-- **Refresh rate:** the content changes once a day; suggest ≥ 1 hour (the minimum the API accepts is 10 s).
-- **Horoscope:** it is for fun and says so (`disclaimer`, always show it). The base text is built from a fixed set of sentences
-  (`source: "library"`, say so with a small label). With **AI analysis** switched on for the widget (`aiEnabled`), `insight`
-  becomes `{ kind: "horoscope", sign, forDate, text, source: "ai", language, disclaimer }` — a freshly written text for the
-  sign, in the user's language, shared by every user of that sign for the day; only the sign and the date are sent to the
-  model, never the birth date. Show `insight.text` (badge "AI") when present, otherwise `cachedData.text[lang]`.
-- **Which sign?** `GET /auth/me` → `zodiac` (derived from the birth date given at sign-up or in the profile) is the natural default:
-  pre-select it in the add-widget form; a user without a birth date picks any sign from the list.
-- `GET /services/wellbeing/signs?lang=fr` 🔒 → `[{ value: "gemini", label: "Gémeaux", glyph: "♊", range: "05-21 → 06-20" }]` for that dropdown.
+Always render `reply` as a chat bubble from the assistant, whether or not `suggestions` is empty — an empty
+`suggestions` array with a `reply` is expected mid-conversation, not a failure. **Nothing is created.** When
+the user confirms a suggestion, send it to the normal `POST /widgets` (`serviceName`, `widgetName`,
+`config`, `refreshRateSeconds`, optional `title`) — every draft was already validated with those exact
+rules. `needsAccount` = a service name the user must link first; `missingSecrets` = params (e.g. a calendar
+URL) the user must type, never guessed by the model. `{ available: false, reply: "", suggestions: [] }`
+when AI is off.
 
 ## Alerts
 
@@ -649,9 +603,97 @@ Body: any of `{ "mood": "😴", "text": "Updated text" }` (at least one required
 
 ## Services
 
-Service-specific endpoints that aren't widget data itself: GitHub's repo picker and the world clock's place search.
+Service-specific endpoints that aren't widget data itself: type-ahead suggestions for widget form fields, and GitHub's repo picker.
 
-**`optionsUrl` in `about.json`:** a param carrying `"optionsUrl"` should be rendered as a dropdown fed by that URL instead of a free-text field. If the param also has `"multiple": true`, it is a multi-select whose picked `value`s are joined with commas. `optionsUrl` endpoints return `[{ value, label, … }]` and may accept an optional `q` (type-ahead) — the GitHub one ignores it.
+**`optionsUrl` in `about.json`:** a param carrying `"optionsUrl"` should be rendered as a combobox — a text field with a dropdown of suggestions fed by that URL — not a plain free-text input, and not (except where noted below) a *closed* dropdown: typing something not in the list is still allowed, unless the field only makes sense as an exact match (`worldclock`'s places, `wellbeing`'s sign, `youtube`'s country, GitHub's repo). This now covers **every service that has a field worth suggesting** — a URL/path/repo/city/channel/asset/etc. field ought to offer something to pick instead of an empty box; a handful of fields genuinely can't (a secret calendar link, a Steam id, a video id) and are documented as such below.
+
+- Call it as `GET <optionsUrl>?q=<what the user typed>&lang=<ui language>&limit=<n>`, debounced (~200 ms). Empty `q` should still be called on focus where noted (worldclock, market_data fiat list, youtube countries, rss feeds): it returns a sane starting list, not an error.
+- `optionsUrl` may already contain a query string (e.g. `/services/market_data/assets?kind=crypto`) — **append** your own params with `&`, never replace it.
+- If the param also has `"multiple": true`, render a multi-select; the value sent to the widget is the picked `value`s joined by commas.
+- **`dependsOn: string[]`** (new): names of *other params in the same form* whose current typed value must be sent as query params to `optionsUrl`, using that param's own name (e.g. custom_api's `path` field has `dependsOn: ["url"]` → call `GET /services/custom_api/inspect?url=<what the user typed in the url field>&q=…`). Only call the endpoint once every listed dependency has a non-empty value; otherwise leave the field a plain input (or show it disabled) — calling it with a missing dependency just returns an empty list, not an error.
+- Every `/services/*` endpoint listed here needs a session (🔒) unless said otherwise, and degrades to an empty array — never an error — when the underlying source is unreachable, so a suggestions dropdown can simply show "no suggestions" and the field stays a normal text input.
+
+### `GET /services/weather/cities?q=&lang=&limit=`
+
+🔒 Type-ahead for the weather widgets' `city` field — live results from the same geocoder the widgets
+themselves use (Open-Meteo), so whatever is picked is guaranteed to resolve. `q` shorter than 2 characters
+returns `[]` (nothing to search yet). `lang` = `en`\|`fr`\|`es` (affects the localisation of results, not
+just labels — "Londres" in `fr` finds London). Cached 10 minutes.
+
+```json
+[ { "value": "Paris", "label": "Paris, Île-de-France, France", "country": "France", "admin1": "Île-de-France" } ]
+```
+Submit the picked `value` as `city` — it is the exact name the geocoder itself would resolve to.
+
+### `GET /services/market_data/assets?q=&kind=&limit=`
+
+🔒 Type-ahead for `base`/`quote`/`asset`/`currency`. `kind` is baked into each param's `optionsUrl` already
+(`fiat`, `crypto`, or `all`) — pass `q`/`lang`/`limit` only. Fiat currencies come from the same ECB-backed
+API (`frankfurter.dev`) the `exchange_rate` widget itself uses for fiat pairs (real codes, so they always
+resolve); crypto ids come from CoinGecko's full coin list. Both cached a day. An empty `q` still returns the
+(short) fiat list; crypto needs at least 2 characters (scanning 20k+ coins on nothing typed would be slow
+and useless).
+
+```json
+[ { "value": "eur", "label": "EUR — Euro", "kind": "fiat" },
+  { "value": "bitcoin", "label": "Bitcoin (BTC)", "kind": "crypto" } ]
+```
+
+### `GET /services/youtube/countries?q=&lang=&limit=`
+
+🔒 Type-ahead for the `trending` widget's `country` field — every 2-letter code YouTube's `regionCode`
+accepts, named in the requested language, static data (no external call). Empty `q` returns the full list
+(there is no "popularity" ordering for countries, so it's meant to be scrolled/filtered client-side, not
+narrowed to a short default).
+
+```json
+[ { "value": "FR", "label": "France" } ]
+```
+
+### `GET /services/rss/feeds?q=&category=`
+
+🔒 A small **curated** list of well-known, reliable feeds (news/tech/science/sport/business) — a starting
+point, not an exhaustive index (there is no general "search every RSS feed" API to call). The `link` field
+stays free text; typing any other feed address still works exactly as before.
+
+```json
+[ { "value": "https://hnrss.org/frontpage", "label": "Hacker News — Front page", "category": "tech" } ]
+```
+
+### `GET /services/custom_api/inspect?url=&path=&q=`
+
+🔒 The one that's actually grounded in the user's own data: fetches the URL already typed in the widget
+form (through the same SSRF-safe fetcher the widget itself uses — never a raw `fetch`) and proposes **real**
+paths found in that exact response, instead of asking the user to guess a JSON path blind.
+
+- No `path` given → inspects the response root. Feeds the `path` field of both `json_value` and `json_list`
+  (`dependsOn: ["url"]`).
+- `path` given (the list path already chosen) → treats that node as an array and returns the scalar fields
+  of its *first item*. Feeds `titleField`/`subtitleField` (`dependsOn: ["url", "path"]`).
+
+```json
+{ "root": "object",
+  "values": [ { "path": "data.price", "label": "data.price", "sample": "12.5" } ],
+  "lists":  [ { "path": "data.items", "label": "data.items",
+                "fields": [ { "path": "name", "label": "name", "sample": "Widget" } ] } ] }
+```
+`values` are candidates for `path` (on `json_value`) or, when `path` was passed, for `titleField`/
+`subtitleField`. `lists` are candidates for `path` (on `json_list`) — each already carries its own item's
+`fields` so the frontend can show a second-step preview without a second request. An unreachable URL, a
+non-JSON or non-2xx response, or a private/internal address (refused by the SSRF guard) all degrade to
+`{ "root": "scalar", "values": [], "lists": [] }` — never a `400`/`500` from a field the user simply hasn't
+finished typing yet, except a genuinely missing `url` (`400`).
+
+### Fields with no suggestions, on purpose
+
+- `calendar.url`, `epitech.calendarToken` — the value **is** the credential (a personal calendar
+  link/token); there is nothing public to suggest, and suggesting past values would mean storing them
+  unencrypted somewhere.
+- `steam.steamId`, `youtube.channel`, `youtube.video` — no public, free "search accounts/videos" endpoint
+  exists without spending extra API quota per keystroke; paste the profile/channel/video link or id
+  directly (see the `term-steam-id` / `term-youtube-ids` help entries for exactly what's accepted).
+- `custom_api.url` — arbitrary by definition; nothing to suggest until a URL exists (see `inspect` above
+  for what happens once it does).
 
 ### `GET /services/github/repos`
 
@@ -666,7 +708,7 @@ Service-specific endpoints that aren't widget data itself: GitHub's repo picker 
 | `401` | No valid session. |
 | `503` | Server missing `TOKEN_ENCRYPTION_KEY`. |
 
-### `GET /services/worldclock/places?q=&lang=&limit=`
+### `GET /services/worldclock/places?q=&lang=&limit=` — the first one built; every endpoint above follows this same shape
 
 🔒 Session required. Type-ahead for the world clock's `homeTimezone` (single) and `cities` (`multiple`) params:
 cities, **countries** and raw time-zone names, in any language, accents optional. `lang` = `en`|`fr`|`es`

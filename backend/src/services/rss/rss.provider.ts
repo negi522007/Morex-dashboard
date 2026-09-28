@@ -173,7 +173,7 @@ export class RssProvider implements ServiceProvider {
         name: 'article_list',
         description: 'Display the last items from a given feed',
         params: [
-          { name: 'link', type: 'string', required: true },
+          { name: 'link', type: 'string', required: true, optionsUrl: '/services/rss/feeds' },
           { name: 'number', type: 'integer' },
         ],
         fetchData: (config) => this.fetchFeed(config),

@@ -142,6 +142,20 @@ self-service alternative to My Epitech's staff-only client registration — unte
 Microsoft until the app is registered. The Epitech/Microsoft/GitHub-style sign-ins now share one accounts
 service and one controller factory instead of copies.
 
+**Sept 28** — Two requests after trying the app: generalize the world clock's new suggestion dropdown to
+every field, everywhere; and make the widget-creation assistant a real conversation instead of a one-shot
+command. Added live/real suggestion endpoints for weather cities (Open-Meteo geocoder), market currencies
+and crypto (Frankfurter + CoinGecko), YouTube trending countries (static), curated RSS feeds, and — the most
+useful one — `custom_api/inspect`, which fetches the URL the user already typed (through the SSRF guard) and
+proposes the actual JSON paths found in it, so the `path`/`titleField`/`subtitleField` fields go from "guess
+a path" to "pick from what's really there." A new `WidgetParam.dependsOn` lets a field's suggestions depend
+on another field's current value (used by `custom_api`'s path-dependent fields). `POST /assistant/widgets`
+now takes an optional `history` and can answer with only a clarifying `reply` and no `suggestions` — a
+question, not a guess — when the request is too vague. Also found and fixed a real bug of my own: a Steam
+unit test used `make(undefined)`, which (JS default-parameter quirk) silently fell back to the default key
+instead of testing the "no key" path, and `custom_api`'s `path` was wrongly required, breaking APIs whose
+answer is a bare list or value at the root.
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |

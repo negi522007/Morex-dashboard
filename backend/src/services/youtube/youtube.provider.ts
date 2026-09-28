@@ -111,7 +111,7 @@ export class YoutubeProvider implements ServiceProvider {
         name: 'trending',
         description: 'Display the most popular videos right now in a country (two-letter code, e.g. FR, US, BJ)',
         params: [
-          { name: 'country', type: 'string', required: true },
+          { name: 'country', type: 'string', required: true, optionsUrl: '/services/youtube/countries' },
           { name: 'number', type: 'integer' },
         ],
         async fetchData(config) {

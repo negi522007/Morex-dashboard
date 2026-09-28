@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { fetchWithTimeout } from '../../common/fetch-timeout.util';
+import { TtlCache } from '../../common/ttl-cache.util';
 import { UNTRUSTED_RULES, clip, languageName } from '../../ai/ai.service';
 import { EnrichContext, ServiceFetchError, ServiceProvider, WidgetDefinition } from '../service-provider.interface';
 
@@ -42,6 +43,38 @@ interface Place {
 }
 
 const GEOCODING_LANGUAGES = ['fr', 'en', 'es'];
+
+export interface CitySuggestion {
+  value: string;
+  label: string;
+  country: string | null;
+  admin1: string | null;
+}
+const searchCache = new TtlCache();
+
+// Type-ahead for the "city" field: live results from the same geocoder the widgets use, so whatever
+// is picked is guaranteed to resolve. Cached briefly — a place's name/population barely changes.
+export async function searchCities(query: string, lang: string, limit = 8): Promise<CitySuggestion[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const language = GEOCODING_LANGUAGES.includes(lang) ? lang : 'en';
+  const count = Math.min(Math.max(Math.floor(limit) || 8, 1), 15);
+  const key = `search:${language}:${count}:${q.toLowerCase()}`;
+  return searchCache.get(
+    key,
+    10 * 60_000,
+    async () => {
+      const data = await fetchJson(`${GEOCODING_URL}?${new URLSearchParams({ name: q, count: String(count), language })}`, 'cities');
+      return ((data?.results ?? []) as any[]).map((r) => ({
+        value: String(r.name),
+        label: [r.name, r.admin1, r.country].filter(Boolean).join(', '),
+        country: r.country ?? null,
+        admin1: r.admin1 ?? null,
+      }));
+    },
+    60 * 60_000,
+  );
+}
 
 // A city never moves, so each name is geocoded once per process.
 const placeCache = new Map<string, Place>();
@@ -113,7 +146,7 @@ const currentWeather: WidgetDefinition = {
   name: 'current_weather',
   description: 'Display the current temperature, sky, humidity and wind for a city',
   params: [
-    { name: 'city', type: 'string', required: true },
+    { name: 'city', type: 'string', required: true, optionsUrl: '/services/weather/cities' },
     { name: 'unit', type: 'string' },
   ],
   // The temperature drives the value history and alerts ("tell me when it goes above 30°")
@@ -153,7 +186,7 @@ const dailyForecast: WidgetDefinition = {
   name: 'daily_forecast',
   description: 'Display the forecast for the next days in a city (1 to 16 days)',
   params: [
-    { name: 'city', type: 'string', required: true },
+    { name: 'city', type: 'string', required: true, optionsUrl: '/services/weather/cities' },
     { name: 'days', type: 'integer' },
     { name: 'unit', type: 'string' },
   ],
@@ -195,7 +228,7 @@ const hourlyForecast: WidgetDefinition = {
   name: 'hourly_forecast',
   description: 'Display the temperature and chance of rain for the next hours in a city (1 to 48 hours)',
   params: [
-    { name: 'city', type: 'string', required: true },
+    { name: 'city', type: 'string', required: true, optionsUrl: '/services/weather/cities' },
     { name: 'hours', type: 'integer' },
     { name: 'unit', type: 'string' },
   ],

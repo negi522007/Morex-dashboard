@@ -90,8 +90,8 @@ const exchangeRate: WidgetDefinition = {
   name: 'exchange_rate',
   description: 'Display the exchange rate for a currency pair, with its recent history',
   params: [
-    { name: 'base', type: 'string', required: true },
-    { name: 'quote', type: 'string', required: true },
+    { name: 'base', type: 'string', required: true, optionsUrl: '/services/market_data/assets?kind=all' },
+    { name: 'quote', type: 'string', required: true, optionsUrl: '/services/market_data/assets?kind=fiat' },
     { name: 'days', type: 'integer' },
   ],
   primaryMetric: (d) => ((d as { rate?: unknown })?.rate as number) ?? null,
@@ -141,9 +141,9 @@ const priceHistory: WidgetDefinition = {
   name: 'price_history',
   description: 'Display the price history for an asset',
   params: [
-    { name: 'asset', type: 'string', required: true },
+    { name: 'asset', type: 'string', required: true, optionsUrl: '/services/market_data/assets?kind=crypto' },
     { name: 'days', type: 'integer' },
-    { name: 'currency', type: 'string' },
+    { name: 'currency', type: 'string', optionsUrl: '/services/market_data/assets?kind=fiat' },
   ],
   primaryMetric: (d) => {
     const last = Array.isArray(d) ? d[d.length - 1] : null;

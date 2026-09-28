@@ -87,50 +87,50 @@ export class GithubOAuthController {
 
   @Get('callback')
   @ApiOperation({ summary: "GitHub's redirect target after consent — the frontend never calls this directly" })
-  @ApiResponse({ status: 200, description: 'Link flow: account linked, plain text response' })
-  @ApiResponse({ status: 302, description: 'Login flow: session cookie set, redirected back to the frontend' })
-  @ApiResponse({ status: 400, description: 'Invalid/expired CSRF state, or GitHub rejected the code' })
-  @ApiResponse({ status: 409, description: 'Link flow: this GitHub account is already linked to a different user' })
+  @ApiResponse({ status: 302, description: 'Back to the frontend: /dashboard (login), /dashboard?github=linked (link), or /login?error=… / /dashboard?github_error=… on failure' })
   async callback(@Query('code') code: string, @Query('state') state: string, @Req() req: Request, @Res() res: Response) {
+    const frontendUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
     const linkStateCookie = req.cookies?.[LINK_STATE_COOKIE];
     const loginStateCookie = req.cookies?.[LOGIN_STATE_COOKIE];
     res.clearCookie(LINK_STATE_COOKIE, { path: STATE_COOKIE_PATH });
     res.clearCookie(LOGIN_STATE_COOKIE, { path: STATE_COOKIE_PATH });
 
+    // Always land back in the app, never a bare error page — same pattern as the Epitech/Microsoft
+    // callbacks: /dashboard for the link flow (with a query flag the frontend can toast), /login for
+    // the login flow (which has nowhere else to send a not-yet-authenticated visitor).
+    const failLink = (msg: string) => res.redirect(`${frontendUrl}/dashboard?github_error=${encodeURIComponent(msg)}`);
+    const failLogin = (msg: string) => res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(msg)}`);
+
     if (!code || !state) {
-      throw new BadRequestException('Missing code or state');
+      return linkStateCookie ? failLink('Missing code or state') : failLogin('Missing code or state');
     }
 
     if (linkStateCookie) {
-      if (state !== linkStateCookie) {
-        throw new BadRequestException('Invalid or expired OAuth state');
-      }
+      if (state !== linkStateCookie) return failLink('Invalid or expired OAuth state');
       const sessionCookieName = this.config.get<string>('SESSION_COOKIE_NAME') ?? 'dashboard_session';
       const sessionId = req.cookies?.[sessionCookieName];
       const user = sessionId ? await this.authService.getUserBySession(sessionId) : null;
-      if (!user) {
-        throw new BadRequestException('Your session expired before GitHub redirected back — log in and try again');
+      if (!user) return failLink('Your session expired before GitHub redirected back. Log in and try again.');
+      try {
+        await this.authService.linkGithubAccount(user.id, code);
+      } catch (err) {
+        return failLink(err instanceof Error ? err.message : 'GitHub linking failed');
       }
-      await this.authService.linkGithubAccount(user.id, code);
-      return res.status(200).send('GitHub account linked. You can close this tab.');
+      return res.redirect(`${frontendUrl}/dashboard?github=linked`);
     }
 
     if (loginStateCookie) {
-      if (state !== loginStateCookie) {
-        throw new BadRequestException('Invalid or expired OAuth state');
-      }
-      const frontendUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+      if (state !== loginStateCookie) return failLogin('Invalid or expired OAuth state');
       try {
         const { session } = await this.authService.loginWithGithub(code);
         setSessionCookie(res, this.config, session.id, session.expiresAt);
         return res.redirect(`${frontendUrl}/dashboard`);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'GitHub sign-in failed';
-        return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(message)}`);
+        return failLogin(err instanceof Error ? err.message : 'GitHub sign-in failed');
       }
     }
 
-    throw new BadRequestException('Invalid or expired OAuth state');
+    return failLogin('Invalid or expired OAuth state');
   }
 
   private redirectToGithub(res: Response, stateCookieName: string) {
