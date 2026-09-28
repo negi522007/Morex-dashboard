@@ -1092,3 +1092,11 @@ body.editing .w-empty-acts { visibility: hidden; }
 /* "New conversation" in the help chat */
 .hc-new { align-self: center; margin-top: 4px; padding: 7px 16px; border-radius: 999px; border: 1px dashed rgb(255 255 255 / .3); background: transparent; color: rgb(255 255 255 / .8); font: 500 12px Poppins, sans-serif; cursor: pointer; }
 .hc-new:hover { background: rgb(255 255 255 / .08); color: #fff; }
+
+/* Profile → delete the account: the confirmation box under the button */
+.del-box { margin-top: 14px; padding: 14px 16px; border-radius: 16px; background: rgb(127 29 29 / .25); border: 1px solid rgb(248 113 113 / .4); display: flex; flex-direction: column; gap: 8px; }
+.del-box b { font-size: 14px; } .del-box p { margin: 0; font-size: 12.5px; opacity: .85; line-height: 1.5; }
+.del-err { color: #fca5a5 !important; opacity: 1 !important; }
+.del-acts { display: flex; gap: 8px; justify-content: flex-end; }
+.btn-danger.solid { background: #dc2626; border-color: #dc2626; color: #fff; }
+.btn-danger.solid:disabled { opacity: .5; cursor: not-allowed; }
