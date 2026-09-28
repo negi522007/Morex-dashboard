@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { AuthService, maskEmail } from './auth.service';
 import { hashPassword } from './password.util';
+import { encryptToken } from '../common/token-encryption.util';
 
 function makePrismaMock() {
   return {
@@ -440,6 +441,35 @@ describe('AuthService', () => {
         where: { userId: 'user-1', serviceName: 'github' },
         data: { cachedData: expect.anything(), insight: expect.anything(), lastRefreshedAt: null },
       });
+    });
+
+    it('revokes the grant on GitHub itself, so reconnecting later re-prompts instead of silently reusing the old account', async () => {
+      const accessTokenEncrypted = encryptToken('gh-token-123', 'a'.repeat(64));
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'salt:hash' });
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1', accessTokenEncrypted });
+      fetchMock.mockResolvedValue({ ok: true, status: 204 });
+
+      await service.unlinkGithubAccount('user-1');
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://api.github.com/applications/client-id/grant',
+        expect.objectContaining({
+          method: 'DELETE',
+          body: JSON.stringify({ access_token: 'gh-token-123' }),
+          headers: expect.objectContaining({ Authorization: `Basic ${Buffer.from('client-id:client-secret').toString('base64')}` }),
+        }),
+      );
+      expect(prisma.oAuthAccount.delete).toHaveBeenCalledWith({ where: { id: 'oauth-1' } });
+    });
+
+    it('still unlinks locally even if GitHub refuses or is unreachable when revoking the grant', async () => {
+      const accessTokenEncrypted = encryptToken('gh-token-123', 'a'.repeat(64));
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'salt:hash' });
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1', accessTokenEncrypted });
+      fetchMock.mockRejectedValue(new Error('network down'));
+
+      await expect(service.unlinkGithubAccount('user-1')).resolves.toBeUndefined();
+      expect(prisma.oAuthAccount.delete).toHaveBeenCalledWith({ where: { id: 'oauth-1' } });
     });
   });
 

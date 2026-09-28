@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
@@ -15,7 +16,7 @@ import { join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { hashPassword, verifyPassword } from './password.util';
-import { encryptToken } from '../common/token-encryption.util';
+import { decryptToken, encryptToken } from '../common/token-encryption.util';
 import { UPLOADS_DIR } from '../common/uploads.util';
 import { Zodiac, parseBirthDate, toIsoDate, zodiacOf } from '../common/birth-date.util';
 
@@ -110,6 +111,8 @@ function toPublicUser(user: {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
@@ -339,9 +342,7 @@ export class AuthService {
   // The other end of linkGithubAccount/loginWithGithub. Blocked when GitHub
   // is the user's ONLY way in (no passwordHash) — since "Sign in with
   // GitHub" now exists, unlinking a passwordless account would otherwise
-  // lock them out with no recovery path. Revoking from GitHub's own side
-  // (Settings > Applications) still works regardless; this just makes OUR
-  // side agree with that instead of holding a dead, undeletable token.
+  // lock them out with no recovery path.
   async unlinkGithubAccount(userId: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -361,12 +362,45 @@ export class AuthService {
       );
     }
 
+    // Also revoke the grant on GitHub's own side, not just delete our row: otherwise GitHub still
+    // considers the app authorized for that account, so the next "Connect GitHub" click skips the
+    // consent screen and silently comes back with the same account instead of letting the user pick.
+    await this.revokeGithubGrant(account.accessTokenEncrypted);
+
     await this.prisma.oAuthAccount.delete({ where: { id: account.id } });
     // Its widgets stop right away: nothing is shown until GitHub is connected again
     await this.prisma.widgetInstance.updateMany({
       where: { userId, serviceName: 'github' },
       data: { cachedData: Prisma.DbNull, insight: Prisma.DbNull, lastRefreshedAt: null },
     });
+  }
+
+  private async revokeGithubGrant(accessTokenEncrypted: string): Promise<void> {
+    const clientId = this.config.get<string>('GITHUB_CLIENT_ID');
+    const clientSecret = this.config.get<string>('GITHUB_CLIENT_SECRET');
+    const encryptionKey = this.config.get<string>('TOKEN_ENCRYPTION_KEY');
+    if (!clientId || !clientSecret || !encryptionKey) return;
+
+    try {
+      const accessToken = decryptToken(accessTokenEncrypted, encryptionKey);
+      const res = await fetch(`https://api.github.com/applications/${clientId}/grant`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/vnd.github+json',
+          'User-Agent': 'dashboard-app',
+        },
+        body: JSON.stringify({ access_token: accessToken }),
+      });
+      // 404 just means GitHub already forgot this grant (e.g. the user revoked it themselves) — fine either way.
+      if (!res.ok && res.status !== 404) {
+        this.logger.warn(`GitHub grant revocation returned ${res.status}`);
+      }
+    } catch (err) {
+      // Best-effort: a network hiccup here must not block unlinking on our side.
+      this.logger.warn(`Could not revoke the GitHub grant: ${err instanceof Error ? err.message : err}`);
+    }
   }
 
   // "Sign in with GitHub": unlike linkGithubAccount, this needs no existing
