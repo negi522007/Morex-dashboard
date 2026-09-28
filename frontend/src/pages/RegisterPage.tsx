@@ -6,6 +6,7 @@ import { AuthLayout, glassInputClass, glassLabelClass } from '../components/Auth
 import { AUTH, useAuthLang } from '../lib/authLang'
 import { translateError } from '../lib/i18n'
 import { SsoButtons } from '../components/SsoButtons'
+import { AuthNotice } from '../components/AuthNotice'
 
 export function RegisterPage() {
   const lang = useAuthLang(), a = AUTH[lang]
@@ -62,13 +63,12 @@ export function RegisterPage() {
       switchTo="/login"
     >
       {submitted ? (
-        <p className="text-base leading-relaxed text-white/80">
-          {a.sent} <strong className="text-white">{email}</strong>. {a.sentEnd}{' '}
-          <Link to="/login" className="font-medium text-sky-300 hover:underline">
-            {a.goLogin}
+        <AuthNotice kind="sent">
+          <p className="mt-3 text-sm text-white/70">{a.sent} <strong className="break-all text-white">{email}</strong></p>
+          <Link to="/login" className="mt-4 inline-block rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-indigo-950 transition hover:bg-indigo-50">
+            {a.signIn}
           </Link>
-          .
-        </p>
+        </AuthNotice>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-3">
@@ -161,7 +161,7 @@ export function RegisterPage() {
             />
           </div>
 
-          {error && <p className="rounded-2xl border border-red-300/30 bg-red-500/15 px-5 py-3 text-sm text-red-100">{error}</p>}
+          {error && <AuthNotice kind="error" detail={error} />}
 
           <div className="pt-2">
             <button type="submit" disabled={loading} className="w-full rounded-full bg-white py-4 text-base font-semibold text-indigo-950 shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:bg-indigo-50 hover:shadow-indigo-400/40 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0">

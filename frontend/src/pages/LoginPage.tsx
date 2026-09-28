@@ -6,6 +6,7 @@ import { AuthLayout, glassInputClass, glassLabelClass } from '../components/Auth
 import { AUTH, useAuthLang } from '../lib/authLang'
 import { translateError } from '../lib/i18n'
 import { SsoButtons } from '../components/SsoButtons'
+import { AuthNotice, type NoticeKind } from '../components/AuthNotice'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -16,11 +17,15 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false)
   const lang = useAuthLang(), a = AUTH[lang]
   const urlError = searchParams.get('error')
-  const [error, setError] = useState<string | null>(urlError ? translateError(urlError, lang) : null)
+  // 401 = wrong email or password, 403 = email not confirmed yet, anything else = a generic hiccup
+  // (with the backend's message, shown in the page's language when it is a known one)
+  const [notice, setNotice] = useState<{ kind: NoticeKind; detail?: string } | null>(
+    urlError ? { kind: 'error', detail: translateError(urlError, lang) } : null,
+  )
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setError(null)
+    setNotice(null)
     setLoading(true)
     try {
       await apiFetch('/auth/login', {
@@ -29,8 +34,9 @@ export function LoginPage() {
       })
       navigate('/dashboard')
     } catch (err) {
-      // The backend's English message is shown in the page's language when it is a known one
-      setError(err instanceof ApiError ? translateError(err.message, lang) : a.wrong)
+      if (err instanceof ApiError && err.status === 401) setNotice({ kind: 'wrong' })
+      else if (err instanceof ApiError && err.status === 403) setNotice({ kind: 'confirm' })
+      else setNotice({ kind: 'error', detail: err instanceof ApiError ? translateError(err.message, lang) : undefined })
     } finally {
       setLoading(false)
     }
@@ -73,7 +79,7 @@ export function LoginPage() {
           />
         </div>
 
-        {error && <p className="rounded-2xl border border-red-300/30 bg-red-500/15 px-5 py-3 text-sm text-red-100">{error}</p>}
+        {notice && <AuthNotice kind={notice.kind} detail={notice.detail} />}
 
         <div className="pt-2">
           <button type="submit" disabled={loading} className="w-full rounded-full bg-white py-4 text-base font-semibold text-indigo-950 shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:bg-indigo-50 hover:shadow-indigo-400/40 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0">

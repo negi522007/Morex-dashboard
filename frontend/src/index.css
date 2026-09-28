@@ -27,6 +27,13 @@
   }
 }
 
+/* The little planet of the login / sign-up messages floats gently */
+@keyframes planet {
+  50% {
+    transform: translateY(-6px) rotate(-6deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
