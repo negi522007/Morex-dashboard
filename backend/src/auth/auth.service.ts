@@ -8,6 +8,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { unlink } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -169,7 +170,7 @@ export class AuthService {
 
     const appUrl = this.config.get<string>('APP_URL') ?? 'http://localhost:8080';
     try {
-      await this.mail.sendConfirmationEmail(email, `${appUrl}/auth/confirm?token=${token}`, lang);
+      await this.mail.sendConfirmationEmail(email, `${appUrl}/auth/confirm?token=${token}`, lang, firstName);
     } catch (err) {
       // Don't leave an unconfirmable, unretryable account behind if the
       // email never went out — the cascade delete also removes the token.
@@ -361,6 +362,11 @@ export class AuthService {
     }
 
     await this.prisma.oAuthAccount.delete({ where: { id: account.id } });
+    // Its widgets stop right away: nothing is shown until GitHub is connected again
+    await this.prisma.widgetInstance.updateMany({
+      where: { userId, serviceName: 'github' },
+      data: { cachedData: Prisma.DbNull, insight: Prisma.DbNull, lastRefreshedAt: null },
+    });
   }
 
   // "Sign in with GitHub": unlike linkGithubAccount, this needs no existing

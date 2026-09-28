@@ -16,6 +16,7 @@ function makePrismaMock() {
     blockedEmail: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn() },
     session: { create: jest.fn(), deleteMany: jest.fn(), findUnique: jest.fn() },
     oAuthAccount: { findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+    widgetInstance: { updateMany: jest.fn() },
     $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
   };
 }
@@ -97,6 +98,7 @@ describe('AuthService', () => {
         'new@example.com',
         expect.stringContaining('http://localhost:8080/auth/confirm?token='),
         'en',
+        'Ada',
       );
       expect(result).toEqual({ id: 'user-1', email: 'new@example.com', firstName: 'Ada', lastName: 'Lovelace', birthDate: null, zodiac: null });
     });
@@ -148,7 +150,7 @@ describe('AuthService', () => {
       const born = new Date('2001-02-28T00:00:00Z');
       await service.register('a@b.c', 'password123', 'A', 'B', born, 'fr');
       expect(prisma.user.create.mock.calls[0][0].data.birthDate).toBe(born);
-      expect(mail.sendConfirmationEmail).toHaveBeenCalledWith('a@b.c', expect.any(String), 'fr');
+      expect(mail.sendConfirmationEmail).toHaveBeenCalledWith('a@b.c', expect.any(String), 'fr', 'A');
     });
 
     it('refuses a password sign-up for an address that said "not me" recently, but not after the block ends', async () => {
@@ -426,6 +428,18 @@ describe('AuthService', () => {
       await service.unlinkGithubAccount('user-1');
 
       expect(prisma.oAuthAccount.delete).toHaveBeenCalledWith({ where: { id: 'oauth-1' } });
+    });
+
+    it('clears the user’s GitHub widgets right away, so they stop showing data once unlinked', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'salt:hash' });
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1' });
+
+      await service.unlinkGithubAccount('user-1');
+
+      expect(prisma.widgetInstance.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', serviceName: 'github' },
+        data: { cachedData: expect.anything(), insight: expect.anything(), lastRefreshedAt: null },
+      });
     });
   });
 

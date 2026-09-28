@@ -109,6 +109,23 @@ describe('TimerService', () => {
     expect(fetchDataMock).toHaveBeenCalledWith({}, { credentials: { apiKey: 'xyz' } });
   });
 
+  it('stops a widget whose account was disconnected: no fetch, and its data is cleared', async () => {
+    providers[0].requiresAuth = true;
+    prisma.oAuthAccount.findFirst.mockResolvedValue(null);
+    prisma.serviceSubscription.findUnique.mockResolvedValue(null);
+    prisma.$queryRaw.mockResolvedValue([
+      { id: 'w1', userId: 'u1', serviceName: 'test-service', widgetName: 'widget-a', config: {} },
+    ]);
+
+    await service.handleTick();
+
+    expect(fetchDataMock).not.toHaveBeenCalled();
+    expect(prisma.widgetInstance.update).toHaveBeenCalledWith({
+      where: { id: 'w1' },
+      data: { cachedData: expect.anything(), lastRefreshedAt: expect.any(Date) },
+    });
+  });
+
   it('refreshes several widgets at the same time, so a slow one does not hold up the others', async () => {
     let inFlight = 0, maxInFlight = 0;
     fetchDataMock.mockImplementation(async () => {

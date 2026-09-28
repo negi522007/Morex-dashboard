@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
+import { Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { SERVICE_PROVIDERS } from '../services/service-providers.token';
@@ -88,7 +89,17 @@ export class TimerService {
     }
 
     try {
-      const auth = widgetNeedsAuth(provider, widget) ? await this.resolveAuth(instance.userId, instance.serviceName) : undefined;
+      const needsAuth = widgetNeedsAuth(provider, widget);
+      const auth = needsAuth ? await this.resolveAuth(instance.userId, instance.serviceName) : undefined;
+      if (needsAuth && !auth) {
+        // The account behind this widget was disconnected: stop reading the service and clear what was shown,
+        // so the card asks to reconnect instead of silently going on. It resumes by itself once reconnected.
+        await this.prisma.widgetInstance.update({
+          where: { id: instance.id },
+          data: { cachedData: Prisma.DbNull, lastRefreshedAt: new Date() },
+        });
+        return;
+      }
       const config = this.decryptConfig(widget, instance.config);
       const data = await widget.fetchData(config, auth);
       await this.prisma.widgetInstance.update({
