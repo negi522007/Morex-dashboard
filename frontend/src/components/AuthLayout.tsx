@@ -79,9 +79,9 @@ export function AuthLayout({ title, subtitle, switchPrompt, switchLabel, switchT
 
         {/* Form side */}
         <section className="flex min-w-0 animate-fade-up flex-col justify-center border-t border-white/10 bg-white/10 p-8 backdrop-blur-2xl [animation-delay:180ms] md:border-t-0 md:border-l md:p-14">
-          <h2 className="text-4xl font-semibold">{title}</h2>
+          {title && <h2 className="text-4xl font-semibold">{title}</h2>}
           {subtitle && <p className="mt-2 text-base text-white/70">{subtitle}</p>}
-          <div className="mt-8">{children}</div>
+          <div className={title || subtitle ? 'mt-8' : ''}>{children}</div>
         </section>
       </div>
     </div>

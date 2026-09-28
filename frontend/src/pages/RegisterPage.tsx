@@ -8,6 +8,19 @@ import { translateError } from '../lib/i18n'
 import { SsoButtons } from '../components/SsoButtons'
 import { AuthNotice } from '../components/AuthNotice'
 
+// Envelope outline + flap, drawn as a constellation (the points are the stars, the lines are drawn in turn)
+const STARS = [[40, 50], [200, 50], [200, 160], [40, 160], [120, 108]]
+const LINKS = [[0, 1], [1, 2], [2, 3], [3, 0], [0, 4], [4, 1]]
+function SentConstellation() {
+  return (
+    <svg className="sent-sky" viewBox="0 0 240 190" aria-hidden>
+      {Array.from({ length: 12 }, (_, i) => <circle key={`d${i}`} className="dust" cx={(i * 53) % 240} cy={(i * 37) % 190} r={i % 4 ? 0.8 : 1.3} style={{ animationDelay: `${(i % 6) * 0.5}s` }} />)}
+      {LINKS.map(([a, b], i) => <line key={i} x1={STARS[a][0]} y1={STARS[a][1]} x2={STARS[b][0]} y2={STARS[b][1]} style={{ animationDelay: `${i * 0.25}s` }} />)}
+      {STARS.map(([x, y], i) => <circle key={i} className="star" cx={x} cy={y} r="3.2" style={{ animationDelay: `${i * 0.4}s` }} />)}
+    </svg>
+  )
+}
+
 export function RegisterPage() {
   const lang = useAuthLang(), a = AUTH[lang]
   const [firstName, setFirstName] = useState('')
@@ -56,19 +69,26 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      title={submitted ? a.inbox : a.signUp}
+      title={submitted ? '' : a.signUp}
       subtitle={submitted ? undefined : a.signUpSub}
       switchPrompt={a.member}
       switchLabel={a.signIn}
       switchTo="/login"
     >
       {submitted ? (
-        <AuthNotice kind="sent">
-          <p className="mt-3 text-sm text-white/70">{a.sent} <strong className="break-all text-white">{email}</strong></p>
-          <Link to="/login" className="mt-4 inline-block rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-indigo-950 transition hover:bg-indigo-50">
-            {a.signIn}
-          </Link>
-        </AuthNotice>
+        // "Look for this message": stars link up one by one and draw an envelope in the sky
+        <div className="text-center">
+          <SentConstellation />
+          <p className="font-['Caveat'] text-2xl text-white">{a.lookFor}</p>
+          <p className="mt-2 inline-flex max-w-full rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white">
+            <span className="truncate">{email}</span>
+          </p>
+          <div className="mt-5">
+            <Link to="/login" className="inline-block rounded-full border border-white/30 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
+              {a.signIn}
+            </Link>
+          </div>
+        </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-3">
