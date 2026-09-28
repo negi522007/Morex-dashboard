@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, apiFetch } from '../../lib/api'
-import { LOCALE, W, paramLabel, tr, translateError, type Lang } from '../../lib/i18n'
+import { LOCALE, W, tr, translateError, type Lang } from '../../lib/i18n'
 import { AV_OPTIONS, DEFAULT_AVATAR, HAIR, NICE, avatarUrl, type AvatarConfig, type Gender } from '../../lib/avatar'
 import { ZODIAC, entryFor, prepareConfig, rateLabel, REFRESH_RATES } from '../../lib/catalog'
 import type { AboutResponse, JournalEntry, User, WidgetInstance } from '../../lib/types'
 import { DECOS } from './Decoration'
-import { SignSelect } from './Drawer'
+import { ParamFields } from './ParamFields'
 import { CityPicker, fromStored, type Picked } from './CityPicker'
 import { THEMES, displayName } from './Chrome'
 
@@ -23,8 +23,8 @@ function Modal({ onClose, className = 'glass modal', style, children }: { onClos
 }
 
 // ---------- Edit a widget: title, refresh rate, decoration (+ its settings and AI switch) ----------
-export function EditWidgetModal({ widget, about, lang, onClose, onSave }: {
-  widget: WidgetInstance; about: AboutResponse | null; lang: Lang; onClose: () => void
+export function EditWidgetModal({ widget, about, user, lang, onClose, onSave }: {
+  widget: WidgetInstance; about: AboutResponse | null; user: User; lang: Lang; onClose: () => void
   onSave: (patch: Partial<Pick<WidgetInstance, 'title' | 'refreshRateSeconds' | 'decoration' | 'aiEnabled' | 'config'>>) => Promise<void>
 }) {
   const t = tr(lang), w = W[lang], entry = entryFor(widget.serviceName, widget.widgetName)
@@ -83,17 +83,7 @@ export function EditWidgetModal({ widget, about, lang, onClose, onSave }: {
       {params.length > 0 && (
         <div className="field"><span>{w.settings}</span>
           {isWorld && <CityPicker lang={lang} home={home} cities={cities} onChange={setWorld} />}
-          {params.filter(() => !isWorld).map((p) => (
-            <label key={p.name} className="dw-field" style={{ margin: '4px 0 0' }}>{paramLabel(p.name, lang)}{p.required ? ' *' : ''}{p.secret ? ' 🔒' : ''}
-              {widget.widgetName === 'horoscope' && p.name === 'sign' ? (
-                <SignSelect value={cfg.sign} lang={lang} onChange={(v) => setCfg((c) => ({ ...c, sign: v }))} />
-              ) : (
-                <input type={p.type === 'integer' ? 'number' : p.secret ? 'password' : 'text'} value={cfg[p.name]} placeholder={p.secret ? '••••••••' : entry?.hints[p.name]?.[1]}
-                  onChange={(e) => setCfg((c) => ({ ...c, [p.name]: e.target.value }))} />
-              )}
-              {p.secret && <small>{w.secretKept}</small>}
-            </label>
-          ))}
+          {!isWorld && entry && <ParamFields entry={entry} params={params} cfg={cfg} setCfg={setCfg} lang={lang} user={user} editing />}
         </div>
       )}
       {entry?.ai && (

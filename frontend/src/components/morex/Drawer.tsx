@@ -1,11 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { W, paramLabel, translateError, type Lang } from '../../lib/i18n'
-import { CATALOG, REFRESH_RATES, SERVICES, ZODIAC, prepareConfig, type CatalogEntry } from '../../lib/catalog'
+import { W, translateError, type Lang } from '../../lib/i18n'
+import { CATALOG, REFRESH_RATES, SERVICES, prepareConfig, type CatalogEntry } from '../../lib/catalog'
 import { SAMPLES } from '../../lib/samples'
 import type { AboutResponse, User, WidgetParam } from '../../lib/types'
 import { WidgetCard } from './WidgetGrid'
 import { CityPicker, fromStored, type Picked, type Place } from './CityPicker'
 import { api } from '../../lib/api'
+import { ParamFields } from './ParamFields'
 
 // Grid size of each card design on the dashboard (columns × rows, same as morex.css), so a preview can be
 // drawn at its real size and then scaled down as a whole: nothing gets squashed, whatever the frame.
@@ -35,16 +36,6 @@ function FitCard({ kind, children }: { kind: string; children: ReactNode }) {
   )
 }
 
-// The horoscope's `sign` is picked from the 12 signs instead of typed
-export function SignSelect({ value, lang, onChange }: { value: string; lang: Lang; onChange: (v: string) => void }) {
-  return (
-    <select className="dw-select" value={value} onChange={(e) => onChange(e.target.value)} required>
-      <option value="" disabled>—</option>
-      {Object.entries(ZODIAC).map(([k, z]) => <option key={k} value={k}>{z.glyph}{'\uFE0E'} {z.name[lang]}</option>)}
-    </select>
-  )
-}
-
 // Card filled with the snapshot data, for the drawer previews
 function SampleCard({ entry, lang, config = {}, data }: { entry: CatalogEntry; lang: Lang; config?: Record<string, string | number>; data?: unknown }) {
   const s = SAMPLES[entry.kind] ?? { data: null, config: {} }
@@ -57,12 +48,14 @@ function SampleCard({ entry, lang, config = {}, data }: { entry: CatalogEntry; l
   )
 }
 
-export function Drawer({ open, lang, about, user, preset, onClose, onCreate }: {
+export function Drawer({ open, lang, about, user, preset, service, onClose, onCreate }: {
   open: boolean
   lang: Lang
   about: AboutResponse | null
   user: User
   preset: CatalogEntry | null
+  // Opens on the list of one service's widgets (e.g. 'github' after connecting GitHub)
+  service?: string | null
   onClose: () => void
   // Resolves when the widget is created; rejects with the backend's message otherwise
   onCreate: (entry: CatalogEntry, config: Record<string, string | number>, refreshRateSeconds: number) => Promise<void>
@@ -106,10 +99,11 @@ export function Drawer({ open, lang, about, user, preset, onClose, onCreate }: {
   useEffect(() => {
     if (!open) return
     setQ(''); setError('')
+    setFilter(service ?? 'all')
     if (preset) pick(preset); else setPicked(null)
     const id = setTimeout(() => search.current?.focus({ preventScroll: true }), 300)
     return () => clearTimeout(id)
-  }, [open, preset])
+  }, [open, preset, service])
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => { if (e.key !== 'Escape') return; if (picked) setPicked(null); else onClose() }
@@ -192,22 +186,8 @@ export function Drawer({ open, lang, about, user, preset, onClose, onCreate }: {
                 <form onSubmit={submit}>
                   {!params.length && <p className="muted" style={{ fontSize: 13 }}>{w.noParams}</p>}
                   {picked.widget === 'world_clock' && <CityPicker lang={lang} home={home} cities={cities} onChange={setWorld} />}
-                  {params.filter(() => picked.widget !== 'world_clock').map((p) => {
-                    const [hint, ex] = picked.hints[p.name] ?? [{ fr: '', en: '', es: '' }, '']
-                    return (
-                      <label key={p.name} className="dw-field">{paramLabel(p.name, lang)}{p.required ? ' *' : ''}{p.secret ? ' 🔒' : ''}
-                        {picked.widget === 'horoscope' && p.name === 'sign' ? (
-                          <SignSelect value={cfg.sign ?? ''} lang={lang} onChange={(v) => setCfg((c) => ({ ...c, sign: v }))} />
-                        ) : (
-                          <input name={p.name} type={p.type === 'integer' ? 'number' : p.secret ? 'password' : 'text'} value={cfg[p.name] ?? ''} placeholder={ex}
-                            required={p.required} autoComplete="off" onChange={(e) => setCfg((c) => ({ ...c, [p.name]: e.target.value }))} />
-                        )}
-                        <small>{picked.widget === 'horoscope' && p.name === 'sign'
-                          ? (user.zodiac && cfg.sign === user.zodiac ? `🎂 ${w.fromBirth}` : '')
-                          : `${hint[lang]}${ex ? `, ${w.eg} ${ex}` : ''}`}</small>
-                      </label>
-                    )
-                  })}
+                  {picked.widget !== 'world_clock' && <ParamFields entry={picked} params={params} cfg={cfg} setCfg={setCfg} lang={lang} user={user} />}
+                  {picked.widget === 'horoscope' && user.zodiac && cfg.sign === user.zodiac && <small className="pf-ok">🎂 {w.fromBirth}</small>}
                   <div className="dw-field">{w.refresh}
                     <div className="dw-rates" role="radiogroup">
                       {REFRESH_RATES.map(([sec, l]) => <button key={sec} type="button" role="radio" aria-checked={sec === rate} className={sec === rate ? 'on' : ''} onClick={() => setRate(sec)}>{l}</button>)}

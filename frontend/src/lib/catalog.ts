@@ -119,9 +119,14 @@ export const CATALOG: CatalogEntry[] = [
 export const entryFor = (serviceName: string, widgetName: string) =>
   CATALOG.find((e) => e.service === serviceName && e.widget === widgetName)
 
-// Last step before a config is sent: the world clock gets its cities turned into IANA time zones.
-// Throws an Error with a message for the user when something typed can't be understood.
+// Last step before a config is sent: a pasted GitHub link becomes "owner/name", and the world clock gets its
+// cities turned into IANA time zones. Throws an Error with a message for the user when something can't be understood.
 export function prepareConfig(serviceName: string, widgetName: string, config: Record<string, string | number>, lang: Lang) {
+  if (serviceName === 'github' && config.repo) {
+    const repo = String(config.repo).trim()
+    const m = repo.match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s]+)\/([^/\s#?]+)/i)
+    return { ...config, repo: m ? `${m[1]}/${m[2].replace(/\.git$/i, '')}` : repo }
+  }
   if (serviceName !== 'worldclock' || widgetName !== 'world_clock') return config
   const out = { ...config }
   if (out.homeTimezone) {
