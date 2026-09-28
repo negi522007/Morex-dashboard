@@ -77,11 +77,20 @@ provider in `.env` (see [CONTRIBUTING.md](./CONTRIBUTING.md#sending-real-confirm
 Three separate causes, in order of likelihood:
 
 1. **The link points to `localhost`.** The mail contains `APP_URL` + `/auth/confirm?token=…`, and `APP_URL`
-   defaults to `http://localhost:8080`. On someone else's computer that is *their* machine, so the link
-   fails even though the mail arrived. `localhost` only works for whoever runs the server. To let other
-   people confirm, `APP_URL` must be an address they can reach: a deployed URL, or a temporary tunnel to
-   your machine (e.g. `cloudflared tunnel --url http://localhost:8080`, then put that URL in `APP_URL` and
-   recreate the `server` container).
+   defaults to `http://localhost:8080`. On someone else's device that is *their own* machine, so the link
+   fails even though the mail arrived. `localhost` only works for whoever runs the server. Fix, in order of
+   how far away the other person is:
+   - **Same Wi-Fi/network (a phone, another laptop on your router)** — the simplest fix: find your
+     machine's LAN IP (`ip addr` on Linux/macOS, `ipconfig` on Windows — something like `192.168.1.23`),
+     set `APP_URL=http://192.168.1.23:8080` **and** `FRONTEND_URL=http://192.168.1.23:5173` in `.env`, then
+     `docker compose up -d --force-recreate server frontend`. Open `http://192.168.1.23:5173` on the other
+     device to use the app itself, or just wait for the confirmation email, its link now works from there
+     too. No code change needed: nothing in the backend is tied to `localhost` (the session cookie has no
+     fixed domain, there is no CORS allow-list restricting the origin). A local firewall blocking incoming
+     connections to 8080/5173 is the most common thing that still stops it working.
+   - **Anyone else, anywhere** — a LAN IP will not reach them: use a deployed URL, or a temporary tunnel to
+     your machine (e.g. `cloudflared tunnel --url http://localhost:8080`, then put that URL in `APP_URL`
+     — and the matching tunnel for the frontend in `FRONTEND_URL` — and recreate both containers).
 2. **It landed in spam.** Mail sent through a personal Gmail account by an unknown app is often filtered.
    Ask them to check Spam/Promotions and mark it "not spam". The mail now has a plain-text part too,
    which helps. For real use, send from a proper transactional provider on a domain with SPF/DKIM.

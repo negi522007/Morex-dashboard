@@ -17,7 +17,7 @@ describe('renderConfirmPage', () => {
     const fr = renderConfirmPage({ ...base, lang: 'fr', pending: { email: 'a***@b.c', firstName: null } });
     expect(fr).toContain('Votre compte est confirmé');
     expect(fr).toContain('http://localhost:5173/login');
-    expect(fr).toContain('aucun compte n’a été créé');
+    expect(fr).toContain('Aucun compte n’a été créé');
     expect(fr).toContain('24 heures');
     const es = renderConfirmPage({ ...base, lang: 'es', pending: { email: 'a***@b.c', firstName: null } });
     expect(es).toContain('¿Eres tú?');
@@ -35,6 +35,23 @@ describe('renderConfirmPage', () => {
     expect(html).not.toContain('<img src=x');
     expect(html).toContain('&lt;img src=x');
     expect(html).not.toContain('alert(1)</script>');
+  });
+
+  it('never uses an em dash in the copy, and matches the app’s own branding (logo, Morex wordmark, white pill button)', () => {
+    for (const lang of ['en', 'fr', 'es'] as const) {
+      const html = renderConfirmPage({ ...base, lang, pending: { email: 'a***@b.c', firstName: 'Ada' } });
+      expect(html).not.toContain('—');
+    }
+    const html = renderConfirmPage({ ...base, lang: 'en', pending: { email: 'a***@b.c', firstName: null } });
+    expect(html).toContain('aria-label="Morex"');
+    expect(html).toContain('>Morex</div>');
+    expect(html).toContain('.primary{background:#fff');
+  });
+
+  it('no longer calls well-being a page (it is a widget group)', () => {
+    const html = renderConfirmPage({ ...base, lang: 'en', pending: { email: 'a***@b.c', firstName: null } });
+    expect(html).not.toMatch(/well-being page/i);
+    expect(html).toContain('horoscope widget');
   });
 
   it('picks the language from Accept-Language, defaulting to English', () => {
