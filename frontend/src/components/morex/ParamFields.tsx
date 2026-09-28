@@ -277,9 +277,11 @@ export function ParamFields({ entry, params, cfg, setCfg, lang, user, editing = 
     if (w === 'upcoming_events' && p.name === 'url') return <CalendarField value={v} onChange={onChange} lang={lang} editing={editing} />
     if (entry.service === 'custom_api' && p.name === 'path') return <JsonExplorer url={cfg.url ?? ''} pick={w === 'json_list' ? 'list' : 'value'} value={v} onChange={onChange} lang={lang} />
     if (entry.service === 'custom_api' && (p.name === 'titleField' || p.name === 'subtitleField')) return <JsonExplorer url={cfg.url ?? ''} listPath={cfg.path} pick="field" value={v} onChange={onChange} lang={lang} />
-    if (SEGMENTS[key] || (p.name === 'unit' && SEGMENTS.unit)) {
+    // "unit" is only ever °C/°F for the weather service — custom_api's own "unit" param is free text
+    // (e.g. "personnes", "$"), so it must not be forced into that same segmented picker.
+    if (SEGMENTS[key] || (entry.service === 'weather' && p.name === 'unit')) {
       const opts = SEGMENTS[key] ?? SEGMENTS.unit
-      return <Seg options={opts} value={v || (p.name === 'unit' ? 'celsius' : ex)} onChange={onChange} lang={lang} />
+      return <Seg options={opts} value={v || (entry.service === 'weather' ? 'celsius' : ex)} onChange={onChange} lang={lang} />
     }
     if (p.type === 'integer' && RANGES[key]) {
       const [min, max] = RANGES[key]
