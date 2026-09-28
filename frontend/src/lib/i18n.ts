@@ -101,7 +101,7 @@ export const tr = (lang: Lang): Texts => T[lang] as Texts
 // Texts shown inside the widget cards, the add drawer and the edit modal
 export const W = {
   fr: {
-    every: 'Toutes les', waiting: 'En attente des premières données…', live: 'DIRECT', essential: 'L’essentiel', aiRecap: 'Résumé par l’IA', readMin: 'min de lecture',
+    every: 'Toutes les', emptyTitle: 'Il manque encore des étoiles', understand: 'Comprendre', modify: '✎ Modifier', whyEmpty: 'Pourquoi mon widget est vide ?', staleNow: 'Pas à jour', newChat: '↺ Nouvelle conversation', waiting: 'En attente des premières données…', live: 'DIRECT', essential: 'L’essentiel', aiRecap: 'Résumé par l’IA', readMin: 'min de lecture',
     lastDays: (n: number) => `${n} derniers jours`, periods: ['24h', '7j', '30j'], stars: 'étoiles', noIssues: 'Aucune issue ouverte 🎉',
     commitsIn: (h: number) => `commits en ${h} h`, standup: 'Stand-up par l’IA', noCommits: 'Aucun commit sur cette période',
     wx: { clear: 'Ensoleillé', partly_cloudy: 'Éclaircies', cloudy: 'Nuageux', fog: 'Brouillard', drizzle: 'Bruine', rain: 'Pluie', snow: 'Neige', thunderstorm: 'Orage' } as Record<string, string>,
@@ -124,7 +124,7 @@ export const W = {
     tapDay: 'touche pour ta journée', quoteTitle: 'Citation du jour', factTitle: 'Le savais-tu ?', tapDiscover: 'Touche pour découvrir', topics: { nature: 'Nature', space: 'Espace', science: 'Science', history: 'Histoire', tech: 'Technologie', body: 'Corps humain' } as Record<string, string>, birthDate: 'Date de naissance', birthNote: 'Sert à ton horoscope : seul ton signe est utilisé', love: 'Amour', work: 'Travail', energy: 'Énergie', fromBirth: 'Rempli d’après ta date de naissance', unknownZone: (x: string) => `Ville inconnue : ${x}. Écris une ville (Paris, New York…) ou un fuseau (Europe/Paris)`, aiLabel: 'Analyse par l’IA', aiHint: 'Ajoute un résumé ou un conseil écrit par l’IA', saveError: 'Impossible d’enregistrer', noParams: 'Aucun réglage : ce widget utilise ton compte lié',
   },
   en: {
-    every: 'Every', waiting: 'Waiting for the first data…', live: 'LIVE', essential: 'In short', aiRecap: 'AI summary', readMin: 'min read',
+    every: 'Every', emptyTitle: 'Some stars are still missing', understand: 'Understand', modify: '✎ Edit', whyEmpty: 'Why is my widget empty?', staleNow: 'Not up to date', newChat: '↺ New conversation', waiting: 'Waiting for the first data…', live: 'LIVE', essential: 'In short', aiRecap: 'AI summary', readMin: 'min read',
     lastDays: (n: number) => `Last ${n} days`, periods: ['24h', '7d', '30d'], stars: 'stars', noIssues: 'No open issues 🎉',
     commitsIn: (h: number) => `commits in ${h} h`, standup: 'AI stand-up', noCommits: 'No commits in this period',
     wx: { clear: 'Sunny', partly_cloudy: 'Partly cloudy', cloudy: 'Cloudy', fog: 'Fog', drizzle: 'Drizzle', rain: 'Rain', snow: 'Snow', thunderstorm: 'Thunderstorm' } as Record<string, string>,
@@ -147,7 +147,7 @@ export const W = {
     tapDay: 'tap for your day', quoteTitle: 'Quote of the day', factTitle: 'Did you know?', tapDiscover: 'Tap to find out', topics: { nature: 'Nature', space: 'Space', science: 'Science', history: 'History', tech: 'Technology', body: 'Human body' } as Record<string, string>, birthDate: 'Birth date', birthNote: 'Used for your horoscope: only your sign is used', love: 'Love', work: 'Work', energy: 'Energy', fromBirth: 'Filled from your birth date', unknownZone: (x: string) => `Unknown city: ${x}. Type a city (Paris, New York…) or a time zone (Europe/Paris)`, aiLabel: 'AI analysis', aiHint: 'Adds a summary or advice written by AI', saveError: 'Could not save', noParams: 'No settings: this widget uses your linked account',
   },
   es: {
-    every: 'Cada', waiting: 'Esperando los primeros datos…', live: 'EN VIVO', essential: 'Lo esencial', aiRecap: 'Resumen por IA', readMin: 'min de lectura',
+    every: 'Cada', emptyTitle: 'Aún faltan estrellas', understand: 'Entender', modify: '✎ Editar', whyEmpty: '¿Por qué mi widget está vacío?', staleNow: 'No actualizado', newChat: '↺ Nueva conversación', waiting: 'Esperando los primeros datos…', live: 'EN VIVO', essential: 'Lo esencial', aiRecap: 'Resumen por IA', readMin: 'min de lectura',
     lastDays: (n: number) => `Últimos ${n} días`, periods: ['24h', '7d', '30d'], stars: 'estrellas', noIssues: 'Ninguna issue abierta 🎉',
     commitsIn: (h: number) => `commits en ${h} h`, standup: 'Stand-up por IA', noCommits: 'Ningún commit en este periodo',
     wx: { clear: 'Soleado', partly_cloudy: 'Intervalos nubosos', cloudy: 'Nublado', fog: 'Niebla', drizzle: 'Llovizna', rain: 'Lluvia', snow: 'Nieve', thunderstorm: 'Tormenta' } as Record<string, string>,
@@ -221,6 +221,20 @@ const ERRORS: [RegExp, Record<Lang, string | ((m: RegExpMatchArray) => string)>]
   [/suspended/i, { fr: 'Ce compte est suspendu', en: 'This account is suspended', es: 'Esta cuenta está suspendida' }],
   [/Failed to fetch|NetworkError|Request failed \(HTTP 5\d\d\)/i, { fr: 'Le serveur ne répond pas, réessaie dans un instant', en: 'The server is not answering, try again in a moment', es: 'El servidor no responde, inténtalo en un momento' }],
 ]
+// A widget's last refresh error (lastError, in English from the backend) said simply, for its card
+const REFRESH_ERRORS: [RegExp, Record<Lang, string>][] = [
+  [/HTTP 429|rate limit|too many/i, { fr: 'le service reçoit trop de demandes, on réessaie bientôt', en: 'the service is getting too many requests, retrying soon', es: 'el servicio recibe demasiadas peticiones, se reintentará pronto' }],
+  [/not connected|connect it again/i, { fr: 'le compte lié n’est plus connecté', en: 'the linked account is no longer connected', es: 'la cuenta vinculada ya no está conectada' }],
+  [/HTTP 40[13]|forbidden|unauthori[sz]ed|invalid.*key/i, { fr: 'accès refusé par le service (clé ou compte)', en: 'access refused by the service (key or account)', es: 'acceso rechazado por el servicio (clave o cuenta)' }],
+  [/HTTP 404|not found|No articles found/i, { fr: 'rien trouvé à cette adresse : vérifie le réglage', en: 'nothing found at this address: check the setting', es: 'no se encontró nada en esta dirección: revisa el ajuste' }],
+  [/Could not resolve|fetch failed|Could not reach|timed? ?out|gave up|ECONN|ENOTFOUND/i, { fr: 'le service ne répond pas (connexion ?)', en: 'the service is not answering (connection?)', es: 'el servicio no responde (¿conexión?)' }],
+  [/Not a valid URL/i, { fr: 'l’adresse n’est pas valide', en: 'the address is not valid', es: 'la dirección no es válida' }],
+]
+export function refreshErrorText(message: string, lang: Lang): string {
+  for (const [re, t] of REFRESH_ERRORS) if (re.test(message)) return t[lang]
+  return translateError(message, lang)
+}
+
 export function translateError(message: string, lang: Lang): string {
   for (const [re, t] of ERRORS) {
     const m = message.match(re)

@@ -102,7 +102,7 @@ interface AskResult { mode: 'ai' | 'search'; answer: string; sources: { id: stri
 type Turn = { role: 'user' | 'assistant'; content: string; result?: AskResult }
 const HELP_STARTERS = ['guide-add-widget', 'guide-empty-widget', 'guide-connect-accounts', 'guide-birthdate']
 
-export function HelpModal({ lang, onClose }: { lang: Lang; onClose: () => void }) {
+export function HelpModal({ lang, initialQuestion, onClose }: { lang: Lang; initialQuestion?: string; onClose: () => void }) {
   const w = W[lang]
   const [turns, setTurns] = useState<Turn[]>([])
   const [starters, setStarters] = useState<{ id: string; title: string }[]>([])
@@ -117,6 +117,9 @@ export function HelpModal({ lang, onClose }: { lang: Lang; onClose: () => void }
     setTimeout(() => input.current?.focus(), 100)
   }, [lang])
   useEffect(() => { box.current?.scrollTo({ top: box.current.scrollHeight, behavior: 'smooth' }) }, [turns, busy])
+  // Opened from an empty widget: ask "why is my widget empty?" straight away
+  const asked = useRef(false)
+  useEffect(() => { if (initialQuestion && !asked.current) { asked.current = true; ask(initialQuestion) } }, [initialQuestion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function ask(question: string) {
     const text = question.trim()
@@ -154,6 +157,9 @@ export function HelpModal({ lang, onClose }: { lang: Lang; onClose: () => void }
           </div>
         ))}
         {busy && <div className="hc-msg it hc-typing"><i /><i /><i /></div>}
+        {turns.length > 0 && !busy && (
+          <button type="button" className="hc-new" onClick={() => { setTurns([]); setQ(''); input.current?.focus() }}>{w.newChat}</button>
+        )}
       </div>
       <form className="hc-compose" onSubmit={(e) => { e.preventDefault(); ask(q) }}>
         <input ref={input} value={q} maxLength={400} placeholder={w.helpAsk} onChange={(e) => setQ(e.target.value)} />
