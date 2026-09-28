@@ -9,6 +9,8 @@ import { RefreshHooksService } from '../insights/refresh-hooks.service';
 import { decryptToken } from '../common/token-encryption.util';
 
 const TICK_MS = 15_000;
+// Widgets refreshed at the same time: one slow or unreachable service no longer holds up everyone else's
+const CONCURRENCY = 8;
 
 interface DueWidgetInstance {
   id: string;
@@ -51,9 +53,18 @@ export class TimerService {
            OR "lastRefreshedAt" + ("refreshRateSeconds" * INTERVAL '1 second') <= NOW()
       `;
 
-      for (const instance of due) {
-        await this.refreshInstance(instance);
-      }
+      let next = 0;
+      const worker = async () => {
+        while (next < due.length) {
+          const instance = due[next++];
+          try {
+            await this.refreshInstance(instance);
+          } catch (err) {
+            this.logger.error(`Refresh crashed for instance ${instance.id}: ${(err as Error).message}`);
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, due.length) }, worker));
     } finally {
       this.ticking = false;
     }

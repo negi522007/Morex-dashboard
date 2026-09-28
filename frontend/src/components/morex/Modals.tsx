@@ -257,10 +257,10 @@ export function BioModal({ user, lang, onClose, onSaved }: { user: User; lang: L
 // Disconnect = DELETE /auth/<provider>, refused with 409 when it is the account's only way to sign in.
 function ConnectedAccounts({ user, lang, onSaved }: { user: User; lang: Lang; onSaved: (u: User) => void }) {
   const w = W[lang]
-  const [ready, setReady] = useState<Record<string, boolean>>({ github: true })
+  const [ready, setReady] = useState<Record<string, boolean>>({})
   const [error, setError] = useState('')
   useEffect(() => {
-    for (const p of ['epitech', 'microsoft']) api.get<{ configured: boolean }>(`/auth/${p}/status`).then((r) => setReady((s) => ({ ...s, [p]: r.configured }))).catch(() => {})
+    for (const p of ['github', 'epitech', 'microsoft']) api.get<{ configured: boolean }>(`/auth/${p}/status`).then((r) => setReady((s) => ({ ...s, [p]: r.configured }))).catch(() => {})
   }, [])
   const rows: [string, string, React.ReactNode, string | null][] = [
     ['github', 'GitHub', '🐙', user.githubLinked ? w.linked : null],

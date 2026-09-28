@@ -26,6 +26,18 @@ export class GithubOAuthController {
     private readonly config: ConfigService,
   ) {}
 
+  // Same shape as /auth/microsoft/status and /auth/epitech/status: the frontend greys out its GitHub buttons
+  // instead of sending people to a 400 page when this server has no GitHub OAuth app.
+  @Get('status')
+  @ApiOperation({ summary: 'Is "Connect / Sign in with GitHub" configured on this server? { configured }' })
+  status() {
+    return { configured: this.isConfigured() };
+  }
+
+  private isConfigured(): boolean {
+    return Boolean(this.config.get<string>('GITHUB_CLIENT_ID') && this.config.get<string>('GITHUB_CLIENT_SECRET') && this.config.get<string>('GITHUB_OAUTH_CALLBACK_URL'));
+  }
+
   // Linking, not login: this route requires an existing session — GitHub
   // OAuth here is authorization for widgets, added on top of an account
   // that already exists. For "Sign in with GitHub" itself, see /login below.

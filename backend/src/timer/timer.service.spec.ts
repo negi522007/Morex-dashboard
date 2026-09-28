@@ -109,6 +109,23 @@ describe('TimerService', () => {
     expect(fetchDataMock).toHaveBeenCalledWith({}, { credentials: { apiKey: 'xyz' } });
   });
 
+  it('refreshes several widgets at the same time, so a slow one does not hold up the others', async () => {
+    let inFlight = 0, maxInFlight = 0;
+    fetchDataMock.mockImplementation(async () => {
+      inFlight++; maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((r) => setTimeout(r, 20));
+      inFlight--;
+      return { ok: true };
+    });
+    prisma.$queryRaw.mockResolvedValue(
+      Array.from({ length: 12 }, (_, i) => ({ id: `w${i}`, userId: 'u1', serviceName: 'test-service', widgetName: 'widget-a', config: {} })),
+    );
+    await service.handleTick();
+    expect(fetchDataMock).toHaveBeenCalledTimes(12);
+    expect(maxInFlight).toBeGreaterThan(1);
+    expect(maxInFlight).toBeLessThanOrEqual(8);
+  });
+
   it('skips a tick that starts while the previous one is still running', async () => {
     let resolveFirst!: () => void;
     const firstQuery = new Promise<any[]>((resolve) => {

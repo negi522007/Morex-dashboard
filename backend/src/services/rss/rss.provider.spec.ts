@@ -1,4 +1,4 @@
-import { RssProvider } from './rss.provider';
+import { RssProvider, decodeEntities } from './rss.provider';
 import { ServiceFetchError } from '../service-provider.interface';
 
 const RSS_XML = `<?xml version="1.0"?>
@@ -192,5 +192,11 @@ describe('RssProvider (article_list widget)', () => {
       const out: any = await widget.enrich!(items, c as any);
       expect(out.items[0].summary).toBe('ok');
     });
+  });
+  it('turns HTML entities into letters, even when a feed encodes them twice', () => {
+    expect(decodeEntities('Proc&#xE8;s de Rachida Dati')).toBe('Procès de Rachida Dati');
+    expect(decodeEntities('Visite du pape &#224; Metz &eacute;t&eacute;')).toBe('Visite du pape à Metz été');
+    expect(decodeEntities('Blocus dans des lyc&amp;#xE9;es')).toBe('Blocus dans des lycées');
+    expect(decodeEntities('A &amp; B, &unknown; stays')).toBe('A & B, &unknown; stays');
   });
 });

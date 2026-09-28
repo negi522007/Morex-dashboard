@@ -41,16 +41,30 @@ interface ItemInsight {
 
 const textOf = (v: any): string => (typeof v === 'string' ? v : v?.['#text'] ?? '');
 
+// HTML entities → characters: named ones (&eacute;), decimal (&#233;) and hex (&#xE9;). Some feeds encode them
+// twice (&amp;#xE9;), so a second pass is made when the first one produced a new entity.
+const NAMED: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', eacute: 'é', egrave: 'è', ecirc: 'ê', euml: 'ë', agrave: 'à', acirc: 'â',
+  ccedil: 'ç', icirc: 'î', iuml: 'ï', ocirc: 'ô', ugrave: 'ù', ucirc: 'û', uuml: 'ü', Eacute: 'É', Agrave: 'À', rsquo: '’', lsquo: '‘',
+  rdquo: '”', ldquo: '“', laquo: '«', raquo: '»', hellip: '…', ndash: '–', mdash: '—', euro: '€', oelig: 'œ',
+};
+export function decodeEntities(text: string): string {
+  const once = (s: string) =>
+    s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
+      if (e[0] !== '#') return NAMED[e] ?? m;
+      const code = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+      return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : m;
+    });
+  const first = once(text);
+  return /&(#x[0-9a-f]+|#\d+|[a-z]+);/i.test(first) ? once(first) : first;
+}
+
 function stripHtml(html: string): string {
-  return html
-    .replace(/<(script|style|noscript|svg|nav|footer|header|form)[\s\S]*?<\/\1>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
+  return decodeEntities(
+    html
+      .replace(/<(script|style|noscript|svg|nav|footer|header|form)[\s\S]*?<\/\1>/gi, ' ')
+      .replace(/<[^>]+>/g, ' '),
+  )
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -80,7 +94,7 @@ function extractRawItems(parsed: unknown): Record<string, unknown>[] {
 
 function feedTitleOf(parsed: unknown): string | null {
   const root = parsed as Record<string, any>;
-  const t = textOf(root?.rss?.channel?.title) || textOf(root?.feed?.title);
+  const t = decodeEntities(textOf(root?.rss?.channel?.title) || textOf(root?.feed?.title));
   return t ? clip(stripHtml(t), 120) : null;
 }
 
@@ -111,7 +125,7 @@ function imageOf(raw: Record<string, any>, base: string): string | null {
 // (<entry><link href="..."/></entry>) shapes — the two formats real feeds
 // actually use, not every historical variant (RDF).
 function normalizeItem(raw: Record<string, any>, feedTitle: string | null, base: string): FeedItem {
-  const title = textOf(raw.title);
+  const title = decodeEntities(textOf(raw.title)).trim();
 
   let link = '';
   if (typeof raw.link === 'string') {

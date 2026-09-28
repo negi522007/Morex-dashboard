@@ -123,6 +123,13 @@ export function Drawer({ open, lang, about, user, preset, onClose, onCreate }: {
   const params = picked ? paramsOf(picked) : []
   const valid = params.every((p) => !p.required || String(cfg[p.name] ?? '').trim())
   const blocked = picked?.needs === 'github' ? !user.githubLinked : picked?.needs === 'epitech' ? !user.epitech : false
+  // Can this server connect that account at all? (GET /auth/<provider>/status)
+  const [canLink, setCanLink] = useState<Record<string, boolean>>({})
+  useEffect(() => {
+    if (!picked?.needs || canLink[picked.needs] !== undefined) return
+    const id = picked.needs
+    api.get<{ configured: boolean }>(`/auth/${id}/status`).then((r) => setCanLink((c) => ({ ...c, [id]: r.configured }))).catch(() => setCanLink((c) => ({ ...c, [id]: false })))
+  }, [picked, canLink])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -209,9 +216,13 @@ export function Drawer({ open, lang, about, user, preset, onClose, onCreate }: {
                   {blocked ? (
                     <>
                       <p className="muted" style={{ fontSize: 13 }}>{picked.needs === 'github' ? w.needsGithub : w.needsEpitech}</p>
-                      <a className="dw-add" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }} href={picked.needs === 'github' ? '/auth/github' : '/auth/epitech'}>
-                        {picked.needs === 'github' ? w.connectGithub : w.connectEpitech}
-                      </a>
+                      {canLink[picked.needs!] === false ? (
+                        <p className="muted" style={{ fontSize: 13 }}>{w.notReady}</p>
+                      ) : (
+                        <a className="dw-add" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }} href={picked.needs === 'github' ? '/auth/github' : '/auth/epitech'}>
+                          {picked.needs === 'github' ? w.connectGithub : w.connectEpitech}
+                        </a>
+                      )}
                     </>
                   ) : (
                     <button className="dw-add" type="submit" disabled={!valid || busy}>{w.addToDash}</button>

@@ -3,10 +3,11 @@ import { apiFetch } from '../lib/api'
 import { AUTH, useAuthLang } from '../lib/authLang'
 
 // The "or" line and the other ways to sign in, shared by the login and sign-up pages:
-// GitHub, then "Continue with Microsoft (school)" and "Continue with My Epitech".
+// GitHub, "Continue with Microsoft (school)" and "Continue with My Epitech" — each greyed out until configured.
 // Each provider says through GET /auth/<provider>/status whether this server has its client id and secret;
 // until it has, the button stays greyed out with a short reason instead of leading to an error.
 const PROVIDERS = [
+  { id: 'github', icon: <GithubIcon /> },
   { id: 'microsoft', icon: <MicrosoftIcon /> },
   { id: 'epitech', icon: <span className="grid h-5 w-5 place-items-center rounded bg-[#0b5fff] text-[9px] font-extrabold">EPI</span> },
 ] as const
@@ -29,10 +30,8 @@ export function SsoButtons() {
         <span className="text-xs text-white/60">{a.or}</span>
         <div className="h-px flex-1 bg-white/20" />
       </div>
-      {/* A real navigation, not fetch(): the backend redirects to GitHub's consent page */}
-      <a href="/auth/github/login" className={`${base} hover:bg-white/20`}><GithubIcon />{a.github}</a>
       {PROVIDERS.map((p) => {
-        const label = p.id === 'microsoft' ? a.microsoft : a.epitech
+        const label = p.id === 'github' ? a.github : p.id === 'microsoft' ? a.microsoft : a.epitech
         return ready[p.id] ? (
           // A real navigation: the backend answers with a redirect to the provider's login page
           <a key={p.id} href={`/auth/${p.id}/login`} className={`${base} hover:bg-white/20`}>{p.icon}{label}</a>
