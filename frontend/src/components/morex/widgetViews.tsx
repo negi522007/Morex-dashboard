@@ -62,7 +62,7 @@ export function RssView({ data, insight, config, lang, title, lastError }: ViewP
       <div className="cols">
         <a className="lead" href={lead.link} target="_blank" rel="noopener noreferrer">
           {image && <div className="img"><img src={image} alt="" referrerPolicy="no-referrer" />{/en direct|live|en vivo/i.test(lead.title) && <span className="live">● {w.live}</span>}</div>}
-          <h3>{lead.title}</h3>
+          <h2>{lead.title}</h2>
           {recap && <><div className="kicker">{w.essential}</div><div className="recap">{recap}</div></>}
           {ai?.whyItMatters && <div className="why">{ai.whyItMatters}</div>}
           <div className="tags">

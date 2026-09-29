@@ -87,7 +87,10 @@ export function AiBubble({ user, lang, onCreate }: {
 
   return (
     <div className="ai-bubble">
-      <div className={`ai-panel${open ? '' : ' closed'}`} role="dialog" aria-label={w.aiName} aria-hidden={!open}>
+      {/* `inert` (not just aria-hidden) when closed: aria-hidden alone hides it from a screen reader but
+          leaves its buttons/input reachable by Tab — a keyboard user could land on controls that are
+          invisible on screen. `inert` removes it from both focus order and the accessibility tree. */}
+      <div className={`ai-panel${open ? '' : ' closed'}`} role="dialog" aria-label={w.aiName} aria-hidden={!open} inert={!open}>
         <div className="ai-head">
           <span className="ai-av"><img src="/logo.svg" alt="" /></span>
           <div><b>{w.aiName}</b><small>{w.aiSub}</small></div>

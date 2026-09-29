@@ -83,7 +83,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .search .lens svg { width: 18px; height: 18px; }
 .results { position: absolute; top: calc(100% + 8px); left: 0; right: 0; padding: 8px; display: none; z-index: 20; background: rgb(15 23 42 / .92); }
 .search:focus-within .results { display: block; }
-.results h6 { margin: 8px 12px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: rgb(255 255 255 / .5); font-weight: 500; }
+.results .res-label { margin: 8px 12px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: rgb(255 255 255 / .5); font-weight: 500; }
 .results a { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 12px; color: #fff; text-decoration: none; font-size: 14px; }
 .results a:hover { background: rgb(255 255 255 / .08); }
 .results a span { font-size: 12px; color: rgb(255 255 255 / .5); }
@@ -181,7 +181,7 @@ body.editing .rf-tab { display: none; }
 
 /* News: newspaper + AI recap */
 .w[data-kind="rss"] { grid-column: span 2; grid-row: span 4; background: #f5efe3 !important; color: #1f1a17; border: 0 !important; backdrop-filter: none !important; }
-.w[data-kind="rss"] .w-foot, .w[data-kind="rss"] .w-foot .rf-cd, .w[data-kind="rss"] .w-foot .rf-at { color: #8a7d70; }
+.w[data-kind="rss"] .w-foot, .w[data-kind="rss"] .w-foot .rf-cd, .w[data-kind="rss"] .w-foot .rf-at { color: #6b5f55; }
 .np { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
 .np a { color: inherit; text-decoration: none; }
 .np .mast { text-align: center; font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 800; border-bottom: 3px double #1f1a17; padding-bottom: 4px; }
@@ -193,12 +193,14 @@ body.editing .rf-tab { display: none; }
 .np .lead .img img { width: 100%; height: 100%; object-fit: cover; filter: sepia(.12); transition: transform .6s; }
 .np .lead:hover .img img { transform: scale(1.04); }
 .np .live { position: absolute; left: 8px; top: 8px; font-size: 9.5px; font-weight: 700; letter-spacing: .08em; padding: 2px 7px; border-radius: 4px; background: #dc2626; color: #fff; }
-.np h3 { font-family: 'Playfair Display', serif; font-size: 17px; line-height: 1.2; margin: 8px 0 5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.np .kicker { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: #8b5cf6; font-weight: 600; margin-bottom: 3px; }
+.np h2 { font-family: 'Playfair Display', serif; font-size: 17px; line-height: 1.2; margin: 8px 0 5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+/* #6d28d9, not the brand #8b5cf6: on this card's light parchment background (#f5efe3), the brighter
+   violet reads at 3.7:1 — below WCAG AA's 4.5:1 for normal text. Darkened just enough to pass (~6.2:1). */
+.np .kicker { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: #6d28d9; font-weight: 600; margin-bottom: 3px; }
 .np .recap { font-family: Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.55; color: #3f3731; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .np .recap::first-letter { float: left; font-family: 'Playfair Display', serif; font-size: 34px; line-height: .85; font-weight: 800; padding: 3px 5px 0 0; color: #1f1a17; }
 .np .why { margin-top: 8px; padding-left: 10px; border-left: 2px solid #8b5cf6; font-family: Georgia, serif; font-style: italic; font-size: 11.5px; line-height: 1.45; color: #4b423b; }
-.np .tags { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: #8a7d70; }
+.np .tags { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: #6b5f55; }
 .np .tags span + span::before { content: '·'; margin-right: 10px; color: #cbbfae; }
 .np .side { border-left: 1px solid #cbbfae; padding-left: 12px; display: flex; flex-direction: column; gap: 9px; overflow: hidden; }
 .np .side a { border-bottom: 1px solid #ddd3c4; padding-bottom: 8px; }
@@ -267,7 +269,7 @@ body[data-wskin] .w[data-kind="rss"] { box-shadow: 0 20px 40px -18px rgb(0 0 0 /
 .logbook .count span { font-family: 'Caveat', cursive; font-size: 20px; color: #6b5f55; }
 .logbook .people { display: flex; } .logbook .people i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 700 11px Poppins; font-style: normal; color: #1f1a17; border: 2px solid #fbf5e9; margin-left: -7px; }
 .logbook .people i:first-child { margin-left: 0; }
-.logbook .ai { display: inline-flex; align-items: center; gap: 5px; font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: #8b5cf6; margin-top: 4px; }
+.logbook .ai { display: inline-flex; align-items: center; gap: 5px; font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: #6d28d9; margin-top: 4px; }
 .logbook .ai svg { width: 10px; height: 10px; fill: #8b5cf6; }
 .logbook .sum { font: 600 17px/26px 'Caveat', cursive; color: #3b3450; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
 .logbook ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
@@ -276,7 +278,7 @@ body[data-wskin] .w[data-kind="rss"] { box-shadow: 0 20px 40px -18px rgb(0 0 0 /
 .logbook li i { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 700 10px Poppins; font-style: normal; color: #1f1a17; }
 .logbook li .msg { min-width: 0; }
 .logbook li .msg div { font-size: 12.5px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.logbook li .msg small { font-size: 10.5px; color: #8a7d70; }
+.logbook li .msg small { font-size: 10.5px; color: #6b5f55; }
 .logbook li .sha { font: 600 10.5px 'JetBrains Mono', monospace; color: #b45309; background: #fef3c7; padding: 2px 6px; border-radius: 5px; }
 @container (max-width: 400px) { .logbook { grid-template-columns: 1fr; } .logbook .sum { -webkit-line-clamp: 3; } }
 .w[data-kind="gh-daily"] { container-type: inline-size; }

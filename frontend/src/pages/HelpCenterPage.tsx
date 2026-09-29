@@ -43,7 +43,7 @@ export function HelpCenterPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 px-4 py-10 font-sans text-white">
-      <div className="mx-auto max-w-3xl">
+      <main className="mx-auto max-w-3xl">
         <Link to="/dashboard" className="text-sm text-white/60 underline decoration-white/30 hover:text-white">{t.back}</Link>
         <h1 className="mt-4 mb-6 text-3xl font-bold">{t.title}</h1>
         <input
@@ -92,7 +92,7 @@ export function HelpCenterPage() {
             </section>
           ) : null,
         )}
-      </div>
+      </main>
     </div>
   )
 }

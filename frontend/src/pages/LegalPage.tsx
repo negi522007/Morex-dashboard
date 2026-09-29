@@ -8,7 +8,7 @@ export function LegalPage({ titleKey, backKey, children }: { titleKey: Record<La
   const lang = useAuthLang()
   return (
     <div className="min-h-screen bg-slate-950 px-4 py-10 font-sans text-white">
-      <div className="mx-auto max-w-2xl">
+      <main className="mx-auto max-w-2xl">
         <Link to="/register" className="text-sm text-white/60 underline decoration-white/30 hover:text-white">
           {backKey[lang]}
         </Link>
@@ -16,7 +16,7 @@ export function LegalPage({ titleKey, backKey, children }: { titleKey: Record<La
         <div className="space-y-4 text-[15px] leading-relaxed text-white/85 [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-white [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1">
           {children(lang)}
         </div>
-      </div>
+      </main>
     </div>
   )
 }
