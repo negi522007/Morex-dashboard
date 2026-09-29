@@ -29,6 +29,7 @@ export function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   // The backend refuses accounts for people under 13: the date picker stops there too
   const today = new Date()
@@ -44,6 +45,10 @@ export function RegisterPage() {
       setError(a.mismatch)
       return
     }
+    if (!acceptTerms) {
+      setError(a.acceptRequired)
+      return
+    }
 
     setLoading(true)
     try {
@@ -57,6 +62,7 @@ export function RegisterPage() {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           birthDate,
+          acceptTerms,
         }),
       })
       setSubmitted(true)
@@ -180,6 +186,21 @@ export function RegisterPage() {
               placeholder={a.again}
             />
           </div>
+
+          <label className="flex items-start gap-2.5 text-sm text-white/75">
+            <input
+              type="checkbox"
+              checked={acceptTerms}
+              onChange={(e) => setAcceptTerms(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/30 bg-white/10 accent-indigo-400"
+            />
+            <span>
+              {a.acceptPre}{' '}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline decoration-white/40 hover:text-white">{a.termsLabel}</a>
+              {' '}{a.acceptAnd}{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline decoration-white/40 hover:text-white">{a.privacyLabel}</a>
+            </span>
+          </label>
 
           {error && <AuthNotice kind="error" detail={error} />}
 

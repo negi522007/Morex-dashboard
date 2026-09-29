@@ -60,11 +60,11 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 201, description: 'Account created, confirmation email sent' })
-  @ApiResponse({ status: 400, description: 'Invalid email, password under 8 characters, or missing firstName/lastName' })
+  @ApiResponse({ status: 400, description: 'Invalid email, password under 8 characters, missing firstName/lastName, or Terms/Privacy not accepted' })
   @ApiResponse({ status: 409, description: 'An account with this email already exists' })
   @ApiResponse({ status: 503, description: 'Confirmation email failed to send — account was NOT created' })
   async register(
-    @Body() body: { email?: string; password?: string; firstName?: string; lastName?: string; birthDate?: string },
+    @Body() body: { email?: string; password?: string; firstName?: string; lastName?: string; birthDate?: string; acceptTerms?: boolean },
     @Req() req: Request,
   ) {
     const { email, password } = this.validateCredentials(body);
@@ -75,6 +75,11 @@ export class AuthController {
     }
     if (!lastName) {
       throw new BadRequestException('Last name is required');
+    }
+    // Client-side already blocks this; re-checked here so the rule holds even against a
+    // direct API call that skips the form (see the defense checklist: "data checked server-side").
+    if (body.acceptTerms !== true) {
+      throw new BadRequestException('You must accept the Terms of Service and Privacy Policy');
     }
     // Optional for now so existing clients keep working; set REQUIRE_BIRTH_DATE=true once the form asks for it.
     const hasBirthDate = body.birthDate !== undefined && body.birthDate !== null && body.birthDate !== '';

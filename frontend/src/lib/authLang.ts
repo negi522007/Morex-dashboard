@@ -46,6 +46,7 @@ export const AUTH = {
     nWrong: 'Oups, ce mot de passe ne nous dit rien', nWrongText: 'Vérifie ton e-mail et ton mot de passe, puis réessaie.',
     nConfirm: 'Ton lien de confirmation t’attend', nConfirmText: 'Ouvre l’e-mail « Un petit mot de Morex » et clique sur « Oui, c’est moi ». Pense à regarder dans les spams !',
     nError: 'Petit souci de notre côté', nSent: 'Ton univers est presque prêt', nSentText: 'Un petit mot t’attend dans ta boîte mail. Clique sur « Oui, c’est moi », puis connecte-toi.', show: 'Afficher le mot de passe', hide: 'Masquer le mot de passe',
+    acceptPre: 'J’accepte les', termsLabel: 'Conditions d’utilisation', acceptAnd: 'et la', privacyLabel: 'Politique de confidentialité', acceptRequired: 'Tu dois accepter les Conditions d’utilisation et la Politique de confidentialité',
   },
   en: {
     slogan: 'Your universe, at a glance', welcome: 'Welcome', loginSub: 'Log in to your universe', newHere: 'New to Morex?', create: 'Create an account',
@@ -58,6 +59,7 @@ export const AUTH = {
     nWrong: 'Oops, that password doesn’t ring a bell', nWrongText: 'Check your email and password, then try again.',
     nConfirm: 'Your confirmation link is waiting', nConfirmText: 'Open the email “A little note from Morex” and click “Yes, it’s me”. Don’t forget your spam folder!',
     nError: 'A little hiccup on our side', nSent: 'Your universe is almost ready', nSentText: 'A little note is waiting in your inbox. Click “Yes, it’s me”, then log in.', show: 'Show password', hide: 'Hide password',
+    acceptPre: 'I accept the', termsLabel: 'Terms of Service', acceptAnd: 'and the', privacyLabel: 'Privacy Policy', acceptRequired: 'You must accept the Terms of Service and Privacy Policy',
   },
   es: {
     slogan: 'Tu universo, de un vistazo', welcome: 'Bienvenido', loginSub: 'Inicia sesión en tu universo', newHere: '¿Nuevo en Morex?', create: 'Crear una cuenta',
@@ -70,5 +72,6 @@ export const AUTH = {
     nWrong: 'Uy, esa contraseña no nos suena', nWrongText: 'Revisa tu correo y tu contraseña, y vuelve a intentarlo.',
     nConfirm: 'Tu enlace de confirmación te espera', nConfirmText: 'Abre el correo «Una notita de Morex» y haz clic en «Sí, soy yo». ¡Mira también en spam!',
     nError: 'Un pequeño problema por nuestra parte', nSent: 'Tu universo está casi listo', nSentText: 'Una notita te espera en tu correo. Haz clic en «Sí, soy yo» y luego inicia sesión.', show: 'Mostrar la contraseña', hide: 'Ocultar la contraseña',
+    acceptPre: 'Acepto los', termsLabel: 'Términos del servicio', acceptAnd: 'y la', privacyLabel: 'Política de privacidad', acceptRequired: 'Debes aceptar los Términos del servicio y la Política de privacidad',
   },
 }
