@@ -606,6 +606,11 @@ this project's actual constraints. On reconsideration, sessions fit better here:
   widgets refused, `no-store` + `noindex`.
 - Docker image runs Node 20, so `undici` is pinned to the 6.x line (8.x needs Node ≥ 22.19).
 
+## Accessibility
+
+See [ACCESSIBILITY.md](./ACCESSIBILITY.md) — a real bug found and fixed (every widget-configuration
+suggestion list was keyboard-unreachable), what was already in place, and what's honestly not verified.
+
 ## Testing
 
 Unit tests live next to the code they cover, as `*.spec.ts` files (Jest + `ts-jest`). Run them from

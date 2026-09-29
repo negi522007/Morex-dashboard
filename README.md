@@ -166,8 +166,9 @@ approach, and the technology-choice justification (decision matrix), see
 see [API.md](./API.md). For local dev setup, adding a new service, and commit conventions, see
 [CONTRIBUTING.md](./CONTRIBUTING.md). Hit something weird? Check
 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — it's real issues hit while building this, not hypothetical
-ones. What data this app collects and why: [PRIVACY.md](./PRIVACY.md). Team organization, a dated
-timeline of what got built and decided, and what's left: [PROJECT_LOG.md](./PROJECT_LOG.md).
+ones. What data this app collects and why: [PRIVACY.md](./PRIVACY.md). What was tested and fixed for
+keyboard/screen-reader use, and what wasn't: [ACCESSIBILITY.md](./ACCESSIBILITY.md). Team organization, a
+dated timeline of what got built and decided, and what's left: [PROJECT_LOG.md](./PROJECT_LOG.md).
 
 ## Testing
 
