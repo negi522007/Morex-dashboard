@@ -91,7 +91,7 @@ export function AiBubble({ user, lang, onCreate }: {
         <div className="ai-head">
           <span className="ai-av"><img src="/logo.svg" alt="" /></span>
           <div><b>{w.aiName}</b><small>{w.aiSub}</small></div>
-          <button type="button" className="ai-x" aria-label="✕" onClick={() => setOpen(false)}>✕</button>
+          <button type="button" className="ai-x" aria-label={w.close} onClick={() => setOpen(false)}>✕</button>
         </div>
         <div className="ai-chat" ref={chat}>
           <div className="ai-m it">{w.aiHello(user.firstName || '')}
