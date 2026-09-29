@@ -50,11 +50,11 @@ export function Sidebar({ lang, onToggle, onProfile, onHelp, onLogout }: {
         <div className="brand"><img src="/logo.svg" alt="" /><span className="brand-name">Morex</span></div>
         <button className="side-toggle" onClick={onToggle} aria-label="Menu"><svg className="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" /></svg></button>
       </div>
-      <nav>
+      <nav aria-label={t.mainNav}>
         {link(I.grid, t.navDash, undefined, 'on')}
         {link(I.user, t.navProfile, onProfile)}
       </nav>
-      <nav className="bottom">
+      <nav className="bottom" aria-label={t.accountNav}>
         {link(I.help, t.help, onHelp)}
         {link(I.out, t.logout, onLogout, 'danger')}
       </nav>
@@ -131,13 +131,15 @@ export function SearchBar({ lang, widgets, onGoWidget, onAdd }: {
         <button className="lens" aria-label={t.search} onClick={() => (open ? close() : (setOpen(true), setTimeout(() => input.current?.focus(), 200)))}>{I.lens}</button>
         <input ref={input} placeholder={t.search} value={q} onChange={(e) => setQ(e.target.value)} />
         <div className="results glass">
-          {mine.length > 0 && <h6>{t.resWidgets}</h6>}
+          {/* A category label inside a transient search popover, not a real page section — a real <h6>
+              here would put it in the page's heading outline with nothing at h2-h5 above it. */}
+          {mine.length > 0 && <p className="res-label">{t.resWidgets}</p>}
           {mine.map(({ w, e }) => (
             <a key={w.id} href="#" onClick={(ev) => { ev.preventDefault(); close(); onGoWidget(w.id) }}>
               {SERVICES[e!.service].label[lang]} · {w.title || e!.name[lang]} <span>{String(Object.values(w.config)[0] ?? '').replace('********', '🔒')}</span>
             </a>
           ))}
-          <h6>{t.resServices}</h6>
+          <p className="res-label">{t.resServices}</p>
           {services.map((e) => (
             <a key={e.kind} href="#" onClick={(ev) => { ev.preventDefault(); close(); onAdd(e) }}>{SERVICES[e.service].label[lang]} · {e.name[lang]} <span>{t.add}</span></a>
           ))}

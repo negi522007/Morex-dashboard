@@ -1,7 +1,5 @@
 # Dashboard
 
-> Status: work in progress. This README will be completed as the project progresses (see TODO below).
-
 ## What is this? (no technical background needed)
 
 Think of your browser's new-tab page — but instead of a search bar and a few shortcuts, you decide
@@ -38,11 +36,14 @@ automatically at a user-defined interval.
 | Maps / Cinema | API key | ⏳ Not started | — |
 
 **Beyond widgets** (all documented in [API.md](./API.md)): a **Well-being** widget group (quote of the day, "did you know?", horoscope), an "Is this you?" **confirmation page** with a "not me" option, **sign-in with a school Microsoft account**, a **help assistant** that explains the app, each service and the technical vocabulary in plain words (English/French/Spanish, works with or without AI), optional **AI** (article recaps with images,
-per-widget insights, a daily brief, a natural-language widget assistant — off unless `AI_PROVIDER`/`AI_API_KEY`
+per-widget insights, a daily brief, a real back-and-forth **widget-creation chat** — off unless `AI_PROVIDER`/`AI_API_KEY`
 are set, opt-in per widget, never touches the journal), **threshold alerts** (in-app + email), **value
-history** for charts, a **read-only public share link**, and **SSRF protection** on every user-supplied URL
-the server fetches. Not built, on purpose: Google Photos and Epitech student data (credits/XP) — reasons in
-API.md.
+history** for charts, a **read-only public share link**, a private **journal** (entries encrypted at rest),
+a DiceBear/photo **avatar editor**, **exporting your own data** as one JSON file, **deleting your own
+account**, every widget surfacing the **exact reason its last refresh failed** instead of an indefinite
+"waiting for data", and **SSRF protection** on every user-supplied URL the server fetches. Not built, on
+purpose: Google Photos, Epitech student data (credits/XP), and Steam (Valve gates API keys behind having
+spent real money once) — reasons in API.md.
 
 The exact list currently live (names, descriptions, parameters) is always exposed dynamically by the
 server at `GET /about.json` — this table can drift, that endpoint can't.
@@ -165,8 +166,9 @@ approach, and the technology-choice justification (decision matrix), see
 see [API.md](./API.md). For local dev setup, adding a new service, and commit conventions, see
 [CONTRIBUTING.md](./CONTRIBUTING.md). Hit something weird? Check
 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — it's real issues hit while building this, not hypothetical
-ones. What data this app collects and why: [PRIVACY.md](./PRIVACY.md). Team organization, a dated
-timeline of what got built and decided, and what's left: [PROJECT_LOG.md](./PROJECT_LOG.md).
+ones. What data this app collects and why: [PRIVACY.md](./PRIVACY.md). What was tested and fixed for
+keyboard/screen-reader use, and what wasn't: [ACCESSIBILITY.md](./ACCESSIBILITY.md). Team organization, a
+dated timeline of what got built and decided, and what's left: [PROJECT_LOG.md](./PROJECT_LOG.md).
 
 ## Testing
 
@@ -181,28 +183,21 @@ important, what isn't and why.
 
 ## TODO
 
-- [x] Bootstrap the NestJS app (`backend/`), Prisma, and a working `/about.json`
-- [x] `AuthModule`: signup, email confirmation, session login/logout, GitHub OAuth linking, "Sign in with GitHub"
-- [x] `TimerModule`: refresh scheduler
-- [x] `WidgetsModule`: add/reconfigure/move/delete widget instances
-- [x] Services: RSS, Market data, GitHub
-- [x] Unit tests for the backend's business logic
-- [x] API reference ([API.md](./API.md))
-- [x] Architecture diagrams (module graph, ER diagram, sequence diagrams)
-- [x] Non-technical user-facing section
-- [x] Usage walkthrough, contributor guide, and troubleshooting doc
-- [x] Bootstrap the React app (`frontend/`): auth pages (login/register), protected dashboard route
-- [x] Widget dashboard UI: add/reconfigure/move/resize/delete, backed by the real API (see [FRONTEND.md](./FRONTEND.md))
-- [x] `AdminModule`: list/edit/ban/unban/delete users — not required by the brief, built anyway
-- [x] Profile editing: `PATCH /auth/me` (self: name, password) and `PATCH /admin/users/:id` (admin: name, emailVerified)
-- [x] GitHub repo picker: `GET /services/github/repos` + `WidgetParam.optionsUrl` contract
-- [x] Live API docs ([Swagger UI](http://localhost:8080/docs) once the server is running), generated from the code
-- [x] Privacy note ([PRIVACY.md](./PRIVACY.md)) — plain-language, not fabricated legal text
-- [x] Project log: team organization, a dated decision timeline, what's left ([PROJECT_LOG.md](./PROJECT_LOG.md))
-- [x] Weather service (Open-Meteo)
-- [x] Backend: AI enrichment, calendar/Epitech/custom-API services, alerts, history, share link, My Epitech OIDC, SSRF guard (see API.md; frontend adaptation checklist at the end of it)
-- [ ] Get the app declared by Epitech staff (OIDC client id/secret) — needed before "Connect with My Epitech" works
-- [x] Backend: "Is this you?" confirmation page, birth date at sign-up, Well-being widgets (quote of the day, did you know, horoscope), Microsoft sign-in (see API.md)
-- [ ] Services: Maps/Cinema
-- [ ] Frontend: apply the Morex mockup (`frontend/public/mockups.html`) — Morayo; the backend side is done, see "Backing the Morex mockup" in [API.md](./API.md)
-- [ ] Frontend: Terms of Service/Privacy Policy acceptance, in-app docs page
+- [x] Backend: accounts, sessions, `TimerModule` scheduler, `WidgetsModule`, `AdminModule`, `/about.json`
+- [x] Every service and widget in the table above, all backed by real external APIs (10 services, 23 widgets)
+- [x] OAuth 2.0 (GitHub, and Microsoft/My Epitech via OIDC — GitHub's grant is properly revoked on unlink,
+      so reconnecting doesn't silently reuse the old account)
+- [x] Frontend: the full "Morex" design (`frontend/public/mockups.html`) applied and wired to the real API —
+      themes, widget skins, journal, avatar editor (DiceBear + photo upload), i18n (EN/FR/ES)
+- [x] Every widget surfaces the exact reason its last refresh failed (`lastError`) instead of an
+      indefinite "waiting for data" — a 404, a rate limit, an empty RSS feed, a disconnected account
+- [x] Type-ahead suggestions on (almost) every widget field, real back-and-forth widget-creation chat, and
+      a documentation help chat that also handles small talk naturally
+- [x] Exporting your own data as JSON, deleting your own account
+- [x] Unit tests for the backend's business logic (470+ tests), architecture diagrams, API reference,
+      contributor guide, troubleshooting doc, privacy note, dated project log
+- [ ] Get the app declared by Epitech staff (OIDC client id/secret) — needed before "Connect with My Epitech" works; not something we control
+- [ ] Services: Maps/Cinema — not built; the brief's list is explicitly "non-exhaustive" and the minimum
+      (services/widgets) is already well exceeded
+- [x] Frontend: Terms of Service/Privacy Policy acceptance at sign-up (`/terms`, `/privacy`, checked both
+      client- and server-side), a dedicated in-app Help Center (`/help`, searchable, grouped by kind)

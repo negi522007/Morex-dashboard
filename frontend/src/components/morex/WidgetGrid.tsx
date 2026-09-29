@@ -45,9 +45,9 @@ export function WidgetCard({ widget, lang, editing = false, className = '', styl
       {!preview && <Decoration name={widget.decoration} />}
       {!preview && (
         <>
-          <button className="badge del" aria-label="−" onClick={(e) => { e.stopPropagation(); onDelete?.() }}>−</button>
-          <button className="badge edit" aria-label="✎" onClick={(e) => { e.stopPropagation(); onEdit?.() }}>✎</button>
-          <button className="resize" aria-label="↘" onPointerDown={onResizeStart}>
+          <button className="badge del" aria-label={W[lang].delete} onClick={(e) => { e.stopPropagation(); onDelete?.() }}>−</button>
+          <button className="badge edit" aria-label={W[lang].edit} onClick={(e) => { e.stopPropagation(); onEdit?.() }}>✎</button>
+          <button className="resize" aria-label={W[lang].resize} onPointerDown={onResizeStart}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 13v8h-8M21 21l-8-8M3 11V3h8M3 3l8 8" /></svg>
           </button>
         </>

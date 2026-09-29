@@ -549,7 +549,7 @@ export function JournalModal({ lang, onClose }: { lang: Lang; onClose: () => voi
 
   return (
     <Modal onClose={onClose} className="modal journal-modal">
-      <button className="j-close" onClick={onClose} aria-label="×">×</button>
+      <button className="j-close" onClick={onClose} aria-label={W[lang].close}>×</button>
       <div ref={book} className={`book${opening ? ' opening' : ''}`}>
         <div className="page left">
           <p className="j-title">{t.journal}</p>

@@ -94,7 +94,7 @@ export function CityPicker({ lang, home, cities, onChange }: {
           <div className="cp-chips">
             {cities.map((c) => (
               <span key={c.stored} className="cp-chip">{c.iso2 ? flagOf(c.iso2) : '🌐'} {c.label}
-                <button type="button" aria-label="✕" onClick={() => onChange(home, cities.filter((x) => x !== c))}>✕</button></span>
+                <button type="button" aria-label={`${w.delete} ${c.label}`} onClick={() => onChange(home, cities.filter((x) => x !== c))}>✕</button></span>
             ))}
           </div>
         )}

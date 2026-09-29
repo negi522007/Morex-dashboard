@@ -606,6 +606,11 @@ this project's actual constraints. On reconsideration, sessions fit better here:
   widgets refused, `no-store` + `noindex`.
 - Docker image runs Node 20, so `undici` is pinned to the 6.x line (8.x needs Node ≥ 22.19).
 
+## Accessibility
+
+See [ACCESSIBILITY.md](./ACCESSIBILITY.md) — a real bug found and fixed (every widget-configuration
+suggestion list was keyboard-unreachable), what was already in place, and what's honestly not verified.
+
 ## Testing
 
 Unit tests live next to the code they cover, as `*.spec.ts` files (Jest + `ts-jest`). Run them from
@@ -685,6 +690,20 @@ to parallel CPU-intensive work — accepted because the actual workload is I/O-b
 case where the event loop excels; to be revisited only if heavy processing appears later.
 
 *Validated by the team: Morayo reviewed and agreed with this stack and architecture after filling their
+own matrix independently.*
+
+**What each of us already knew, and how it shaped the "Team experience" row above:** Exauce had already
+built and deployed NestJS + Prisma projects before this one, including handling sessions, OAuth linking
+and Docker-based deployment — the exact shape of this app's backend. Neither of us had shipped a
+production Flask/FastAPI or Spring Boot backend. On React: both had prior experience building React UIs;
+neither had used Vue or Angular beyond a tutorial. That prior experience is what the "Team experience"
+row (weight 3, the joint-highest) scores — on a fixed deadline, not re-learning how to structure, debug
+and deploy the backend layer mattered as much as any single technical criterion in the table.
+
+**Real POCs, not just the matrix**: [`poc/`](./poc/) has a small, actually-built-and-run proof of
+concept for every alternative in the tables below and above (Python/Flask, Java/`HttpServer`, MySQL,
+MongoDB, TypeORM) — each with the exact commands, its real output, and what running it confirmed or
+complicated about the corresponding decision. See [`poc/README.md`](./poc/README.md).
 
 ### The other layers (each compared against at least two alternatives)
 

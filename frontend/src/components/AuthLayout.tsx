@@ -36,54 +36,59 @@ export function AuthLayout({ title, subtitle, switchPrompt, switchLabel, switchT
         className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-indigo-950/40 to-slate-950/60"
       />
 
-      {/* Language of the page, before logging in */}
-      <div className="absolute top-5 right-5 z-10 flex gap-1 rounded-full border border-white/15 bg-white/10 p-1 backdrop-blur-md">
-        {LANGS.map((l) => (
-          <button key={l} type="button" onClick={() => setAuthLang(l)} aria-pressed={l === lang}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${l === lang ? 'bg-white text-indigo-950' : 'text-white/80 hover:text-white'}`}>
-            {l.toUpperCase()}
-          </button>
-        ))}
-      </div>
+      {/* `contents` keeps this an invisible wrapper for layout (grid/flex above still apply directly to
+          its children) while giving the page a single <main> landmark — without it, everything here sat
+          outside any landmark region (axe: "region", "landmark-one-main"). */}
+      <main className="contents">
+        {/* Language of the page, before logging in */}
+        <div className="absolute top-5 right-5 z-10 flex gap-1 rounded-full border border-white/15 bg-white/10 p-1 backdrop-blur-md">
+          {LANGS.map((l) => (
+            <button key={l} type="button" onClick={() => setAuthLang(l)} aria-pressed={l === lang}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${l === lang ? 'bg-white text-indigo-950' : 'text-white/80 hover:text-white'}`}>
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
 
-      <div className="relative grid w-full max-w-6xl grid-cols-1 overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl shadow-indigo-950/60 md:min-h-[680px] md:grid-cols-[1.1fr_1fr]">
-        {/* Brand side */}
-        <section className="flex min-w-0 flex-col justify-between gap-10 bg-slate-950/20 p-8 md:p-14">
-          <div className="flex animate-fade-up items-center gap-2.5">
-            <Logo size={52} />
-            <span className="text-2xl font-semibold tracking-tight">Morex</span>
-          </div>
+        <div className="relative grid w-full max-w-6xl grid-cols-1 overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl shadow-indigo-950/60 md:min-h-[680px] md:grid-cols-[1.1fr_1fr]">
+          {/* Brand side */}
+          <section aria-label="Morex" className="flex min-w-0 flex-col justify-between gap-10 bg-slate-950/20 p-8 md:p-14">
+            <div className="flex animate-fade-up items-center gap-2.5">
+              <Logo size={52} />
+              <span className="text-2xl font-semibold tracking-tight">Morex</span>
+            </div>
 
-          <div className="animate-fade-up [animation-delay:120ms]">
-            <h1 className="text-6xl font-bold tracking-tight md:text-8xl">
-              <span className="bg-gradient-to-r from-white via-indigo-100 to-sky-300 bg-clip-text text-transparent">
-                Morex
+            <div className="animate-fade-up [animation-delay:120ms]">
+              <h1 className="text-6xl font-bold tracking-tight md:text-8xl">
+                <span className="bg-gradient-to-r from-white via-indigo-100 to-sky-300 bg-clip-text text-transparent">
+                  Morex
+                </span>
+              </h1>
+              <p className="mt-4 text-2xl font-light text-white/85 md:text-3xl">{AUTH[lang].slogan}</p>
+            </div>
+
+            <Link
+              to={switchTo}
+              className="group flex w-fit animate-fade-up flex-col rounded-2xl border border-white/20 bg-white/10 px-6 py-4 backdrop-blur-md transition hover:bg-white/20 [animation-delay:240ms]"
+            >
+              <span className="text-sm text-white/70">{switchPrompt}</span>
+              <span className="flex items-center gap-2 text-lg font-medium">
+                {switchLabel}
+                <span aria-hidden className="transition group-hover:translate-x-1">
+                  »
+                </span>
               </span>
-            </h1>
-            <p className="mt-4 text-2xl font-light text-white/85 md:text-3xl">{AUTH[lang].slogan}</p>
-          </div>
+            </Link>
+          </section>
 
-          <Link
-            to={switchTo}
-            className="group flex w-fit animate-fade-up flex-col rounded-2xl border border-white/20 bg-white/10 px-6 py-4 backdrop-blur-md transition hover:bg-white/20 [animation-delay:240ms]"
-          >
-            <span className="text-sm text-white/70">{switchPrompt}</span>
-            <span className="flex items-center gap-2 text-lg font-medium">
-              {switchLabel}
-              <span aria-hidden className="transition group-hover:translate-x-1">
-                »
-              </span>
-            </span>
-          </Link>
-        </section>
-
-        {/* Form side */}
-        <section className="flex min-w-0 animate-fade-up flex-col justify-center border-t border-white/10 bg-white/10 p-8 backdrop-blur-2xl [animation-delay:180ms] md:border-t-0 md:border-l md:p-14">
-          {title && <h2 className="text-4xl font-semibold">{title}</h2>}
-          {subtitle && <p className="mt-2 text-base text-white/70">{subtitle}</p>}
-          <div className={title || subtitle ? 'mt-8' : ''}>{children}</div>
-        </section>
-      </div>
+          {/* Form side */}
+          <section aria-label={title || switchLabel} className="flex min-w-0 animate-fade-up flex-col justify-center border-t border-white/10 bg-white/10 p-8 backdrop-blur-2xl [animation-delay:180ms] md:border-t-0 md:border-l md:p-14">
+            {title && <h2 className="text-4xl font-semibold">{title}</h2>}
+            {subtitle && <p className="mt-2 text-base text-white/70">{subtitle}</p>}
+            <div className={title || subtitle ? 'mt-8' : ''}>{children}</div>
+          </section>
+        </div>
+      </main>
     </div>
   )
 }
