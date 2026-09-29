@@ -692,13 +692,16 @@ case where the event loop excels; to be revisited only if heavy processing appea
 *Validated by the team: Morayo reviewed and agreed with this stack and architecture after filling their
 own matrix independently.*
 
-**What each of us already knew, and how it shaped the "Team experience" row above:** Exauce had already
-built and deployed NestJS + Prisma projects before this one, including handling sessions, OAuth linking
-and Docker-based deployment — the exact shape of this app's backend. Neither of us had shipped a
-production Flask/FastAPI or Spring Boot backend. On React: both had prior experience building React UIs;
-neither had used Vue or Angular beyond a tutorial. That prior experience is what the "Team experience"
-row (weight 3, the joint-highest) scores — on a fixed deadline, not re-learning how to structure, debug
-and deploy the backend layer mattered as much as any single technical criterion in the table.
+**What each of us already knew, and how it shaped the "Team experience" row above:** Exauce already knew
+NestJS and Docker before this project. Morayo already knew React. Neither of us had prior experience with
+Python, Java, Vue, Angular, MySQL, MongoDB or TypeORM — those were genuinely researched and tested for
+this decision (see the real POCs below), not just ruled out on paper. That's what the "Team experience"
+row (weight 3, the joint-highest) scores: on a fixed deadline, starting from a language and framework
+each of us already knew how to structure, debug and deploy mattered as much as any single technical
+criterion in the table.
+
+Process: each of us filled the decision matrix independently first, then compared — the numbers above are
+the result of that comparison, not one person's opinion imposed on the other.
 
 **Real POCs, not just the matrix**: [`poc/`](./poc/) has a small, actually-built-and-run proof of
 concept for every alternative in the tables below and above (Python/Flask, Java/`HttpServer`, MySQL,
