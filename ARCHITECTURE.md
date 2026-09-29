@@ -701,7 +701,41 @@ each of us already knew how to structure, debug and deploy mattered as much as a
 criterion in the table.
 
 Process: each of us filled the decision matrix independently first, then compared — the numbers above are
-the result of that comparison, not one person's opinion imposed on the other.
+the result of that comparison, not one person's opinion imposed on the other. The two individual matrices
+(validated by Morayo):
+
+**Morayo's matrix (frontend perspective, React already known):**
+
+| Criterion | Weight | Node.js | Python | Java | React | Vue | Angular |
+|---|---|---|---|---|---|---|---|
+| Team experience | 3 | 3 | 3 | 2 | 5 | 3 | 2 |
+| Ecosystem / libraries | 3 | 4 | 4 | 3 | 5 | 4 | 3 |
+| Docker deployment complexity | 2 | 4 | 4 | 2 | 4 | 4 | 3 |
+| OAuth tooling maturity | 2 | 4 | 4 | 3 | 4 | 3 | 3 |
+| Suitability for scheduled refresh | 1 | 4 | 4 | 3 | 4 | 4 | 3 |
+| Community support / longevity | 1 | 5 | 5 | 4 | 5 | 4 | 4 |
+| Learning value | 1 | 4 | 3 | 3 | 4 | 3 | 3 |
+| **Weighted total** | | **56** | **54** | **35** | **62** | **46** | **37** |
+
+**Exauce's matrix (backend perspective, NestJS + Docker already known):**
+
+| Criterion | Weight | Node.js | Python | Java | React | Vue | Angular |
+|---|---|---|---|---|---|---|---|
+| Team experience | 3 | 5 | 2 | 1 | 3 | 2 | 1 |
+| Ecosystem / libraries | 3 | 5 | 4 | 3 | 4 | 4 | 3 |
+| Docker deployment complexity | 2 | 5 | 4 | 2 | 4 | 4 | 3 |
+| OAuth tooling maturity | 2 | 5 | 4 | 3 | 4 | 3 | 3 |
+| Suitability for scheduled refresh | 1 | 5 | 4 | 3 | 4 | 4 | 3 |
+| Community support / longevity | 1 | 5 | 5 | 4 | 5 | 4 | 4 |
+| Learning value | 1 | 4 | 3 | 3 | 4 | 3 | 3 |
+| **Weighted total** | | **64** | **43** | **28** | **59** | **46** | **37** |
+
+**Why this matters more than either matrix alone:** the two of us started from different real experience
+(React for Morayo, NestJS + Docker for Exauce), yet both independently ranked Node.js first among backend
+options and React first among frontend options — never the reverse. Only the "Team experience" row moves
+sharply depending on who scored it (Node.js: 56→64, React: 62→59); the other six criteria, more
+researched than personally lived, stay close between the two. That convergence from two different
+starting points is the real argument, not just "everyone voted for what they already knew."
 
 **Real POCs, not just the matrix**: [`poc/`](./poc/) has a small, actually-built-and-run proof of
 concept for every alternative in the tables below and above (Python/Flask, Java/`HttpServer`, MySQL,
