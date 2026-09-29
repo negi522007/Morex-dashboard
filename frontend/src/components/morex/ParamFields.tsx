@@ -110,6 +110,16 @@ function Range({ min, max, value, onChange, unit }: { min: number; max: number; 
   return <div className="pf-range"><input type="range" min={min} max={max} value={value} onChange={(e) => onChange(e.target.value)} /><b>{value} {unit}</b></div>
 }
 const List = ({ children }: { children: ReactNode }) => <div className="pf-list" role="listbox">{children}</div>
+// A listbox option that also works from the keyboard (Tab to reach it, Enter/Space to pick it) — plain
+// divs with only onClick are invisible to keyboard-only and screen-reader users.
+function Opt({ selected, onSelect, className = '', children }: { selected?: boolean; onSelect: () => void; className?: string; children: ReactNode }) {
+  return (
+    <div role="option" aria-selected={!!selected} tabIndex={0} className={`${selected ? 'on' : ''} ${className}`.trim()}
+      onClick={onSelect} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect() } }}>
+      {children}
+    </div>
+  )
+}
 
 // ---------- one control per kind of setting ----------
 function FeedPicker({ value, onChange, lang }: { value: string; onChange: (v: string) => void; lang: Lang }) {
@@ -148,8 +158,8 @@ function CryptoPicker({ value, onChange, lang }: { value: string; onChange: (v: 
     <>
       <input className="pf-in pf-search" value={shown} placeholder="Bitcoin, ETH…" onFocus={(e) => e.target.select()} onChange={(e) => { setTyping(true); setQ(e.target.value) }} />
       <List>
-        {popular.map(([id, n, t, g, c]) => <div key={id} role="option" aria-selected={value === id} className={value === id ? 'on' : ''} onClick={() => pick(id)}><span className="pf-coin" style={{ background: c }}>{g}</span>{n}<small>{t}</small></div>)}
-        {rest.map((f) => <div key={f.value} role="option" aria-selected={value === f.value} className={value === f.value ? 'on' : ''} onClick={() => pick(f.value, f.label)}><span className="pf-coin">🪙</span>{f.label}</div>)}
+        {popular.map(([id, n, t, g, c]) => <Opt key={id} selected={value === id} onSelect={() => pick(id)}><span className="pf-coin" style={{ background: c }}>{g}</span>{n}<small>{t}</small></Opt>)}
+        {rest.map((f) => <Opt key={f.value} selected={value === f.value} onSelect={() => pick(f.value, f.label)}><span className="pf-coin">🪙</span>{f.label}</Opt>)}
         {!popular.length && !rest.length && <div className="pf-empty">{T.none[lang]}</div>}
       </List>
     </>
@@ -174,7 +184,7 @@ function RepoPicker({ value, onChange, lang, linked }: { value: string; onChange
         <>
           <small>{T.yourRepos[lang]}</small>
           <input className="pf-in pf-search" value={q} placeholder={T.search[lang]} onChange={(e) => setQ(e.target.value)} />
-          <List>{shown.map((r) => <div key={r.value} role="option" aria-selected={value === r.value} className={value === r.value ? 'on' : ''} onClick={() => onChange(r.value)}>📁 {r.label}</div>)}
+          <List>{shown.map((r) => <Opt key={r.value} selected={value === r.value} onSelect={() => onChange(r.value)}>📁 {r.label}</Opt>)}
             {!shown.length && <div className="pf-empty">{T.none[lang]}</div>}</List>
         </>
       ) : <small>{T.notLinked[lang]}</small>}
@@ -194,7 +204,13 @@ function CityField({ value, onChange, lang }: { value: string; onChange: (v: str
       <input className="pf-in pf-search" value={q} placeholder="Cotonou, Paris…" onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
         onChange={(e) => { setQ(e.target.value); onChange(e.target.value) }} />
       {open && found.length > 0 && (
-        <List>{found.map((c, i) => <div key={i} role="option" aria-selected={false} onMouseDown={(e) => { e.preventDefault(); setQ(c.value); onChange(c.value); setOpen(false) }}>📍 {c.label}</div>)}</List>
+        <List>{found.map((c, i) => {
+          const select = () => { setQ(c.value); onChange(c.value); setOpen(false) }
+          // onMouseDown (not onClick) so the option is picked before the input's onBlur closes the list;
+          // tabIndex/onKeyDown give the same option to keyboard users, who never trigger that blur race.
+          return <div key={i} role="option" aria-selected={false} tabIndex={0}
+            onMouseDown={(e) => { e.preventDefault(); select() }} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), select())}>📍 {c.label}</div>
+        })}</List>
       )}
     </div>
   )
@@ -207,7 +223,7 @@ function CountryPicker({ value, onChange, lang }: { value: string; onChange: (v:
     <>
       <div className="pf-flags">{TOP_COUNTRIES.map((c) => <button key={c} type="button" className={c === value.toUpperCase() ? 'on' : ''} onClick={() => onChange(c)}>{flagOf(c)}<small>{c}</small></button>)}</div>
       <input className="pf-in pf-search" value={q} placeholder={T.otherCountry[lang]} onChange={(e) => setQ(e.target.value)} />
-      {found.length > 0 && <List>{found.map((c) => <div key={c.value} role="option" aria-selected={value.toUpperCase() === c.value} className={value.toUpperCase() === c.value ? 'on' : ''} onClick={() => { onChange(c.value); setQ('') }}>{flagOf(c.value)} {c.label}</div>)}</List>}
+      {found.length > 0 && <List>{found.map((c) => <Opt key={c.value} selected={value.toUpperCase() === c.value} onSelect={() => { onChange(c.value); setQ('') }}>{flagOf(c.value)} {c.label}</Opt>)}</List>}
     </>
   )
 }
@@ -228,9 +244,9 @@ function ChannelPicker({ value, onChange, lang }: { value: string; onChange: (v:
       {found.length > 0 && (
         <List>
           {found.map((c) => (
-            <div key={c.value} role="option" aria-selected={c.value === value} className={c.value === value ? 'on' : ''} onClick={() => onChange(c.value)}>
+            <Opt key={c.value} selected={c.value === value} onSelect={() => onChange(c.value)}>
               {c.label}{c.subscribers != null && <small> · {compact(c.subscribers, lang)} {W[lang].subscribers}</small>}
-            </div>
+            </Opt>
           ))}
         </List>
       )}
@@ -277,8 +293,8 @@ function JsonExplorer({ url, listPath, pick, value, onChange, lang }: { url: str
       {busy ? <small>{T.reading[lang]}</small> : rows.length > 0 ? (
         <>
           <small>{pick === 'list' ? T.pickList[lang] : pick === 'field' ? T.pickField[lang] : T.pickValue[lang]}</small>
-          <div className="pf-tree">{rows.slice(0, 30).map((r) => (
-            <div key={r.path} className={r.path === value ? 'on' : ''} onClick={() => onChange(r.path)}><span className="k">{r.label}</span>{r.sample !== '' && <>: <span className="v">{String(r.sample).slice(0, 40)}</span></>}</div>
+          <div className="pf-tree" role="listbox">{rows.slice(0, 30).map((r) => (
+            <Opt key={r.path} selected={r.path === value} onSelect={() => onChange(r.path)}><span className="k">{r.label}</span>{r.sample !== '' && <>: <span className="v">{String(r.sample).slice(0, 40)}</span></>}</Opt>
           ))}</div>
         </>
       ) : url.trim() && data ? <small>{T.noJson[lang]}</small> : null}
