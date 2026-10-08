@@ -178,12 +178,16 @@ export class AuthController {
   @UseGuards(SessionGuard)
   @ApiCookieAuth('dashboard_session')
   @ApiOperation({ summary: 'Get the currently logged-in user — useful to check auth state on app load' })
-  @ApiResponse({ status: 200, description: 'The current user, plus githubLinked, hasPassword (false = OAuth sign-in only) and `epitech` and `microsoft` (linked-account profiles or null)' })
+  @ApiResponse({ status: 200, description: 'The current user, plus githubLinked, googleLinked, hasPassword (false = OAuth sign-in only) and `epitech` and `microsoft` (linked-account profiles or null)' })
   @ApiResponse({ status: 401, description: 'No valid session' })
   async me(@CurrentUser() user: PublicUser) {
-    const [githubLinked, hasPassword] = await Promise.all([this.authService.hasLinkedGithub(user.id), this.authService.hasPassword(user.id)]);
+    const [githubLinked, googleLinked, hasPassword] = await Promise.all([
+      this.authService.hasLinkedGithub(user.id),
+      this.authService.hasLinkedGoogle(user.id),
+      this.authService.hasPassword(user.id),
+    ]);
     const [epitech, microsoft] = await Promise.all([this.epitechOidc.profileOf(user.id), this.microsoftOidc.profileOf(user.id)]);
-    return { ...user, githubLinked, hasPassword, epitech, microsoft };
+    return { ...user, githubLinked, googleLinked, hasPassword, epitech, microsoft };
   }
 
   @Patch('me')

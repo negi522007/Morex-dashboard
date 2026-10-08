@@ -120,7 +120,8 @@ export const W = {
     unlinkedTitle: (n: string) => `${n} n’est pas connecté`, unlinkedText: 'Ce widget a besoin de ton compte pour afficher ses données.',
     linkUnlocks: { github: { text: 'Tes widgets GitHub peuvent maintenant se mettre à jour', items: ['Derniers commits', 'Issues', 'Statistiques', 'Ce qui a changé'] },
       epitech: { text: 'Ton profil Epitech est relié à Morex', items: ['Mon profil', 'Planning'] },
-      microsoft: { text: 'Tu peux maintenant te connecter avec ton compte d’école', items: ['Connexion rapide'] } },
+      microsoft: { text: 'Tu peux maintenant te connecter avec ton compte d’école', items: ['Connexion rapide'] },
+      google: { text: 'Tu peux maintenant te connecter avec ton compte Google', items: ['Connexion rapide'] } },
     tapDay: 'touche pour ta journée', quoteTitle: 'Citation du jour', factTitle: 'Le savais-tu ?', tapDiscover: 'Touche pour découvrir', topics: { nature: 'Nature', space: 'Espace', science: 'Science', history: 'Histoire', tech: 'Technologie', body: 'Corps humain' } as Record<string, string>, birthDate: 'Date de naissance', birthNote: 'Sert à ton horoscope : seul ton signe est utilisé', love: 'Amour', work: 'Travail', energy: 'Énergie', fromBirth: 'Rempli d’après ta date de naissance', unknownZone: (x: string) => `Ville inconnue : ${x}. Écris une ville (Paris, New York…) ou un fuseau (Europe/Paris)`, aiLabel: 'Analyse par l’IA', aiHint: 'Ajoute un résumé ou un conseil écrit par l’IA', saveError: 'Impossible d’enregistrer', noParams: 'Aucun réglage : ce widget utilise ton compte lié',
   },
   en: {
@@ -143,7 +144,8 @@ export const W = {
     unlinkedTitle: (n: string) => `${n} is not connected`, unlinkedText: 'This widget needs your account to show its data.',
     linkUnlocks: { github: { text: 'Your GitHub widgets can now update', items: ['Latest commits', 'Issues', 'Stats', 'What changed'] },
       epitech: { text: 'Your Epitech profile is linked to Morex', items: ['My profile', 'Planning'] },
-      microsoft: { text: 'You can now sign in with your school account', items: ['Quick sign-in'] } },
+      microsoft: { text: 'You can now sign in with your school account', items: ['Quick sign-in'] },
+      google: { text: 'You can now sign in with your Google account', items: ['Quick sign-in'] } },
     tapDay: 'tap for your day', quoteTitle: 'Quote of the day', factTitle: 'Did you know?', tapDiscover: 'Tap to find out', topics: { nature: 'Nature', space: 'Space', science: 'Science', history: 'History', tech: 'Technology', body: 'Human body' } as Record<string, string>, birthDate: 'Birth date', birthNote: 'Used for your horoscope: only your sign is used', love: 'Love', work: 'Work', energy: 'Energy', fromBirth: 'Filled from your birth date', unknownZone: (x: string) => `Unknown city: ${x}. Type a city (Paris, New York…) or a time zone (Europe/Paris)`, aiLabel: 'AI analysis', aiHint: 'Adds a summary or advice written by AI', saveError: 'Could not save', noParams: 'No settings: this widget uses your linked account',
   },
   es: {
@@ -166,7 +168,8 @@ export const W = {
     unlinkedTitle: (n: string) => `${n} no está conectado`, unlinkedText: 'Este widget necesita tu cuenta para mostrar sus datos.',
     linkUnlocks: { github: { text: 'Tus widgets de GitHub ya pueden actualizarse', items: ['Últimos commits', 'Issues', 'Estadísticas', 'Qué ha cambiado'] },
       epitech: { text: 'Tu perfil de Epitech está vinculado a Morex', items: ['Mi perfil', 'Planning'] },
-      microsoft: { text: 'Ya puedes iniciar sesión con tu cuenta de la escuela', items: ['Acceso rápido'] } },
+      microsoft: { text: 'Ya puedes iniciar sesión con tu cuenta de la escuela', items: ['Acceso rápido'] },
+      google: { text: 'Ya puedes iniciar sesión con tu cuenta de Google', items: ['Acceso rápido'] } },
     tapDay: 'toca para tu día', quoteTitle: 'Cita del día', factTitle: '¿Sabías que…?', tapDiscover: 'Toca para descubrirlo', topics: { nature: 'Naturaleza', space: 'Espacio', science: 'Ciencia', history: 'Historia', tech: 'Tecnología', body: 'Cuerpo humano' } as Record<string, string>, birthDate: 'Fecha de nacimiento', birthNote: 'Sirve para tu horóscopo: solo se usa tu signo', love: 'Amor', work: 'Trabajo', energy: 'Energía', fromBirth: 'Rellenado según tu fecha de nacimiento', unknownZone: (x: string) => `Ciudad desconocida: ${x}. Escribe una ciudad (París, Nueva York…) o una zona horaria (Europe/Paris)`, aiLabel: 'Análisis por IA', aiHint: 'Añade un resumen o un consejo escrito por la IA', saveError: 'No se pudo guardar', noParams: 'Sin ajustes: este widget usa tu cuenta vinculada',
   },
 }

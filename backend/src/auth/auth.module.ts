@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { GithubOAuthController } from './github-oauth.controller';
+import { GoogleOAuthController } from './google-oauth.controller';
 import { AuthService } from './auth.service';
 import { SessionGuard } from './session.guard';
 import { MailModule } from '../mail/mail.module';
@@ -16,7 +17,7 @@ const MicrosoftOAuthController = makeOidcController({ route: 'auth/microsoft', l
 
 @Module({
   imports: [MailModule],
-  controllers: [AuthController, GithubOAuthController, EpitechOAuthController, MicrosoftOAuthController],
+  controllers: [AuthController, GithubOAuthController, GoogleOAuthController, EpitechOAuthController, MicrosoftOAuthController],
   providers: [AuthService, SessionGuard, OidcAccountsService, EpitechOidcService, MicrosoftOidcService, UnconfirmedCleanupService],
   exports: [SessionGuard, AuthService],
 })

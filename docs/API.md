@@ -254,6 +254,54 @@ Behavior depends on which flow started it:
 | `400` | Missing/mismatched CSRF state (either flow), or GitHub rejected the code. |
 | `409` | Link flow only: this GitHub account is already linked to a *different* platform user. |
 
+### `GET /auth/google`
+
+🔒 Session required. **Not a login route** — links a Google account to the *already* authenticated user.
+Navigate the browser here directly (don't `fetch` it); it 302-redirects to Google's consent screen.
+
+| Status | When |
+|---|---|
+| `302` | Redirect to Google. |
+| `400` | Google OAuth isn't configured on the server (missing env vars). |
+| `401` | No valid session. |
+
+### `DELETE /auth/google`
+
+🔒 Session required. Unlinks the current user's Google account. Also revokes the grant on Google's own
+side (`POST /revoke`), best-effort — a failure there never blocks the local unlink.
+
+| Status | When |
+|---|---|
+| `204` | Unlinked. |
+| `401` | No valid session. |
+| `404` | No linked Google account for this user. |
+| `409` | This account has no password — unlinking would remove the only way to log in. |
+
+### `GET /auth/google/login`
+
+No session required — **"Sign in with Google"**, the same alternative-to-`POST /auth/login` shape as
+`/auth/github/login`. Three cases on the way back, in order: already linked → log in; not linked but
+Google reports a verified email matching an existing local account → link and log in; neither → register
+a brand-new account (`given_name`/`family_name` from Google's profile, falling back to splitting `name`)
+with `emailVerified: true` right away, since Google already verified that address.
+
+| Status | When |
+|---|---|
+| `302` | Redirect to Google. |
+| `400` | Google OAuth isn't configured on the server (missing env vars). |
+
+### `GET /auth/google/callback`
+
+Google redirects here after consent for both flows above — the frontend never calls this directly.
+
+| Status | When |
+|---|---|
+| `302` | Link flow, success: redirects to `<FRONTEND_URL>/dashboard?google=linked`. |
+| `302` | Link flow, failure: redirects to `<FRONTEND_URL>/dashboard?google_error=<message>`. |
+| `302` | Login flow, success: redirects to `<FRONTEND_URL>/dashboard`, session cookie set. |
+| `302` | Login flow, failure (no verified email, banned account, bad/expired state): redirects to `<FRONTEND_URL>/login?error=<message>`. |
+| `409` | Link flow only: this Google account is already linked to a *different* platform user (surfaced via the redirect's `google_error`, not a raw HTTP 409 — same as the other OAuth link flows' error-query pattern above). |
+
 ---
 
 ## Widgets

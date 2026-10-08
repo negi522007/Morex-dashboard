@@ -38,6 +38,23 @@ interface GithubEmail {
   verified: boolean;
 }
 
+interface GoogleTokenResponse {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+}
+
+// Google's userinfo endpoint (openid/email/profile scopes) already returns a verified-or-not flag and a
+// pre-split given/family name — no second request needed, unlike GitHub's separate /user/emails call.
+interface GoogleProfile {
+  sub: string;
+  email: string;
+  email_verified: boolean;
+  given_name?: string;
+  family_name?: string;
+  name?: string;
+}
+
 export const EMAIL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 // How long an address that said "not me" stays closed to password sign-ups.
 const REJECT_BLOCK_MS = 24 * 60 * 60 * 1000;
@@ -502,6 +519,191 @@ export class AuthService {
 
   async hasLinkedGithub(userId: string): Promise<boolean> {
     const account = await this.prisma.oAuthAccount.findFirst({ where: { userId, provider: 'github' } });
+    return account !== null;
+  }
+
+  // Shared by both Google flows (link and login) — same shape as exchangeGithubCode. Google's userinfo
+  // endpoint already reports whether the email is verified and gives given/family name directly, so
+  // there's no equivalent of GitHub's separate fetchVerifiedGithubEmail call.
+  private async exchangeGoogleCode(code: string): Promise<{ accessToken: string; profile: GoogleProfile }> {
+    const clientId = this.config.get<string>('GOOGLE_CLIENT_ID');
+    const clientSecret = this.config.get<string>('GOOGLE_CLIENT_SECRET');
+    const redirectUri = this.config.get<string>('GOOGLE_OAUTH_CALLBACK_URL');
+    if (!clientId || !clientSecret || !redirectUri) {
+      throw new ServiceUnavailableException('Google OAuth is not configured on the server');
+    }
+
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+    const tokenData = (await tokenRes.json()) as GoogleTokenResponse;
+    if (!tokenData.access_token) {
+      throw new BadRequestException(
+        `Google did not return an access token (${tokenData.error_description ?? tokenData.error ?? 'unknown error'})`,
+      );
+    }
+
+    const profileRes = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    if (!profileRes.ok) {
+      throw new BadRequestException('Could not fetch the Google profile for this token');
+    }
+    const profile = (await profileRes.json()) as GoogleProfile;
+    return { accessToken: tokenData.access_token, profile };
+  }
+
+  // Mirrors linkGithubAccount exactly — see its comment for why a conflicting link fails loudly
+  // instead of silently reassigning ownership.
+  async linkGoogleAccount(userId: string, code: string): Promise<void> {
+    const encryptionKey = this.config.get<string>('TOKEN_ENCRYPTION_KEY');
+    if (!encryptionKey) {
+      throw new ServiceUnavailableException('Google OAuth is not configured on the server');
+    }
+    const { accessToken, profile } = await this.exchangeGoogleCode(code);
+    const providerAccountId = profile.sub;
+    const accessTokenEncrypted = encryptToken(accessToken, encryptionKey);
+
+    const existing = await this.prisma.oAuthAccount.findUnique({
+      where: { provider_providerAccountId: { provider: 'google', providerAccountId } },
+    });
+
+    if (existing && existing.userId !== userId) {
+      throw new ConflictException('This Google account is already linked to another user');
+    }
+
+    if (existing) {
+      await this.prisma.oAuthAccount.update({
+        where: { id: existing.id },
+        data: { accessTokenEncrypted },
+      });
+    } else {
+      await this.prisma.oAuthAccount.create({
+        data: { provider: 'google', providerAccountId, userId, accessTokenEncrypted },
+      });
+    }
+  }
+
+  // Mirrors unlinkGithubAccount — same passwordless-lockout guard, same "revoke on the provider's side
+  // too" reasoning.
+  async unlinkGoogleAccount(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const account = await this.prisma.oAuthAccount.findFirst({
+      where: { userId, provider: 'google' },
+    });
+    if (!account) {
+      throw new NotFoundException('No linked Google account for this user');
+    }
+
+    if (!user.passwordHash) {
+      throw new ConflictException(
+        'This account has no password — unlinking Google would lock you out. Set a password first.',
+      );
+    }
+
+    await this.revokeGoogleGrant(account.accessTokenEncrypted);
+    await this.prisma.oAuthAccount.delete({ where: { id: account.id } });
+  }
+
+  private async revokeGoogleGrant(accessTokenEncrypted: string): Promise<void> {
+    const encryptionKey = this.config.get<string>('TOKEN_ENCRYPTION_KEY');
+    if (!encryptionKey) return;
+
+    try {
+      const accessToken = decryptToken(accessTokenEncrypted, encryptionKey);
+      const res = await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(accessToken)}`, {
+        method: 'POST',
+      });
+      // Google returns 400 for an already-invalid token — fine either way, same as GitHub's 404 case.
+      if (!res.ok && res.status !== 400) {
+        this.logger.warn(`Google grant revocation returned ${res.status}`);
+      }
+    } catch (err) {
+      this.logger.warn(`Could not revoke the Google grant: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
+  // "Sign in with Google": same three-case logic as loginWithGithub (already linked / verified email
+  // matches an existing account / brand new account) — see its comment for the full reasoning.
+  async loginWithGoogle(code: string): Promise<{ session: { id: string; expiresAt: Date }; user: PublicUser }> {
+    const encryptionKey = this.config.get<string>('TOKEN_ENCRYPTION_KEY');
+    if (!encryptionKey) {
+      throw new ServiceUnavailableException('Google OAuth is not configured on the server');
+    }
+    const { accessToken, profile } = await this.exchangeGoogleCode(code);
+    const providerAccountId = profile.sub;
+    const accessTokenEncrypted = encryptToken(accessToken, encryptionKey);
+
+    const existingAccount = await this.prisma.oAuthAccount.findUnique({
+      where: { provider_providerAccountId: { provider: 'google', providerAccountId } },
+      include: { user: true },
+    });
+
+    let user;
+    if (existingAccount) {
+      user = existingAccount.user;
+      await this.prisma.oAuthAccount.update({
+        where: { id: existingAccount.id },
+        data: { accessTokenEncrypted },
+      });
+    } else {
+      if (!profile.email_verified) {
+        throw new BadRequestException('Your Google account has no verified email address to sign in with');
+      }
+      const verifiedEmail = profile.email;
+
+      const existingUser = await this.prisma.user.findUnique({ where: { email: verifiedEmail } });
+      if (existingUser) {
+        user = existingUser;
+      } else {
+        const fallbackParts = (profile.name ?? verifiedEmail).trim().split(/\s+/).filter(Boolean);
+        const firstName = profile.given_name ?? fallbackParts[0] ?? verifiedEmail;
+        const lastName = profile.family_name ?? (fallbackParts.slice(1).join(' ') || firstName);
+        const adminEmails = (this.config.get<string>('ADMIN_EMAILS') ?? '')
+          .split(',')
+          .map((e) => e.trim().toLowerCase())
+          .filter(Boolean);
+        user = await this.prisma.user.create({
+          data: {
+            email: verifiedEmail,
+            firstName,
+            lastName,
+            emailVerified: true,
+            isAdmin: adminEmails.includes(verifiedEmail.toLowerCase()),
+          },
+        });
+      }
+
+      await this.prisma.oAuthAccount.create({
+        data: { provider: 'google', providerAccountId, userId: user.id, accessTokenEncrypted },
+      });
+    }
+
+    if (user.isBanned) {
+      throw new ForbiddenException('This account has been suspended');
+    }
+
+    const session = await this.prisma.session.create({
+      data: { userId: user.id, expiresAt: new Date(Date.now() + SESSION_TTL_MS) },
+    });
+
+    return { session, user: toPublicUser(user) };
+  }
+
+  async hasLinkedGoogle(userId: string): Promise<boolean> {
+    const account = await this.prisma.oAuthAccount.findFirst({ where: { userId, provider: 'google' } });
     return account !== null;
   }
 
