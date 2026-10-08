@@ -61,6 +61,37 @@ function validateConfig(widget: WidgetDefinition, rawConfig: unknown): Record<st
   return result;
 }
 
+// Caught live during a defense Q&A: sending a wrong-shaped `position` (a string, an array, an object
+// with arbitrary keys) was silently accepted (200) and stored as-is — react-grid-layout would then choke
+// on it client-side. And a wrong-typed `title`/`decoration`/`aiEnabled`/`shared` wasn't rejected with a
+// clean 400 either: it passed straight through to Prisma, which throws its own validation error for a
+// mismatched column type — surfacing as an unhandled 500, not something our own code ever decided.
+function validatePosition(value: unknown): Record<string, number> {
+  if (value !== undefined && (typeof value !== 'object' || value === null || Array.isArray(value))) {
+    throw new BadRequestException('position must be an object, e.g. { x, y, w, h }');
+  }
+  const v = (value ?? {}) as Record<string, unknown>;
+  const out: Record<string, number> = {};
+  for (const key of ['x', 'y', 'w', 'h'] as const) {
+    if (v[key] === undefined) continue; // partial updates (e.g. only x/y after a drag) stay partial
+    const n = Number(v[key]);
+    if (!Number.isFinite(n)) throw new BadRequestException(`position.${key} must be a number`);
+    out[key] = n;
+  }
+  return out;
+}
+
+function validateBoolean(value: unknown, field: string): boolean {
+  if (typeof value !== 'boolean') throw new BadRequestException(`${field} must be a boolean`);
+  return value;
+}
+
+function validateNullableString(value: unknown, field: string, maxLength: number): string | null {
+  if (value === null) return null;
+  if (typeof value !== 'string') throw new BadRequestException(`${field} must be a string or null`);
+  return value.slice(0, maxLength);
+}
+
 @Injectable()
 export class WidgetsService {
   constructor(
@@ -124,7 +155,8 @@ export class WidgetsService {
         `You must connect your ${provider.name} account before adding a widget from this service`,
       );
     }
-    if (body.shared && widget.shareable === false) {
+    const shared = body.shared !== undefined ? validateBoolean(body.shared, 'shared') : false;
+    if (shared && widget.shareable === false) {
       throw new BadRequestException('This widget shows private data and cannot be shared');
     }
     const hasSecrets = widget.params.some((p) => p.secret);
@@ -137,11 +169,11 @@ export class WidgetsService {
         widgetName: widget.name,
         config: stored as Prisma.InputJsonValue,
         refreshRateSeconds,
-        position: (body.position ?? {}) as Prisma.InputJsonValue,
-        title: body.title ?? null,
-        decoration: body.decoration ?? null,
-        aiEnabled: body.aiEnabled ?? false,
-        shared: body.shared ?? false,
+        position: validatePosition(body.position) as Prisma.InputJsonValue,
+        title: validateNullableString(body.title ?? null, 'title', 80),
+        decoration: validateNullableString(body.decoration ?? null, 'decoration', 40),
+        aiEnabled: body.aiEnabled !== undefined ? validateBoolean(body.aiEnabled, 'aiEnabled') : false,
+        shared,
       },
     });
     return this.present(created);
@@ -169,22 +201,23 @@ export class WidgetsService {
       data.refreshRateSeconds = this.validateRefreshRate(body.refreshRateSeconds);
     }
     if (body.position !== undefined) {
-      data.position = body.position as Prisma.InputJsonValue;
+      data.position = validatePosition(body.position) as Prisma.InputJsonValue;
     }
     if (body.title !== undefined) {
-      data.title = body.title;
+      data.title = validateNullableString(body.title, 'title', 80);
     }
     if (body.decoration !== undefined) {
-      data.decoration = body.decoration;
+      data.decoration = validateNullableString(body.decoration, 'decoration', 40);
     }
     if (body.shared !== undefined) {
-      if (body.shared && widget.shareable === false) {
+      const shared = validateBoolean(body.shared, 'shared');
+      if (shared && widget.shareable === false) {
         throw new BadRequestException('This widget shows private data and cannot be shared');
       }
-      data.shared = body.shared;
+      data.shared = shared;
     }
     if (body.aiEnabled !== undefined) {
-      data.aiEnabled = body.aiEnabled;
+      data.aiEnabled = validateBoolean(body.aiEnabled, 'aiEnabled');
       if (body.aiEnabled) {
         // Turning it on: refresh on the next scheduler tick so the insight appears without waiting.
         data.insightHash = null;

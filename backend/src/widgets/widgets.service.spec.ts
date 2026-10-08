@@ -261,6 +261,27 @@ describe('WidgetsService', () => {
       });
       expect(prisma.oAuthAccount.findFirst).not.toHaveBeenCalled();
     });
+
+    // Found live during a defense Q&A: these used to be accepted (position silently stored as garbage)
+    // or crash into a raw 500 from Prisma's own type check (shared/aiEnabled/title) instead of a clean 400.
+    it.each([
+      ['position', 'not-an-object'],
+      ['position', [1, 2, 3]],
+      ['shared', 'yes'],
+      ['aiEnabled', 'true'],
+      ['title', 12345],
+      ['decoration', { nope: true }],
+    ])('rejects a wrong-shaped "%s" instead of silently accepting or crashing', async (field, value) => {
+      await expect(
+        service.create('user-1', {
+          serviceName: 'rss',
+          widgetName: 'article_list',
+          config: { link: 'https://example.com/feed' },
+          refreshRateSeconds: 60,
+          [field]: value,
+        } as any),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
   });
 
   describe('update', () => {
@@ -314,6 +335,24 @@ describe('WidgetsService', () => {
           position: { x: 1, y: 2 },
         },
       });
+    });
+
+    it.each([
+      ['position', 'not-an-object'],
+      ['position', [1, 2, 3]],
+      ['shared', 'yes'],
+      ['aiEnabled', 'true'],
+      ['title', 12345],
+      ['decoration', { nope: true }],
+    ])('rejects a wrong-shaped "%s" on update too, instead of silently accepting or crashing', async (field, value) => {
+      prisma.widgetInstance.findFirst.mockResolvedValue({
+        id: 'w1',
+        userId: 'user-1',
+        serviceName: 'rss',
+        widgetName: 'article_list',
+        config: { link: 'https://example.com/feed' },
+      });
+      await expect(service.update('user-1', 'w1', { [field]: value } as any)).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 
