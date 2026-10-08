@@ -19,9 +19,15 @@ docker push <registry>/<image>:latest
 
 ## Deploy (e.g. Render, "Deploy an existing image from a registry")
 
-- **Port**: `80` (nginx; the backend listens on `3000` internally only, never exposed — see the
-  Dockerfile's `ENV BACKEND_ORIGIN`/`ENV PORT`).
-- **Environment variables**: the same ones `backend/.env.example` documents (`DATABASE_URL`,
+- **Port**: set the service's port to **`80`** explicitly in the dashboard (nginx; the backend keeps its
+  own existing default of `8080` internally only, never exposed — see the Dockerfile's `ENV
+  BACKEND_ORIGIN`).
+- **Do not set a `PORT` environment variable yourself** on the platform's dashboard, even to `80`. Render
+  (and similar platforms) auto-routes a Docker service's public traffic straight to whatever `PORT` env
+  var it finds — which would bypass nginx and the frontend entirely, sending everything to the backend
+  instead. This image deliberately defines no `PORT` so there's nothing for that auto-detection to grab;
+  the dashboard's own explicit "Port: 80" field is what controls routing here.
+- **Other environment variables**: the same ones `backend/.env.example` documents (`DATABASE_URL`,
   `TOKEN_ENCRYPTION_KEY`, `APP_URL`, `FRONTEND_URL` — both now the *same* URL, since there's only one —
-  `SMTP_*`, OAuth client ids/secrets, etc.). Do **not** set `BACKEND_ORIGIN` or `PORT` yourselves — the
-  Dockerfile already fixes those for this image specifically.
+  `SMTP_*`, OAuth client ids/secrets, etc.). Do **not** set `BACKEND_ORIGIN` yourself either — the
+  Dockerfile already fixes that for this image specifically.

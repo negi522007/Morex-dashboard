@@ -48,9 +48,14 @@ COPY frontend/nginx.conf.template /etc/nginx/http.d/default.conf.template.src
 COPY deploy/start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 
-# nginx is what's actually reachable from outside; the backend listens on $PORT internally only
-# (3000, never exposed) and is reached by nginx via BACKEND_ORIGIN.
-ENV PORT=3000
-ENV BACKEND_ORIGIN=http://127.0.0.1:3000
+# nginx (port 80) is what's actually reachable from outside; the backend keeps its own existing default
+# port (8080 — same as docker-compose, unset here on purpose) and is reached by nginx via BACKEND_ORIGIN.
+# Deliberately NOT named/set as $PORT: Render (and similar platforms) auto-detects a service's public
+# port from a PORT env var when one is present in the image, and would route traffic straight to the
+# backend instead of nginx if this image set one — exactly what happened the first time this shipped
+# (ENV PORT=3000 here caused Render to send all public traffic directly to the backend, bypassing nginx
+# and the built frontend entirely: /about.json "worked" by accident, since the backend answers that route
+# directly, while / 404'd with the backend's own "Cannot GET /").
+ENV BACKEND_ORIGIN=http://127.0.0.1:8080
 EXPOSE 80
 CMD ["/app/start.sh"]
