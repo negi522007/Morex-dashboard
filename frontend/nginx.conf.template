@@ -9,9 +9,16 @@ server {
     # entrypoint (this file lives at /etc/nginx/templates/default.conf.template) — docker-compose.yml
     # sets it to http://server:8080 (the Compose service name); a split-host deploy (e.g. Render, where
     # frontend and backend are two separate services with no shared "server" hostname) sets it to the
-    # backend service's own URL instead. Never hardcode either here.
+    # backend service's own public HTTPS URL instead. Never hardcode either here.
     proxy_pass ${BACKEND_ORIGIN};
-    proxy_set_header Host $host;
+    # Deliberately NOT forwarding the original client Host here (unlike a typical reverse proxy): when
+    # BACKEND_ORIGIN is an external host (e.g. Render), the platform in front of it routes by the Host
+    # header / SNI of the backend's OWN hostname — sending the frontend's hostname instead causes a 502
+    # (wrong-service routing), which is exactly what broke the first split-host deploy. Omitting this
+    # line lets nginx default to $proxy_host (the host from proxy_pass itself) on every target, Compose
+    # or external; the backend never reads the Host header for anything (APP_URL/FRONTEND_URL are
+    # explicit env vars, not inferred from it), so this is safe either way.
+    proxy_ssl_server_name on;
     proxy_set_header X-Forwarded-For $remote_addr;
   }
 
