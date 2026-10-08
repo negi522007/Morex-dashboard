@@ -5,7 +5,12 @@ server {
 
   # Every backend route prefix — keep in sync with vite.config.ts's dev proxy.
   location ~ ^/(auth|widgets|journal|uploads|services|ai|brief|assistant|alerts|share|public|admin/users|helpdesk|docs|docs-json|about\.json) {
-    proxy_pass http://server:8080;
+    # BACKEND_ORIGIN is substituted by the nginx base image's own envsubst-on-templates
+    # entrypoint (this file lives at /etc/nginx/templates/default.conf.template) — docker-compose.yml
+    # sets it to http://server:8080 (the Compose service name); a split-host deploy (e.g. Render, where
+    # frontend and backend are two separate services with no shared "server" hostname) sets it to the
+    # backend service's own URL instead. Never hardcode either here.
+    proxy_pass ${BACKEND_ORIGIN};
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $remote_addr;
   }
