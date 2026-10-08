@@ -20,7 +20,10 @@ export function newPkce() {
 const CLOCK_SKEW_S = 120;
 
 export interface IdTokenChecks {
-  issuer: string;
+  // A RegExp is for a multi-tenant provider whose real per-token issuer varies (e.g. Microsoft's
+  // "common" endpoint, one real tenant GUID per organisation) and can't be pinned to one fixed string
+  // the way a single-tenant provider's discovery document can.
+  issuer: string | RegExp;
   audience: string;
   nonce: string;
 }
@@ -50,7 +53,8 @@ export function verifyIdToken(idToken: string, keys: any[], checks: IdTokenCheck
 
   const now = Math.floor(Date.now() / 1000);
   const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
-  if (payload.iss !== checks.issuer) throw new BadRequestException('Identity token issuer mismatch');
+  const issuerOk = typeof checks.issuer === 'string' ? payload.iss === checks.issuer : checks.issuer.test(payload.iss);
+  if (!issuerOk) throw new BadRequestException('Identity token issuer mismatch');
   if (!aud.includes(checks.audience)) throw new BadRequestException('Identity token audience mismatch');
   if (typeof payload.exp !== 'number' || payload.exp + CLOCK_SKEW_S < now) throw new BadRequestException('Identity token expired');
   if (payload.nonce !== checks.nonce) throw new BadRequestException('Identity token nonce mismatch');

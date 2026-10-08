@@ -3,7 +3,7 @@ import { apiFetch } from '../lib/api'
 import { AUTH, useAuthLang } from '../lib/authLang'
 
 // The "or" line and the other ways to sign in, shared by the login and sign-up pages:
-// GitHub, "Continue with Microsoft (school)" and "Continue with My Epitech" — each greyed out until configured.
+// GitHub, "Continue with Microsoft" and "Continue with My Epitech" — each greyed out until configured.
 // Each provider says through GET /auth/<provider>/status whether this server has its client id and secret;
 // until it has, the button stays greyed out with a short reason instead of leading to an error.
 const PROVIDERS = [

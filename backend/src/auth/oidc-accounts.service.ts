@@ -58,7 +58,24 @@ export class OidcAccountsService {
   }
 
   // Known account → log in; same verified email as a local account → attach to it; otherwise create the account.
-  async login(provider: string, label: string, grant: OidcGrant, identity: OidcIdentity): Promise<{ id: string; expiresAt: Date }> {
+  //
+  // `allowLinkByEmail` (default true) exists for exactly one reason: a provider whose issuer check binds
+  // to ONE specific, verified organisation (Epitech, or Microsoft restricted to one tenant) can trust its
+  // own `email`/`preferred_username` claim, because only that organisation's admins could ever set it for
+  // real. A provider that accepts ANY tenant (Microsoft opened up beyond epitech.eu) cannot: this is the
+  // "nOAuth" class of vulnerability — any Entra ID tenant admin can set an arbitrary user's email/UPN
+  // attribute to someone else's real address with nothing to stop them, so trusting it enough to attach
+  // to an EXISTING account would let an attacker sign into a stranger's account just by typing their
+  // email into a throwaway tenant they fully control. Pass `allowLinkByEmail: false` for such a provider:
+  // a collision with an existing account becomes a clear error instead of a silent takeover.
+  async login(
+    provider: string,
+    label: string,
+    grant: OidcGrant,
+    identity: OidcIdentity,
+    opts: { allowLinkByEmail?: boolean } = {},
+  ): Promise<{ id: string; expiresAt: Date }> {
+    const allowLinkByEmail = opts.allowLinkByEmail ?? true;
     const tokens = this.tokens(grant);
     const account = await this.prisma.oAuthAccount.findUnique({
       where: { provider_providerAccountId: { provider, providerAccountId: grant.subject } },
@@ -74,6 +91,11 @@ export class OidcAccountsService {
         throw new BadRequestException(`Your ${label} account has no verified email address to sign in with`);
       }
       user = await this.prisma.user.findUnique({ where: { email } });
+      if (user && !allowLinkByEmail) {
+        throw new ConflictException(
+          `An account with this email already exists. Log in normally, then connect ${label} from your profile instead.`,
+        );
+      }
       if (!user) {
         const adminEmails = (this.config.get<string>('ADMIN_EMAILS') ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
         user = await this.prisma.user.create({
