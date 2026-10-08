@@ -16,6 +16,11 @@ export default defineConfig({
       '/brief': 'http://localhost:8080',
       '/services': 'http://localhost:8080',
       '/uploads': 'http://localhost:8080',
+      '/alerts': 'http://localhost:8080',
+      '/share': 'http://localhost:8080',
+      '/public': 'http://localhost:8080',
+      '/ai': 'http://localhost:8080',
+      '/admin/users': 'http://localhost:8080',
     },
   },
 })
