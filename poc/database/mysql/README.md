@@ -1,7 +1,7 @@
 # POC — MySQL vs PostgreSQL
 
 What this tests: the "Database" row of the decision matrix in
-[ARCHITECTURE.md](../../../ARCHITECTURE.md) — storing the same two things PostgreSQL
+[ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) — storing the same two things PostgreSQL
 stores for real (a user owning widget instances with free-form `config`, and the exact
 comparison the scheduler's due-widgets query needs), run against a real MySQL 8 container.
 

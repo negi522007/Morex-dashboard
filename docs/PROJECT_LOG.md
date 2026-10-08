@@ -1,0 +1,195 @@
+# Project Log
+
+Team organization, the timeline of what got built and decided, and what's left — kept as one readable
+narrative rather than scattered across commit messages.
+
+## Meetings
+
+Two team meetings anchor the timeline below:
+
+- **Meeting 1 — Sept 15**: decided the technology stack, agreed on the contract between frontend and
+  backend (the `ServiceProvider`/`WidgetDefinition` shape), and split the tasks between the two of us.
+- **Meeting 2 — Sept 20**: tested the merged result of frontend and backend together and noted the
+  inconsistencies and gaps that testing surfaced. That's where the ideas for the admin module, the
+  optional name field, a design review, and more came from — the entries below from Sept 21 onward are
+  that follow-up work.
+
+## Team organization
+
+Two people, split by phase and then by service rather than a strict frontend/backend line everywhere:
+
+- **Exauce** — backend/infra: `AuthModule` (sessions, email confirmation, GitHub OAuth linking, profile
+  editing), `TimerModule` (scheduler), `WidgetsModule`, `AdminModule`, Docker/CI-adjacent plumbing, plus
+  the RSS, Market data, and GitHub services end to end (backend fetcher + this doc set).
+- **Morayo** — the entire frontend (Vite/React/Tailwind, auth pages, the widget dashboard, drag/resize,
+  the GitHub-linking button), plus the Weather, Steam, and Maps/Cinema services once built.
+
+Rationale recorded in [ARCHITECTURE.md](./ARCHITECTURE.md): split by phase (agree the `ServiceProvider`
+contract together first) then by service end-to-end, so neither person blocks on the other during the
+bulk of the work — a straight frontend/backend split would have left one person doing 6 backend service
+integrations *and* all UI, the other doing comparatively little.
+
+## Timeline
+
+**Sept 15 (Meeting 1)** — Repo initialized. The team's original architecture proposal
+(NestJS/Prisma/Postgres + React, Redis/BullMQ for the timer, JWT auth) was reviewed and challenged point
+by point: quantity target raised well above the brief's minimum, Redis/BullMQ flagged as disproportionate
+for the project's scale, the OAuth "authorization vs authentication" distinction clarified,
+email-confirmation requirement initially missing from the plan. `ServiceProvider`/`WidgetDefinition`
+contract designed as the join point between backend services and the frontend, and tasks split between
+Exauce and Morayo.
+
+**Sept 16** — Auth strategy revisited from first principles: JWT (the original default, never actually
+evaluated against this project's constraints) vs server-side sessions. Sessions won — single-container
+deployment gets nothing from JWT's statelessness, and the brief's admin/ban requirement needs instant
+revocation, which sessions give for free and JWT doesn't. Scheduler design simplified to
+`@nestjs/schedule` (no Redis/BullMQ).
+
+**Sept 17** — Backend bootstrap day: NestJS app, Prisma, a working `GET /about.json` (the brief's
+mandatory gate), `AuthModule` (register/confirm/login/logout), GitHub OAuth linking, `TimerModule`, and
+three services (RSS, Market data via CoinGecko, GitHub) plus `WidgetsModule` (add/reconfigure/move/
+delete). Everything tested against the real running app at each step, not just unit-level.
+
+**Sept 18** — Documentation day: unit tests (Jest, business logic only — see `ARCHITECTURE.md#testing`
+for the exact scope), `API.md`, `ARCHITECTURE.md` diagrams, `CONTRIBUTING.md`, `TROUBLESHOOTING.md`,
+and a generated Swagger UI at `/docs` alongside the hand-written `API.md`.
+
+**Sept 20 (Meeting 2)** — Morayo built the entire frontend in one push: Vite/React/TypeScript/Tailwind v4
+scaffold, the dev proxy to the backend, auth pages (register/login), the protected dashboard (session
+check, logout), the GitHub-linking card, the widget grid (add/reconfigure/move/resize/delete via
+`react-grid-layout`), and `FRONTEND.md`. The team then tested the merged frontend and backend together —
+that pass is what surfaced the gaps behind the entries below: no way to manage users, a registration form
+that only asked for email/password, and a design worth a second look.
+
+**Sept 21** — Both branches merged into `main`. Real email delivery configured (Brevo's signup pushed
+toward a paid plan on first try, so switched to a Gmail SMTP app password instead) — this also surfaced
+a real bug: `docker-compose.yml` was forcing `SMTP_HOST`/`SMTP_PORT` back to Mailhog regardless of
+`.env`, silently ignoring real credentials. `firstName`/`lastName` added to `User` (backend + a
+one-off, explicitly-authorized frontend edit), initially optional.
+
+**Sept 22** — `AdminModule` built (list/ban/unban/delete) — the brief lists it as useful, not mandatory;
+built anyway per the team's own standard of covering everything the brief mentions. A real widget
+misconfiguration during testing (a GitHub repo entered without its owner prefix) motivated a proper fix:
+a generic `WidgetParam.optionsUrl` contract field plus `GET /services/github/repos`, so a repo picker
+dropdown becomes possible (the frontend rendering side is specced in `FRONTEND.md` for Morayo, not
+built here). Full documentation pass across every doc file.
+
+**Sept 23** — `firstName`/`lastName` flipped from optional to **required** at registration (reversing
+the Sept 21 decision, per explicit instruction). Profile editing added both ways: `PATCH /auth/me`
+(self: name, password — a password change kills every other session) and `PATCH /admin/users/:id`
+(admin: name, a manual `emailVerified` override). `PRIVACY.md` and this log written. Also: **"Sign in
+with GitHub"** (`GET /auth/github/login`) — a real second login path, not just account linking. Reuses
+the existing GitHub OAuth App/callback, told apart from the linking flow by which CSRF state cookie is
+present. Logs in directly if already linked, links onto a matching-verified-email local account without
+duplicating it, or auto-registers a brand-new already-verified account otherwise. `LoginPage.tsx` got a
+one-off "Continue with GitHub" link to test it end-to-end. 6 new unit tests (119 total).
+
+**Sept 25** — Backend prepared for Morayo's new frontend (the mockup, `frontend/public/mockups.html`), which
+she lays out herself. Added: Journal (text encrypted at rest), World clock, a **Weather** service
+(Open-Meteo, no key), profile fields (bio, theme, language, widget style, DiceBear avatar config) plus
+avatar photo upload, widget `title` / `decoration`, and `exchange_rate` now returns its history (ECB
+reference rates for fiat pairs, CoinGecko for crypto) so a graph can be drawn from real data. Every mockup
+element and the endpoint behind it is listed in API.md ("Backing the Morex mockup"). A frontend rebuild was
+started along the way and then set aside — the frontend stays Morayo's.
+
+**Sept 25 (later)** — Second backend pass, on `feat/morex-backend`. **Security first:** an audit found that
+the RSS fetch would follow any URL a user typed (including internal addresses), so every user-supplied URL
+now goes through an SSRF-safe fetcher. **Then features:** provider-agnostic AI (Anthropic / OpenAI-compatible
+/ offline mock) with per-widget opt-in, per-user daily cap and a shared cache — RSS gets real images and
+recaps, any widget can get an insight, plus a daily brief and a natural-language widget assistant that only
+*proposes* validated widgets. New services: generic calendar (`.ics`, covers Google Calendar), custom JSON
+API, GitHub daily changes/stand-up, My Epitech (planning via the calendar token; identity via OIDC — the
+student signs in with Microsoft on Epitech's side). Also threshold alerts (deterministic, in-app + email),
+value history, and a read-only share link. Credential-like widget params are encrypted and masked.
+**Decided not to build:** Google Photos (restricted API, needs verified Google Cloud credentials) and
+Epitech credits/XP (not exposed by the OIDC scopes; the only workaround is users pasting their session
+token, refused for security). The frontend was not touched.
+
+**Sept 26** — Merged Morayo's `feat/youtube` (Morex frontend + YouTube service + 3-widget weather) into
+`feat/morex-backend` and verified the whole stack end to end (API, then the real frontend in a headless
+browser: no console errors, no failing requests, all widget kinds rendering). Fixed a signup problem found
+in use: an unconfirmed account used to block its email address forever; it is now replaced on retry (2 min
+cooldown against mail spam) and purged after 24 h. The mailer now treats a refused recipient as a failure,
+adds a plain-text part, and logs what the SMTP server answered. Documented why confirmation links only work
+for the machine running the server unless `APP_URL` is public (TROUBLESHOOTING.md).
+
+**Sept 26 (defense checklist)** — Went through the school's defense checklist against the running app.
+Fixed: `docker compose up --build` now starts everything (the web app was missing from compose — it is
+built and served by nginx, which also forwards the API routes), works with **no `.env`** (safe defaults,
+mail to Mailhog, an encryption key generated once into a dedicated volume that is not served publicly),
+and waits for the database (a fresh clone used to crash on its first migration). Verified from a copy of the
+repo without `.env`. The UI findings for Morayo are listed at the end of FRONTEND.md.
+
+**Sept 26 (later)** — Reported by a user: the world clock rejected "Égypte" and "Bangladesh" ("Unknown city").
+Cause: the form only knew city names (IANA zones are named after cities). Fix: the backend now resolves
+cities *and countries* in three languages (`city-timezones` + `countries-and-timezones` datasets), serves a
+type-ahead `GET /services/worldclock/places` for a dropdown, and the widget accepts plain names. Also added
+a **help assistant** (`/helpdesk/*`): a trilingual knowledge base of guides, every service/widget/parameter
+and the technical vocabulary, searchable without AI and answered by the AI model from those pages only when
+available (never an error: it degrades to the best page). A test fails if a widget or parameter has no help
+entry. Free AI model guidance re-checked against the providers' current docs; `AI_REASONING_EFFORT` added for
+reasoning models. Specs for every screen not yet built are in FRONTEND.md.
+
+**Sept 26 (evening)** — Feedback from a real user test, acted on: (1) the confirmation link opened a bare
+white page and confirmed on click. It now opens a styled "Is this you?" page with *Yes* and *No, it wasn't
+me* (which deletes the pending account and closes that address to sign-ups for a day), and a plain GET never
+confirms anything (mail scanners open links). The email itself is styled and trilingual. (2) The offline
+"mock" AI was refused in production so a demo can never show fake AI text; a real Gemini key is used instead.
+(3) Date of birth is collected at sign-up (validated, ≥ 13, optional on the API until the form asks for it)
+for a **Well-being widget group** (quote of the day, did you know, horoscope — Morayo's idea was a group of widgets, not a page, so it is three ordinary widgets). (4) **Steam** service added.
+(5) A **Microsoft sign-in** restricted to one organisation (tenant-checked against email spoofing) as the
+self-service alternative to My Epitech's staff-only client registration — untested against the real
+Microsoft until the app is registered. The Epitech/Microsoft/GitHub-style sign-ins now share one accounts
+service and one controller factory instead of copies.
+
+**Sept 28** — Two requests after trying the app: generalize the world clock's new suggestion dropdown to
+every field, everywhere; and make the widget-creation assistant a real conversation instead of a one-shot
+command. Added live/real suggestion endpoints for weather cities (Open-Meteo geocoder), market currencies
+and crypto (Frankfurter + CoinGecko), YouTube trending countries (static), curated RSS feeds, and — the most
+useful one — `custom_api/inspect`, which fetches the URL the user already typed (through the SSRF guard) and
+proposes the actual JSON paths found in it, so the `path`/`titleField`/`subtitleField` fields go from "guess
+a path" to "pick from what's really there." A new `WidgetParam.dependsOn` lets a field's suggestions depend
+on another field's current value (used by `custom_api`'s path-dependent fields). `POST /assistant/widgets`
+now takes an optional `history` and can answer with only a clarifying `reply` and no `suggestions` — a
+question, not a guess — when the request is too vague. Also found and fixed a real bug of my own: a Steam
+unit test used `make(undefined)`, which (JS default-parameter quirk) silently fell back to the default key
+instead of testing the "no key" path, and `custom_api`'s `path` was wrongly required, breaking APIs whose
+answer is a bare list or value at the root.
+
+**Sept 29** — Two real, hands-on bug reports, both fixed and verified live against the running app: a
+GitHub widget config saved as a full pasted URL (`https://github.com/owner/repo`) instead of `owner/repo`
+was silently 404ing forever, and a `market_data` widget saved with a free-typed crypto name ("Ether")
+instead of its CoinGecko id ("ethereum") did the same — both now self-heal on the next refresh (the GitHub
+one normalizes a pasted URL; the market one resolves the name via the existing suggestion search and
+retries once), no need to delete and recreate the widget. Also: **Steam was built, then removed** — Valve
+only issues a Web API key to an account that has spent at least $5 real money once (a "Limited Account"
+policy, unrelated to owning free games), which isn't testable here, so it was pulled rather than shipped
+unverified (see API.md → *Deliberately not built*). YouTube confirmed working end to end with a real key.
+
+## Key decisions (quick reference)
+
+| Decision | When | Why |
+|---|---|---|
+| Node.js/NestJS + React | Sept 15 | Decision matrix — ecosystem fit + team experience, see `ARCHITECTURE.md` |
+| Sessions, not JWT | Sept 16 | Single-instance deploy gains nothing from statelessness; admin ban needs instant revocation |
+| No Redis/BullMQ for the timer | Sept 15–16 | Disproportionate at this scale; `@nestjs/schedule` is enough |
+| GitHub OAuth scope stays minimal (`read:user user:email`) | Sept 17 | Least privilege — these widgets only read; private-repo access wasn't worth the broader scope |
+| Build `AdminModule` despite "not mandatory" | Sept 22 | Team standard: cover everything the brief mentions, not just what's enforced |
+| `firstName`/`lastName` required | Sept 23 | Explicit decision reversal — was optional, now required at signup |
+| Real SMTP via Gmail app password, not Brevo | Sept 21 | Brevo's signup pushed toward a paid plan; Gmail needed no third-party account |
+| Every user-supplied URL fetched through an SSRF guard | Sept 25 | Audit finding: RSS `fetch(link)` could reach internal services |
+| AI is server-side, opt-in per widget, provider-agnostic; never sees the journal | Sept 25 | Key must not reach the browser; PRIVACY.md promises privacy; daily cap protects the key |
+| Insight stored beside `cachedData`, not inside | Sept 25 | Keeps every existing widget shape stable for the frontend |
+| No Epitech JWT pasting / scraping | Sept 25 | It is the student's full access, would live in our DB and expires; ask Epitech for an official scope instead |
+| "Sign in with GitHub" as a real login path, not just linking | Sept 23 | Already the intended design (see `schema.prisma`'s `OAuthAccount` comment from Sept 15) — just not built until now |
+
+## What's left
+
+See the root [README.md](../README.md#todo) TODO for the live checklist. As of this writing, the open
+items are:
+- Weather, Steam, and Maps/Cinema services (Morayo)
+- Per-widget custom rendering (currently a generic key/value dump)
+- Frontend: the repo-picker dropdown, a profile/settings page, GitHub-linked-status indicator, and the
+  Terms-of-Service/Privacy-Policy checkbox + in-app docs page (all specced in `FRONTEND.md` for Morayo —
+  `PRIVACY.md` now exists as real content for that last one, not a placeholder)
+- Responsive/mobile layout — not yet tested

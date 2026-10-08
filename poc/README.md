@@ -1,6 +1,6 @@
 # Proofs of concept — the technology comparison, run for real
 
-[ARCHITECTURE.md](../ARCHITECTURE.md)'s "Technology choices" section compares the stack
+[ARCHITECTURE.md](../docs/ARCHITECTURE.md)'s "Technology choices" section compares the stack
 actually used (Node.js/NestJS, React, PostgreSQL, Prisma) against real alternatives on a
 written decision matrix. This folder is the other half of that: a small, runnable POC for
 every alternative that matrix scored, each doing the same job as a real piece of this app

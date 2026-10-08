@@ -3,7 +3,7 @@
 What this tests: the same `/about.json` contract the real server exposes at
 `backend/src/about/about.service.ts` — a typed route, a nested JSON shape, reading the
 caller's IP — built in Python instead, to check the "Node.js" vs "Python" row of the
-decision matrix in [ARCHITECTURE.md](../../../ARCHITECTURE.md) against something real,
+decision matrix in [ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) against something real,
 not just a table of opinions.
 
 ## Run it

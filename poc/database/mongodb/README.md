@@ -1,7 +1,7 @@
 # POC — MongoDB vs PostgreSQL
 
 What this tests: the "Database" row of the decision matrix in
-[ARCHITECTURE.md](../../../ARCHITECTURE.md) — the same two things the MySQL POC tests
+[ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) — the same two things the MySQL POC tests
 (storing free-form widget `config`, running the scheduler's due-widgets comparison), this
 time against a real MongoDB document store instead of a relational one.
 

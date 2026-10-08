@@ -1,7 +1,7 @@
 # POC — TypeORM vs Prisma
 
 What this tests: the "ORM / data access" row of the decision matrix in
-[ARCHITECTURE.md](../../../ARCHITECTURE.md) — the same `User`/`WidgetInstance` shape as
+[ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) — the same `User`/`WidgetInstance` shape as
 `backend/prisma/schema.prisma` (simplified), and the scheduler's own due-widgets logic,
 built with TypeORM entities + query builder instead of Prisma.
 
