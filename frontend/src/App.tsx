@@ -5,6 +5,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { TermsPage } from './pages/TermsPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { HelpCenterPage } from './pages/HelpCenterPage'
+import { AdminPage } from './pages/AdminPage'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/help" element={<HelpCenterPage />} />
+      <Route path="/admin" element={<AdminPage />} />
     </Routes>
   )
 }

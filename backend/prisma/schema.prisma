@@ -22,6 +22,9 @@ model User {
   // Blocks login and kills every existing Session row the moment it's set
   // (see AdminService.ban) — instant, unlike a JWT-based approach would be.
   isBanned      Boolean  @default(false)
+  // Why, in the admin's own words — required when banning, cleared on unban. Shown back to the admin
+  // in the users table, and to the user themselves in the ban notification email.
+  banReason     String?
 
   // Profile/preferences (Morex dashboard UI) — all optional/defaulted so
   // existing accounts don't need a backfill.

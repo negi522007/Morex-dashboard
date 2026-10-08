@@ -2,7 +2,7 @@
 
 React app for the Dashboard project: sign up, log in, and build a personal dashboard out of
 configurable, auto-refreshing widgets. This document covers the frontend and **how it talks to the
-backend**. For the overall project (backend, Docker, architecture) see the [root README](./README.md),
+backend**. For the overall project (backend, Docker, architecture) see the [root README](../README.md),
 and for every endpoint see [API.md](./API.md).
 
 ## Status
@@ -197,7 +197,7 @@ bare `/admin`, or Vite would send your page to the backend.
 |---|---|---|
 | Name | `firstName` `lastName` | |
 | Email | `email` | |
-| Status | `emailVerified`, `isBanned`, `isAdmin` | Badges: "Unconfirmed" (`emailVerified:false`), "Banned", "Admin". Unconfirmed accounts are deleted by the server after 24 h — say so in a tooltip. |
+| Status | `emailVerified`, `isBanned`, `banReason`, `isAdmin` | Badges: "Unconfirmed" (`emailVerified:false`), "Banned" (title/tooltip shows `banReason`), "Admin". Unconfirmed accounts are deleted by the server after 24 h — say so in a tooltip. |
 | Joined | `createdAt` | Relative date |
 | Widgets / Linked accounts / Sessions | `widgetCount`, `linkedAccountsCount`, `sessionCount` | Small numbers; `sessionCount` is "sessions stored", not "online now" |
 | Actions | — | See below |
@@ -210,13 +210,19 @@ Add a search box (client-side filter on name/email) and a filter "All / Unconfir
 |---|---|---|
 | Edit name | `PATCH /admin/users/:id` `{ firstName, lastName }` | Blank name → `400`, show the message |
 | Mark email as confirmed | `PATCH /admin/users/:id` `{ emailVerified: true }` | For someone whose confirmation mail never arrived |
-| Ban | `PATCH /admin/users/:id/ban` → `204` | Ends all their sessions immediately. Confirm dialog first. |
-| Unban | `PATCH /admin/users/:id/unban` → `204` | |
-| Delete | `DELETE /admin/users/:id` → `204` | **Permanent** (their widgets, journal, links go too). Confirm dialog that makes the admin type the email, or at least a clear warning. |
+| Ban | `PATCH /admin/users/:id/ban` `{ reason }` → `204` | Ends all their sessions immediately. `reason` is **mandatory** (blank → `400`) — the UI must collect it before the request, not just rely on the server's error. The user is emailed the reason and told they can reply to contest it (no in-app appeal flow was built — see "why" below). |
+| Unban | `PATCH /admin/users/:id/unban` → `204` | Clears `banReason`. The user is emailed that access was restored. |
+| Delete | `DELETE /admin/users/:id` `{ reason }` → `204` | **Permanent** (their widgets, journal, links go too). `reason` is **mandatory** (blank → `400`), same as ban. Emailed to the user, with the "reply to contest" note, right before the row is actually deleted. Confirm dialog makes the admin type the email, as well as the reason. |
 
 Rules to reflect in the UI so the admin doesn't hit avoidable errors: you cannot ban or delete **yourself**
 or **another admin** (the API answers `400` with a message — hide or disable those buttons for rows where
 `isAdmin` is true or `id` equals the current user's id, and still display the API message if it happens).
+
+**Why email-and-reply instead of a full in-app appeal system**: a banned/unbanned user is never left
+guessing (reason stated, notified by email, a real inbox to reply to) — but a complete moderation
+workflow (an appeal ticket with a status, a dedicated admin review screen) is a disproportionate amount of
+new surface (new models, new pages, a new notification loop) for a project this size. Revisit only if a
+real backlog of contested bans shows up.
 After any action, refresh the list (or update the row locally). Error states: a `403` (should not happen if
 the guard is right) → redirect to `/dashboard`; other errors → a visible message, never a silent failure.
 Also show the empty and loading states (the same standard as the dashboard, see the findings below).

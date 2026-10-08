@@ -24,7 +24,7 @@ against the actual built app in Docker — a real logged-in session, a real widg
 
 Re-running the exact same audit after the fixes: **0 violations, on every page, at both viewport sizes.**
 
-Reproduce it: `poc/` has the pattern for a throwaway logged-in Playwright session (create a user via the
+Reproduce it: [`poc/`](../poc/) has the pattern for a throwaway logged-in Playwright session (create a user via the
 API, confirm via the token in `EmailVerificationToken`, `context.addCookies([{ name:
 'dashboard_session', ... }])`); load `axe-core`'s bundled script into the page and call `window.axe.run()`.
 Chromium needs `libnspr4`/`libnss3`/`libasound2` on a machine that doesn't already have them.

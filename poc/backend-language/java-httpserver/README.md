@@ -1,7 +1,7 @@
 # POC — Java vs Node.js (NestJS)
 
 What this tests: the "Node.js" vs "Java" row of the decision matrix in
-[ARCHITECTURE.md](../../../ARCHITECTURE.md) — the same `/about.json` contract, built with
+[ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) — the same `/about.json` contract, built with
 nothing but the JDK itself (`com.sun.net.httpserver`, zero external dependencies, zero
 build tool — Java 11+'s single-file source launch runs `Main.java` directly).
 

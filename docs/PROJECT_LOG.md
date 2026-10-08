@@ -185,7 +185,7 @@ unverified (see API.md → *Deliberately not built*). YouTube confirmed working 
 
 ## What's left
 
-See the root [README.md](./README.md#todo) TODO for the live checklist. As of this writing, the open
+See the root [README.md](../README.md#todo) TODO for the live checklist. As of this writing, the open
 items are:
 - Weather, Steam, and Maps/Cinema services (Morayo)
 - Per-widget custom rendering (currently a generic key/value dump)

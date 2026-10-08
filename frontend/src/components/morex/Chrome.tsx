@@ -34,11 +34,12 @@ const I = {
   out: <svg className="i" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l-5-5 5-5M5 12h11" /></svg>,
   globe: <svg className="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></svg>,
   lens: <svg className="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>,
+  shield: <svg className="i" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6l7-3Z" /><path d="M9 12l2 2 4-4" /></svg>,
 }
 
 // ---------- Sidebar (collapsible) ----------
-export function Sidebar({ lang, onToggle, onProfile, onHelp, onLogout }: {
-  lang: Lang; onToggle: () => void; onProfile: () => void; onHelp: () => void; onLogout: () => void
+export function Sidebar({ lang, isAdmin, onToggle, onProfile, onAdmin, onHelp, onLogout }: {
+  lang: Lang; isAdmin?: boolean; onToggle: () => void; onProfile: () => void; onAdmin?: () => void; onHelp: () => void; onLogout: () => void
 }) {
   const t = tr(lang)
   const link = (icon: React.ReactNode, label: string, onClick?: () => void, cls = '') => (
@@ -53,6 +54,7 @@ export function Sidebar({ lang, onToggle, onProfile, onHelp, onLogout }: {
       <nav aria-label={t.mainNav}>
         {link(I.grid, t.navDash, undefined, 'on')}
         {link(I.user, t.navProfile, onProfile)}
+        {isAdmin && link(I.shield, t.navAdmin, onAdmin)}
       </nav>
       <nav className="bottom" aria-label={t.accountNav}>
         {link(I.help, t.help, onHelp)}

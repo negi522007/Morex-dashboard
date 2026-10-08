@@ -35,7 +35,7 @@ automatically at a user-defined interval.
 | Well-being | No | ✅ Done | `daily_quote`, `did_you_know`, `horoscope` (sign) — written in EN/FR/ES, horoscope labelled "for fun" |
 | Maps / Cinema | API key | ⏳ Not started | — |
 
-**Beyond widgets** (all documented in [API.md](./API.md)): a **Well-being** widget group (quote of the day, "did you know?", horoscope), an "Is this you?" **confirmation page** with a "not me" option, **sign-in with a school Microsoft account**, a **help assistant** that explains the app, each service and the technical vocabulary in plain words (English/French/Spanish, works with or without AI), optional **AI** (article recaps with images,
+**Beyond widgets** (all documented in [API.md](./docs/API.md)): a **Well-being** widget group (quote of the day, "did you know?", horoscope), an "Is this you?" **confirmation page** with a "not me" option, **sign-in with a school Microsoft account**, a **help assistant** that explains the app, each service and the technical vocabulary in plain words (English/French/Spanish, works with or without AI), optional **AI** (article recaps with images,
 per-widget insights, a daily brief, a real back-and-forth **widget-creation chat** — off unless `AI_PROVIDER`/`AI_API_KEY`
 are set, opt-in per widget, never touches the journal), **threshold alerts** (in-app + email), **value
 history** for charts, a **read-only public share link**, a private **journal** (entries encrypted at rest),
@@ -84,13 +84,13 @@ npm install
 npm run dev      # http://localhost:5173 — stop the `frontend` container first, it uses the same port
 ```
 
-See [FRONTEND.md](./FRONTEND.md) for what's built there (routes, the dev proxy, what isn't yet).
+See [FRONTEND.md](./docs/FRONTEND.md) for what's built there (routes, the dev proxy, what isn't yet).
 
 ## How to use it
 
 The walkthrough below uses `curl` directly against the API — useful to understand the contract or debug
 independently of the UI. For the actual app, use the frontend at `http://localhost:5173` instead; it
-makes these exact same requests. Full endpoint reference: [API.md](./API.md).
+makes these exact same requests. Full endpoint reference: [API.md](./docs/API.md).
 
 **1. Create an account and confirm it.** (`firstName`/`lastName` are required; editable later via
 `PATCH /auth/me`.)
@@ -100,7 +100,7 @@ curl -X POST http://localhost:8080/auth/register \
   -d '{"email":"you@example.com","password":"a-real-password","firstName":"Ada","lastName":"Lovelace"}'
 ```
 By default this lands in **Mailhog** (`http://localhost:8025`), not a real inbox — see
-[CONTRIBUTING.md](./CONTRIBUTING.md#sending-real-confirmation-emails-not-just-to-mailhog) to configure
+[CONTRIBUTING.md](./docs/CONTRIBUTING.md#sending-real-confirmation-emails-not-just-to-mailhog) to configure
 real delivery instead. Open Mailhog and click the confirmation link, or grab the link's `token` and hit
 it directly:
 ```bash
@@ -162,13 +162,13 @@ curl -b cookies.txt -X POST http://localhost:8080/auth/logout
 
 For the technical architecture, the `ServiceProvider` contract, the data model, diagrams, the testing
 approach, and the technology-choice justification (decision matrix), see
-[ARCHITECTURE.md](./ARCHITECTURE.md). For the full list of HTTP endpoints (what the frontend calls),
-see [API.md](./API.md). For local dev setup, adding a new service, and commit conventions, see
-[CONTRIBUTING.md](./CONTRIBUTING.md). Hit something weird? Check
-[TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — it's real issues hit while building this, not hypothetical
-ones. What data this app collects and why: [PRIVACY.md](./PRIVACY.md). What was tested and fixed for
-keyboard/screen-reader use, and what wasn't: [ACCESSIBILITY.md](./ACCESSIBILITY.md). Team organization, a
-dated timeline of what got built and decided, and what's left: [PROJECT_LOG.md](./PROJECT_LOG.md).
+[ARCHITECTURE.md](./docs/ARCHITECTURE.md). For the full list of HTTP endpoints (what the frontend calls),
+see [API.md](./docs/API.md). For local dev setup, adding a new service, and commit conventions, see
+[CONTRIBUTING.md](./docs/CONTRIBUTING.md). Hit something weird? Check
+[TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) — it's real issues hit while building this, not hypothetical
+ones. What data this app collects and why: [PRIVACY.md](./docs/PRIVACY.md). What was tested and fixed for
+keyboard/screen-reader use, and what wasn't: [ACCESSIBILITY.md](./docs/ACCESSIBILITY.md). Team organization, a
+dated timeline of what got built and decided, and what's left: [PROJECT_LOG.md](./docs/PROJECT_LOG.md).
 
 ## Testing
 
@@ -178,7 +178,7 @@ npm test          # unit tests (Jest)
 npm run test:cov  # with coverage
 ```
 
-See [ARCHITECTURE.md#testing](./ARCHITECTURE.md#testing) for exactly what's covered and, just as
+See [ARCHITECTURE.md#testing](./docs/ARCHITECTURE.md#testing) for exactly what's covered and, just as
 important, what isn't and why.
 
 ## TODO

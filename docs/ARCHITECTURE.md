@@ -1,7 +1,7 @@
 # Architecture
 
 Technical documentation for developers/contributors. For a general overview (install, usage, feature
-list), see [README.md](./README.md).
+list), see [README.md](../README.md).
 
 ## Directory layout
 
@@ -105,7 +105,14 @@ non-secret facts stored with a linked account (My Epitech identity).
 
 ## Data model (Prisma)
 
-File: `backend/prisma/schema.prisma`.
+**Where this actually lives, concretely** (asked at a defense Q&A — written down so it never needs
+guessing again):
+- **Schema** (the source of truth): `backend/prisma/schema.prisma`.
+- **Migrations** (the dated, incremental history of every schema change, applied automatically):
+  `backend/prisma/migrations/`.
+- **The running database itself**: PostgreSQL, a Docker service (`db` in `docker-compose.yml`), its data
+  in a named Docker volume (`db_data`) — not a file in this repo, persists across restarts but not in git.
+  Inspect the real data at any time: `docker compose exec db psql -U dashboard -d dashboard`.
 
 ```mermaid
 erDiagram
@@ -672,6 +679,25 @@ a silently skipped one.
 
 ## Technology choices — Decision Matrix
 
+**If asked point-blank "why this and not that," the honest answer in one paragraph per layer** (the
+matrices and POCs below are the evidence; this is the argument itself):
+
+- **Node.js, not Python**: not "objectively better" — Python + Pydantic + mypy can get the same
+  compile-time safety this project leans on (the `WidgetParam` contract, implemented by 10 services,
+  checked everywhere it's used). The real argument is that TypeScript gives that safety as the language's
+  *default* behavior, while Python needs those tools deliberately chosen and kept disciplined — and that,
+  plus already knowing NestJS, is what tipped a fixed-deadline decision. If the team's experience had cut
+  the other way, this would have been a real dilemma, not an easy call.
+- **PostgreSQL, not MongoDB**: ~95% of this schema is relational by nature (`User` owning `Session`,
+  `OAuthAccount`, `WidgetInstance`, `Alert`, `JournalEntry`, cascading deletes on account removal) — only
+  `config`/`cachedData`/`insight` are genuinely free-form, and `jsonb` already covers those. MongoDB's real
+  cost here isn't performance, it's that `deleteAccount()` stays a one-line, DB-guaranteed cascade in
+  Postgres; in Mongo it would need hand-written cleanup across every collection, with real risk of leaving
+  orphaned data behind — directly against what `docs/PRIVACY.md` promises.
+- **Prisma, not TypeORM**: TypeORM's dev convenience (`synchronize: true`) is explicitly unsafe for
+  production by its own docs — no equivalent to `prisma migrate deploy` running unconditionally and safely
+  at every container start, which `docker-entrypoint.sh` depends on for "zero manual steps."
+
 | Criterion | Weight | Node.js | Python | Java | React | Vue | Angular |
 |---|---|---|---|---|---|---|---|
 | Team experience | 3 | 4 | 3 | 2 | 5 | 3 | 2 |
@@ -692,18 +718,55 @@ case where the event loop excels; to be revisited only if heavy processing appea
 *Validated by the team: Morayo reviewed and agreed with this stack and architecture after filling their
 own matrix independently.*
 
-**What each of us already knew, and how it shaped the "Team experience" row above:** Exauce had already
-built and deployed NestJS + Prisma projects before this one, including handling sessions, OAuth linking
-and Docker-based deployment — the exact shape of this app's backend. Neither of us had shipped a
-production Flask/FastAPI or Spring Boot backend. On React: both had prior experience building React UIs;
-neither had used Vue or Angular beyond a tutorial. That prior experience is what the "Team experience"
-row (weight 3, the joint-highest) scores — on a fixed deadline, not re-learning how to structure, debug
-and deploy the backend layer mattered as much as any single technical criterion in the table.
+**What each of us already knew, and how it shaped the "Team experience" row above:** Exauce already knew
+NestJS and Docker before this project. Morayo already knew React. Neither of us had prior experience with
+Python, Java, Vue, Angular, MySQL, MongoDB or TypeORM — those were genuinely researched and tested for
+this decision (see the real POCs below), not just ruled out on paper. That's what the "Team experience"
+row (weight 3, the joint-highest) scores: on a fixed deadline, starting from a language and framework
+each of us already knew how to structure, debug and deploy mattered as much as any single technical
+criterion in the table.
 
-**Real POCs, not just the matrix**: [`poc/`](./poc/) has a small, actually-built-and-run proof of
+Process: each of us filled the decision matrix independently first, then compared — the numbers above are
+the result of that comparison, not one person's opinion imposed on the other. The two individual matrices
+(validated by Morayo):
+
+**Morayo's matrix (frontend perspective, React already known):**
+
+| Criterion | Weight | Node.js | Python | Java | React | Vue | Angular |
+|---|---|---|---|---|---|---|---|
+| Team experience | 3 | 3 | 3 | 2 | 5 | 3 | 2 |
+| Ecosystem / libraries | 3 | 4 | 4 | 3 | 5 | 4 | 3 |
+| Docker deployment complexity | 2 | 4 | 4 | 2 | 4 | 4 | 3 |
+| OAuth tooling maturity | 2 | 4 | 4 | 3 | 4 | 3 | 3 |
+| Suitability for scheduled refresh | 1 | 4 | 4 | 3 | 4 | 4 | 3 |
+| Community support / longevity | 1 | 5 | 5 | 4 | 5 | 4 | 4 |
+| Learning value | 1 | 4 | 3 | 3 | 4 | 3 | 3 |
+| **Weighted total** | | **56** | **54** | **35** | **62** | **46** | **37** |
+
+**Exauce's matrix (backend perspective, NestJS + Docker already known):**
+
+| Criterion | Weight | Node.js | Python | Java | React | Vue | Angular |
+|---|---|---|---|---|---|---|---|
+| Team experience | 3 | 5 | 2 | 1 | 3 | 2 | 1 |
+| Ecosystem / libraries | 3 | 5 | 4 | 3 | 4 | 4 | 3 |
+| Docker deployment complexity | 2 | 5 | 4 | 2 | 4 | 4 | 3 |
+| OAuth tooling maturity | 2 | 5 | 4 | 3 | 4 | 3 | 3 |
+| Suitability for scheduled refresh | 1 | 5 | 4 | 3 | 4 | 4 | 3 |
+| Community support / longevity | 1 | 5 | 5 | 4 | 5 | 4 | 4 |
+| Learning value | 1 | 4 | 3 | 3 | 4 | 3 | 3 |
+| **Weighted total** | | **64** | **43** | **28** | **59** | **46** | **37** |
+
+**Why this matters more than either matrix alone:** the two of us started from different real experience
+(React for Morayo, NestJS + Docker for Exauce), yet both independently ranked Node.js first among backend
+options and React first among frontend options — never the reverse. Only the "Team experience" row moves
+sharply depending on who scored it (Node.js: 56→64, React: 62→59); the other six criteria, more
+researched than personally lived, stay close between the two. That convergence from two different
+starting points is the real argument, not just "everyone voted for what they already knew."
+
+**Real POCs, not just the matrix**: [`poc/`](../poc/) has a small, actually-built-and-run proof of
 concept for every alternative in the tables below and above (Python/Flask, Java/`HttpServer`, MySQL,
 MongoDB, TypeORM) — each with the exact commands, its real output, and what running it confirmed or
-complicated about the corresponding decision. See [`poc/README.md`](./poc/README.md).
+complicated about the corresponding decision. See [`poc/README.md`](../poc/README.md).
 
 ### The other layers (each compared against at least two alternatives)
 

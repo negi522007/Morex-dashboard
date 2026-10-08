@@ -62,6 +62,11 @@ services:
       context: ./frontend
     ports:
       - "5173:80"
+    environment:
+      # The Compose service name, resolved on the internal Compose network. A split-host deploy
+      # (frontend and backend as two separate services with no shared Docker network) sets this to
+      # the backend's own public URL instead — see nginx.conf.template.
+      BACKEND_ORIGIN: http://server:8080
     depends_on:
       - server
 

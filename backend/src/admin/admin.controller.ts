@@ -37,12 +37,13 @@ export class AdminController {
 
   @Patch(':id/ban')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Suspend a user: blocks login and kills every existing session immediately' })
+  @ApiOperation({ summary: 'Suspend a user: blocks login and kills every existing session immediately. Emails them the reason and how to contest it.' })
+  @ApiBody({ schema: { example: { reason: 'Spamming RSS widgets with the same feed across many accounts' } } })
   @ApiResponse({ status: 204, description: 'Banned' })
-  @ApiResponse({ status: 400, description: 'Target is yourself, or another admin' })
+  @ApiResponse({ status: 400, description: 'Target is yourself, another admin, or reason is missing' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async ban(@CurrentUser() admin: { id: string }, @Param('id') id: string) {
-    await this.adminService.ban(id, admin.id);
+  async ban(@CurrentUser() admin: { id: string }, @Param('id') id: string, @Body() body: { reason?: string }) {
+    await this.adminService.ban(id, admin.id, body?.reason ?? '');
   }
 
   @Patch(':id/unban')
@@ -56,11 +57,12 @@ export class AdminController {
 
   @Delete(':id')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Permanently delete a user and everything of theirs (cascade)' })
+  @ApiOperation({ summary: 'Permanently delete a user and everything of theirs (cascade). Emails them the reason and how to contest it, before the data is gone.' })
+  @ApiBody({ schema: { example: { reason: 'Repeated harassment reported by other users' } } })
   @ApiResponse({ status: 204, description: 'Deleted' })
-  @ApiResponse({ status: 400, description: 'Target is yourself, or another admin' })
+  @ApiResponse({ status: 400, description: 'Target is yourself, another admin, or reason is missing' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async remove(@CurrentUser() admin: { id: string }, @Param('id') id: string) {
-    await this.adminService.remove(id, admin.id);
+  async remove(@CurrentUser() admin: { id: string }, @Param('id') id: string, @Body() body: { reason?: string }) {
+    await this.adminService.remove(id, admin.id, body?.reason ?? '');
   }
 }
