@@ -16,6 +16,14 @@ const UNBAN_TEXT: Record<string, { subject: string; body: string }> = {
   fr: { subject: 'Ton compte Morex a été réactivé', body: 'Un administrateur a levé la suspension de ton compte. Tu peux te reconnecter.' },
   es: { subject: 'Tu cuenta de Morex ha sido restaurada', body: 'Un administrador levantó la suspensión de tu cuenta. Ya puedes volver a entrar.' },
 };
+// Sent right before the data is actually gone (see remove() below) — same reasoning as BAN_TEXT: never a
+// silent account loss, always a reason and a real inbox to reply to. Unlike a ban, this can't be undone
+// by an "unban" button once sent — honest about that, instead of implying a reversal that isn't real.
+const DELETE_TEXT: Record<string, { subject: string; body: (reason: string) => string }> = {
+  en: { subject: 'Your Morex account has been deleted', body: (r) => `An administrator permanently deleted your account and everything in it. Reason given: "${r}".\n\nThis cannot be undone from our side. If you think this is a mistake or want to explain your side, reply to this email — a real person will read it.` },
+  fr: { subject: 'Ton compte Morex a été supprimé', body: (r) => `Un administrateur a supprimé définitivement ton compte et tout ce qu'il contenait. Motif indiqué : « ${r} ».\n\nCe n'est pas réversible de notre côté. Si tu penses que c'est une erreur ou que tu veux t'expliquer, réponds à cet email — une vraie personne le lira.` },
+  es: { subject: 'Tu cuenta de Morex ha sido eliminada', body: (r) => `Un administrador eliminó permanentemente tu cuenta y todo su contenido. Motivo indicado: «${r}».\n\nEsto no se puede deshacer de nuestro lado. Si crees que es un error o quieres explicarte, responde a este correo — una persona real lo leerá.` },
+};
 
 @Injectable()
 export class AdminService {
@@ -95,8 +103,15 @@ export class AdminService {
 
   // Permanent — cascades to sessions, widget instances, OAuth links, etc.
   // via the existing onDelete: Cascade relations. Banning is the
-  // reversible option; this isn't.
-  async remove(userId: string, adminId: string): Promise<void> {
+  // reversible option; this isn't. A reason is mandatory for the same
+  // accountability reason as ban(), and is emailed before the data is gone
+  // (see DELETE_TEXT) — the one way the user can still push back, even
+  // though nothing here can actually restore the account afterwards.
+  async remove(userId: string, adminId: string, reason: string): Promise<void> {
+    const trimmedReason = (reason ?? '').trim();
+    if (!trimmedReason) {
+      throw new BadRequestException('A reason is required to delete an account');
+    }
     if (userId === adminId) {
       throw new BadRequestException('You cannot delete your own account');
     }
@@ -104,6 +119,12 @@ export class AdminService {
     if (target.isAdmin) {
       throw new BadRequestException('Cannot delete another admin');
     }
+
+    const t = DELETE_TEXT[target.language] ?? DELETE_TEXT.en;
+    await this.mail.sendAlertEmail(target.email, t.subject, t.body(trimmedReason)).catch((err) =>
+      this.logger.warn(`Could not email the deletion notice to ${target.email}: ${(err as Error).message}`),
+    );
+
     await this.prisma.user.delete({ where: { id: userId } });
   }
 

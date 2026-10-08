@@ -37,7 +37,7 @@ const T = {
     confirmUnban: (n: string) => `Réactiver ${n} ? Un email de confirmation lui sera envoyé.`,
     banReasonPrompt: 'Motif (envoyé par email à l’utilisateur) :', banReasonPlaceholder: 'Ex. : spam, abus, contenu interdit…',
     deletePrompt: (e: string) => `Suppression définitive. Tape l’email pour confirmer : ${e}`,
-    deleteWarn: 'Widgets, journal, comptes liés — tout part avec, pour de bon.',
+    deleteWarn: 'Widgets, journal, comptes liés — tout part avec, pour de bon. Un email avec le motif lui sera envoyé avant.',
     confirm: 'Confirmer', loading: 'Chargement…', error: 'Une erreur est survenue', firstName: 'Prénom', lastName: 'Nom',
   },
   en: {
@@ -52,7 +52,7 @@ const T = {
     confirmUnban: (n: string) => `Unban ${n}? A confirmation email will be sent to them.`,
     banReasonPrompt: 'Reason (emailed to the user):', banReasonPlaceholder: 'e.g. spam, abuse, prohibited content…',
     deletePrompt: (e: string) => `Permanent deletion. Type the email to confirm: ${e}`,
-    deleteWarn: 'Widgets, journal, linked accounts — all of it goes too, for good.',
+    deleteWarn: "Widgets, journal, linked accounts — all of it goes too, for good. They'll get an email with the reason first.",
     confirm: 'Confirm', loading: 'Loading…', error: 'Something went wrong', firstName: 'First name', lastName: 'Last name',
   },
   es: {
@@ -67,7 +67,7 @@ const T = {
     confirmUnban: (n: string) => `¿Reactivar a ${n}? Se le enviará un email de confirmación.`,
     banReasonPrompt: 'Motivo (enviado por email al usuario):', banReasonPlaceholder: 'Ej.: spam, abuso, contenido prohibido…',
     deletePrompt: (e: string) => `Eliminación definitiva. Escribe el email para confirmar: ${e}`,
-    deleteWarn: 'Widgets, diario, cuentas vinculadas: todo desaparece, para siempre.',
+    deleteWarn: 'Widgets, diario, cuentas vinculadas: todo desaparece, para siempre. Antes se le enviará un email con el motivo.',
     confirm: 'Confirmar', loading: 'Cargando…', error: 'Algo salió mal', firstName: 'Nombre', lastName: 'Apellido',
   },
 } satisfies Record<Lang, Record<string, string | ((s: string) => string)>>
@@ -89,6 +89,7 @@ export function AdminPage() {
   const [editValues, setEditValues] = useState({ firstName: '', lastName: '' })
   const [confirming, setConfirming] = useState<{ id: string; kind: 'ban' | 'unban' | 'delete' } | null>(null)
   const [deleteTyped, setDeleteTyped] = useState('')
+  const [deleteReasonInput, setDeleteReasonInput] = useState('')
   const [banReasonInput, setBanReasonInput] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
 
@@ -112,7 +113,7 @@ export function AdminPage() {
 
   async function act<T>(id: string, fn: () => Promise<T>) {
     setBusy(id); setError('')
-    try { await fn(); await load() } catch (e) { setError(e instanceof ApiError ? e.message : t.error) } finally { setBusy(null); setConfirming(null); setDeleteTyped(''); setBanReasonInput('') }
+    try { await fn(); await load() } catch (e) { setError(e instanceof ApiError ? e.message : t.error) } finally { setBusy(null); setConfirming(null); setDeleteTyped(''); setDeleteReasonInput(''); setBanReasonInput('') }
   }
 
   const name = (u: AdminUser) => [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email
@@ -224,17 +225,20 @@ export function AdminPage() {
                             <span className="flex flex-col gap-1 rounded-xl bg-red-500/10 p-2 text-xs">
                               <span>{t.deletePrompt(u.email)}</span>
                               <span className="text-red-200/80">{t.deleteWarn}</span>
+                              <span>{t.banReasonPrompt}</span>
+                              <input value={deleteReasonInput} onChange={(e) => setDeleteReasonInput(e.target.value)} placeholder={t.banReasonPlaceholder}
+                                className="rounded-lg border border-white/20 bg-white/10 px-2 py-1" />
                               <input value={deleteTyped} onChange={(e) => setDeleteTyped(e.target.value)} placeholder={u.email}
                                 className="rounded-lg border border-white/20 bg-white/10 px-2 py-1" />
                               <span className="flex gap-2">
-                                <button disabled={busy === u.id || deleteTyped.trim().toLowerCase() !== u.email.toLowerCase()}
-                                  onClick={() => act(u.id, () => api.del(`/admin/users/${u.id}`))}
+                                <button disabled={busy === u.id || deleteTyped.trim().toLowerCase() !== u.email.toLowerCase() || !deleteReasonInput.trim()}
+                                  onClick={() => act(u.id, () => api.del(`/admin/users/${u.id}`, { reason: deleteReasonInput.trim() }))}
                                   className="rounded-full bg-red-500 px-3 py-1 font-semibold text-white disabled:opacity-40">{t.confirm}</button>
-                                <button onClick={() => { setConfirming(null); setDeleteTyped('') }} className="rounded-full border border-white/25 px-3 py-1">{t.cancel}</button>
+                                <button onClick={() => { setConfirming(null); setDeleteTyped(''); setDeleteReasonInput('') }} className="rounded-full border border-white/25 px-3 py-1">{t.cancel}</button>
                               </span>
                             </span>
                           ) : !locked ? (
-                            <button onClick={() => setConfirming({ id: u.id, kind: 'delete' })}
+                            <button onClick={() => { setConfirming({ id: u.id, kind: 'delete' }); setDeleteTyped(''); setDeleteReasonInput('') }}
                               className="rounded-full border border-red-400/40 px-2.5 py-1 text-xs text-red-300 hover:bg-red-500/10">{t.delete}</button>
                           ) : null}
                         </div>

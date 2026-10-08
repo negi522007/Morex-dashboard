@@ -212,7 +212,7 @@ Add a search box (client-side filter on name/email) and a filter "All / Unconfir
 | Mark email as confirmed | `PATCH /admin/users/:id` `{ emailVerified: true }` | For someone whose confirmation mail never arrived |
 | Ban | `PATCH /admin/users/:id/ban` `{ reason }` → `204` | Ends all their sessions immediately. `reason` is **mandatory** (blank → `400`) — the UI must collect it before the request, not just rely on the server's error. The user is emailed the reason and told they can reply to contest it (no in-app appeal flow was built — see "why" below). |
 | Unban | `PATCH /admin/users/:id/unban` → `204` | Clears `banReason`. The user is emailed that access was restored. |
-| Delete | `DELETE /admin/users/:id` → `204` | **Permanent** (their widgets, journal, links go too). Confirm dialog that makes the admin type the email, or at least a clear warning. |
+| Delete | `DELETE /admin/users/:id` `{ reason }` → `204` | **Permanent** (their widgets, journal, links go too). `reason` is **mandatory** (blank → `400`), same as ban. Emailed to the user, with the "reply to contest" note, right before the row is actually deleted. Confirm dialog makes the admin type the email, as well as the reason. |
 
 Rules to reflect in the UI so the admin doesn't hit avoidable errors: you cannot ban or delete **yourself**
 or **another admin** (the API answers `400` with a message — hide or disable those buttons for rows where

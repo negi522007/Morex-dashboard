@@ -112,25 +112,43 @@ describe('AdminService', () => {
   });
 
   describe('remove', () => {
+    it('refuses a missing or blank reason, before even looking the user up', async () => {
+      await expect(service.remove('u2', 'admin-1', '')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.remove('u2', 'admin-1', '   ')).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
+
     it('refuses to let an admin delete themselves', async () => {
-      await expect(service.remove('admin-1', 'admin-1')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.remove('admin-1', 'admin-1', 'reason')).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.user.findUnique).not.toHaveBeenCalled();
     });
 
     it('404s on an unknown user', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
-      await expect(service.remove('nope', 'admin-1')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.remove('nope', 'admin-1', 'reason')).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('refuses to delete another admin', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: 'u2', isAdmin: true });
-      await expect(service.remove('u2', 'admin-1')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.remove('u2', 'admin-1', 'reason')).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.user.delete).not.toHaveBeenCalled();
     });
 
-    it('deletes a non-admin target', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'u2', isAdmin: false });
-      await service.remove('u2', 'admin-1');
+    it('emails the target the reason, then deletes a non-admin target', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u2', isAdmin: false, email: 'u2@example.com', language: 'en' });
+      await service.remove('u2', 'admin-1', 'Repeated harassment reported by other users');
+      expect(mail.sendAlertEmail).toHaveBeenCalledWith(
+        'u2@example.com',
+        expect.any(String),
+        expect.stringContaining('Repeated harassment reported by other users'),
+      );
+      expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'u2' } });
+    });
+
+    it('still deletes even if the notification email fails to send', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u2', isAdmin: false, email: 'u2@example.com', language: 'en' });
+      mail.sendAlertEmail.mockRejectedValue(new Error('smtp down'));
+      await expect(service.remove('u2', 'admin-1', 'reason')).resolves.toBeUndefined();
       expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'u2' } });
     });
   });
