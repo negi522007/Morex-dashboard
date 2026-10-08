@@ -17,6 +17,7 @@ interface AdminUser {
   emailVerified: boolean
   isAdmin: boolean
   isBanned: boolean
+  banReason: string | null
   createdAt: string
   widgetCount: number
   linkedAccountsCount: number
@@ -32,8 +33,9 @@ const T = {
     unconfirmedTip: 'Les comptes non confirmés sont supprimés automatiquement après 24 h',
     edit: 'Modifier', save: 'Enregistrer', cancel: 'Annuler', confirmEmail: 'Confirmer l’email',
     ban: 'Bannir', unban: 'Réactiver', delete: 'Supprimer',
-    confirmBan: (n: string) => `Bannir ${n} ? Ses sessions seront fermées immédiatement.`,
-    confirmUnban: (n: string) => `Réactiver ${n} ?`,
+    confirmBan: (n: string) => `Bannir ${n} ? Ses sessions seront fermées immédiatement et il/elle reçoit un email avec le motif.`,
+    confirmUnban: (n: string) => `Réactiver ${n} ? Un email de confirmation lui sera envoyé.`,
+    banReasonPrompt: 'Motif (envoyé par email à l’utilisateur) :', banReasonPlaceholder: 'Ex. : spam, abus, contenu interdit…',
     deletePrompt: (e: string) => `Suppression définitive. Tape l’email pour confirmer : ${e}`,
     deleteWarn: 'Widgets, journal, comptes liés — tout part avec, pour de bon.',
     confirm: 'Confirmer', loading: 'Chargement…', error: 'Une erreur est survenue', firstName: 'Prénom', lastName: 'Nom',
@@ -46,8 +48,9 @@ const T = {
     unconfirmedTip: 'Unconfirmed accounts are deleted automatically after 24 h',
     edit: 'Edit', save: 'Save', cancel: 'Cancel', confirmEmail: 'Confirm email',
     ban: 'Ban', unban: 'Unban', delete: 'Delete',
-    confirmBan: (n: string) => `Ban ${n}? Their sessions will end immediately.`,
-    confirmUnban: (n: string) => `Unban ${n}?`,
+    confirmBan: (n: string) => `Ban ${n}? Their sessions will end immediately and they'll get an email with the reason.`,
+    confirmUnban: (n: string) => `Unban ${n}? A confirmation email will be sent to them.`,
+    banReasonPrompt: 'Reason (emailed to the user):', banReasonPlaceholder: 'e.g. spam, abuse, prohibited content…',
     deletePrompt: (e: string) => `Permanent deletion. Type the email to confirm: ${e}`,
     deleteWarn: 'Widgets, journal, linked accounts — all of it goes too, for good.',
     confirm: 'Confirm', loading: 'Loading…', error: 'Something went wrong', firstName: 'First name', lastName: 'Last name',
@@ -60,8 +63,9 @@ const T = {
     unconfirmedTip: 'Las cuentas no confirmadas se eliminan automáticamente tras 24 h',
     edit: 'Editar', save: 'Guardar', cancel: 'Cancelar', confirmEmail: 'Confirmar email',
     ban: 'Suspender', unban: 'Reactivar', delete: 'Eliminar',
-    confirmBan: (n: string) => `¿Suspender a ${n}? Sus sesiones terminarán de inmediato.`,
-    confirmUnban: (n: string) => `¿Reactivar a ${n}?`,
+    confirmBan: (n: string) => `¿Suspender a ${n}? Sus sesiones terminarán de inmediato y recibirá un email con el motivo.`,
+    confirmUnban: (n: string) => `¿Reactivar a ${n}? Se le enviará un email de confirmación.`,
+    banReasonPrompt: 'Motivo (enviado por email al usuario):', banReasonPlaceholder: 'Ej.: spam, abuso, contenido prohibido…',
     deletePrompt: (e: string) => `Eliminación definitiva. Escribe el email para confirmar: ${e}`,
     deleteWarn: 'Widgets, diario, cuentas vinculadas: todo desaparece, para siempre.',
     confirm: 'Confirmar', loading: 'Cargando…', error: 'Algo salió mal', firstName: 'Nombre', lastName: 'Apellido',
@@ -85,6 +89,7 @@ export function AdminPage() {
   const [editValues, setEditValues] = useState({ firstName: '', lastName: '' })
   const [confirming, setConfirming] = useState<{ id: string; kind: 'ban' | 'unban' | 'delete' } | null>(null)
   const [deleteTyped, setDeleteTyped] = useState('')
+  const [banReasonInput, setBanReasonInput] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
 
   const load = () => api.get<AdminUser[]>('/admin/users').then(setUsers).catch((e) => setError(e instanceof ApiError ? e.message : t.error))
@@ -107,7 +112,7 @@ export function AdminPage() {
 
   async function act<T>(id: string, fn: () => Promise<T>) {
     setBusy(id); setError('')
-    try { await fn(); await load() } catch (e) { setError(e instanceof ApiError ? e.message : t.error) } finally { setBusy(null); setConfirming(null); setDeleteTyped('') }
+    try { await fn(); await load() } catch (e) { setError(e instanceof ApiError ? e.message : t.error) } finally { setBusy(null); setConfirming(null); setDeleteTyped(''); setBanReasonInput('') }
   }
 
   const name = (u: AdminUser) => [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email
@@ -180,7 +185,7 @@ export function AdminPage() {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1.5">
                           {!u.emailVerified && <span title={t.unconfirmedTip} className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-200">{t.badgeUnconfirmed}</span>}
-                          {u.isBanned && <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs text-red-200">{t.badgeBanned}</span>}
+                          {u.isBanned && <span title={u.banReason ?? undefined} className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs text-red-200">{t.badgeBanned}{u.banReason ? `: ${u.banReason}` : ''}</span>}
                           {u.isAdmin && <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-200">{t.badgeAdmin}</span>}
                         </div>
                       </td>
@@ -192,14 +197,27 @@ export function AdminPage() {
                             <button disabled={busy === u.id} onClick={() => act(u.id, () => api.patch(`/admin/users/${u.id}`, { emailVerified: true }))}
                               className="rounded-full border border-white/20 px-2.5 py-1 text-xs hover:bg-white/10">{t.confirmEmail}</button>
                           )}
-                          {!locked && confirming?.id === u.id && confirming.kind === (u.isBanned ? 'unban' : 'ban') ? (
+                          {!locked && confirming?.id === u.id && confirming.kind === 'ban' && !u.isBanned ? (
+                            <span className="flex flex-col gap-1 rounded-xl bg-white/10 p-2 text-xs">
+                              <span>{t.confirmBan(name(u))}</span>
+                              <span>{t.banReasonPrompt}</span>
+                              <input value={banReasonInput} onChange={(e) => setBanReasonInput(e.target.value)} placeholder={t.banReasonPlaceholder}
+                                className="rounded-lg border border-white/20 bg-white/10 px-2 py-1" />
+                              <span className="flex gap-2">
+                                <button disabled={busy === u.id || !banReasonInput.trim()}
+                                  onClick={() => act(u.id, () => api.patch(`/admin/users/${u.id}/ban`, { reason: banReasonInput.trim() }))}
+                                  className="rounded-full bg-white px-3 py-1 font-semibold text-slate-950 disabled:opacity-40">{t.confirm}</button>
+                                <button onClick={() => { setConfirming(null); setBanReasonInput('') }} className="rounded-full border border-white/25 px-3 py-1">{t.cancel}</button>
+                              </span>
+                            </span>
+                          ) : !locked && confirming?.id === u.id && confirming.kind === 'unban' && u.isBanned ? (
                             <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-2 py-1 text-xs">
-                              {u.isBanned ? t.confirmUnban(name(u)) : t.confirmBan(name(u))}
-                              <button disabled={busy === u.id} onClick={() => act(u.id, () => api.patch(`/admin/users/${u.id}/${u.isBanned ? 'unban' : 'ban'}`, {}))} className="font-semibold underline">{t.confirm}</button>
+                              {t.confirmUnban(name(u))}
+                              <button disabled={busy === u.id} onClick={() => act(u.id, () => api.patch(`/admin/users/${u.id}/unban`, {}))} className="font-semibold underline">{t.confirm}</button>
                               <button onClick={() => setConfirming(null)}>{t.cancel}</button>
                             </span>
                           ) : !locked ? (
-                            <button onClick={() => setConfirming({ id: u.id, kind: u.isBanned ? 'unban' : 'ban' })}
+                            <button onClick={() => { setConfirming({ id: u.id, kind: u.isBanned ? 'unban' : 'ban' }); setBanReasonInput('') }}
                               className="rounded-full border border-white/20 px-2.5 py-1 text-xs hover:bg-white/10">{u.isBanned ? t.unban : t.ban}</button>
                           ) : null}
                           {!locked && confirming?.id === u.id && confirming.kind === 'delete' ? (

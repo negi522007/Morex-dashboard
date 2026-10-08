@@ -9,13 +9,19 @@ function makePrismaMock() {
   };
 }
 
+function makeMailMock() {
+  return { sendAlertEmail: jest.fn().mockResolvedValue(undefined) };
+}
+
 describe('AdminService', () => {
   let prisma: ReturnType<typeof makePrismaMock>;
+  let mail: ReturnType<typeof makeMailMock>;
   let service: AdminService;
 
   beforeEach(() => {
     prisma = makePrismaMock();
-    service = new AdminService(prisma as any);
+    mail = makeMailMock();
+    service = new AdminService(prisma as any, mail as any);
   });
 
   describe('listUsers', () => {
@@ -30,6 +36,7 @@ describe('AdminService', () => {
           emailVerified: true,
           isAdmin: false,
           isBanned: false,
+          banReason: null,
           createdAt: new Date('2026-01-01'),
           _count: { widgetInstances: 2, oauthAccounts: 1, sessions: 3 },
         },
@@ -46,6 +53,7 @@ describe('AdminService', () => {
           emailVerified: true,
           isAdmin: false,
           isBanned: false,
+          banReason: null,
           createdAt: new Date('2026-01-01'),
           widgetCount: 2,
           linkedAccountsCount: 1,
@@ -58,28 +66,48 @@ describe('AdminService', () => {
   describe('ban', () => {
     it('404s on an unknown user', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
-      await expect(service.ban('nope', 'admin-1')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.ban('nope', 'admin-1', 'spamming')).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('refuses to let an admin ban themselves', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: 'admin-1', isAdmin: true });
-      await expect(service.ban('admin-1', 'admin-1')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.ban('admin-1', 'admin-1', 'spamming')).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
     it('refuses to ban another admin', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: 'u2', isAdmin: true });
-      await expect(service.ban('u2', 'admin-1')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.ban('u2', 'admin-1', 'spamming')).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('sets isBanned and deletes every session for the target, in one transaction', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'u2', isAdmin: false });
+    it('refuses a missing or blank reason, before even looking the user up', async () => {
+      await expect(service.ban('u2', 'admin-1', '')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.ban('u2', 'admin-1', '   ')).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    });
 
-      await service.ban('u2', 'admin-1');
+    it('sets isBanned + banReason and deletes every session for the target, in one transaction, then emails them', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u2', isAdmin: false, email: 'u2@example.com', language: 'fr' });
+
+      await service.ban('u2', 'admin-1', 'Spamming the same RSS link from many accounts');
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'u2' }, data: { isBanned: true } });
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'u2' },
+        data: { isBanned: true, banReason: 'Spamming the same RSS link from many accounts' },
+      });
       expect(prisma.session.deleteMany).toHaveBeenCalledWith({ where: { userId: 'u2' } });
+      expect(mail.sendAlertEmail).toHaveBeenCalledWith(
+        'u2@example.com',
+        expect.any(String),
+        expect.stringContaining('Spamming the same RSS link from many accounts'),
+      );
+    });
+
+    it('still bans even if the notification email fails to send', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u2', isAdmin: false, email: 'u2@example.com', language: 'en' });
+      mail.sendAlertEmail.mockRejectedValue(new Error('smtp down'));
+      await expect(service.ban('u2', 'admin-1', 'reason')).resolves.toBeUndefined();
     });
   });
 
@@ -113,10 +141,11 @@ describe('AdminService', () => {
       await expect(service.unban('nope')).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('clears isBanned', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'u2' });
+    it('clears isBanned and banReason, then emails the user', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u2', email: 'u2@example.com', language: 'es' });
       await service.unban('u2');
-      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'u2' }, data: { isBanned: false } });
+      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'u2' }, data: { isBanned: false, banReason: null } });
+      expect(mail.sendAlertEmail).toHaveBeenCalledWith('u2@example.com', expect.any(String), expect.any(String));
     });
   });
 
