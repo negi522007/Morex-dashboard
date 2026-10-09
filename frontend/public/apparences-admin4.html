@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex admin en pages</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .55), rgb(15 12 50 / .82)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1.top { text-align: center; font-weight: 600; margin: 0; padding-top: 28px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .78); margin: 8px auto 12px; max-width: 920px; padding: 0 16px; font-size: 14px; }
+  .legend { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; font-size: 12px; margin-bottom: 14px; align-items: center; }
+  .legend label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; padding: 5px 12px; border-radius: 999px; background: rgb(255 255 255 / .08); }
+  .tabs { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; padding: 0 12px; }
+  .tabs button { font: inherit; font-size: 13px; padding: 8px 16px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .25); background: transparent; color: #fff; cursor: pointer; }
+  .tabs button.on { background: #fff; color: #1e1b4b; font-weight: 600; }
+  .desc { text-align: center; font-size: 13px; color: rgb(255 255 255 / .82); margin: 6px auto 18px; max-width: 860px; padding: 0 12px; }
+  .stage { max-width: 1240px; margin: 0 auto; padding: 0 20px 70px; }
+  .glass { background: rgb(15 23 42 / .74); border: 1px solid rgb(255 255 255 / .12); border-radius: 24px; backdrop-filter: blur(18px); }
+  .ok-tag, .be-tag { display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; padding: 1px 7px; border-radius: 999px; vertical-align: middle; margin-left: 6px; text-transform: uppercase; }
+  .ok-tag { background: rgb(52 211 153 / .18); color: #6ee7b7; } .be-tag { background: rgb(251 191 36 / .2); color: #fcd34d; }
+  body.hide-be .needs-be { display: none !important; }
+  body.no-tags .ok-tag, body.no-tags .be-tag { display: none; }
+  .btn { font: inherit; font-size: 12.5px; padding: 7px 13px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .22); background: rgb(255 255 255 / .06); color: #fff; cursor: pointer; white-space: nowrap; }
+  .btn:hover:not(:disabled) { background: rgb(255 255 255 / .14); } .btn:disabled { opacity: .35; cursor: not-allowed; }
+  .btn.danger { border-color: rgb(248 113 113 / .55); color: #fecaca; } .btn.primary { background: #fff; color: #1e1b4b; border-color: #fff; font-weight: 600; }
+  .btn.sm { padding: 4px 10px; font-size: 11.5px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .b-admin { background: rgb(167 139 250 / .22); color: #ddd6fe; } .b-ban { background: rgb(248 113 113 / .22); color: #fecaca; }
+  .b-unconf { background: rgb(251 191 36 / .2); color: #fde68a; } .b-ok { background: rgb(52 211 153 / .16); color: #a7f3d0; } .b-online { background: rgb(56 189 248 / .18); color: #bae6fd; }
+  .av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 12px; flex: none; position: relative; }
+  .av .dot { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: #34d399; border: 2px solid #0f172a; }
+  .muted { color: rgb(255 255 255 / .58); font-size: 12px; }
+  .num { font-family: 'JetBrains Mono', monospace; }
+  h3.sec { margin: 0 0 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .search { flex: 1; min-width: 200px; padding: 10px 16px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .18); background: rgb(255 255 255 / .07); color: #fff; font: inherit; font-size: 13px; outline: none; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; } .chips button { font: inherit; font-size: 12px; padding: 7px 13px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .2); background: transparent; color: #fff; cursor: pointer; }
+  .chips button.on { background: rgb(167 139 250 / .3); border-color: #c4b5fd; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(140px); padding: 11px 18px; border-radius: 14px; background: #1e1b4b; border: 1px solid rgb(255 255 255 / .2); font-size: 13px; transition: .3s; z-index: 80; max-width: 90vw; }
+  .toast.show { transform: translateX(-50%); }
+  .prov { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-size: 10px; font-weight: 800; background: rgb(255 255 255 / .1); margin-right: 3px; }
+  /* dialogs */
+  .dlg-bg { position: fixed; inset: 0; background: rgb(2 6 23 / .7); display: none; place-items: center; z-index: 60; backdrop-filter: blur(5px); padding: 16px; }
+  .dlg-bg.open { display: grid; }
+  .dlg { width: min(560px, 100%); max-height: 92vh; overflow: auto; padding: 24px; border-radius: 24px; background: #0f172a; border: 1px solid rgb(255 255 255 / .15); }
+  .dlg h3 { margin: 4px 0 6px; } .dlg p { font-size: 13px; color: rgb(255 255 255 / .82); line-height: 1.55; margin: 6px 0; }
+  .dlg textarea, .dlg input { width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid rgb(255 255 255 / .2); background: rgb(255 255 255 / .06); color: #fff; font: inherit; font-size: 13px; margin: 6px 0 10px; resize: vertical; }
+  .dlg .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  .dlg .big { font-size: 34px; }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; } .presets button { font: inherit; font-size: 11.5px; padding: 5px 11px; border-radius: 999px; border: 1px dashed rgb(255 255 255 / .3); background: transparent; color: #fff; cursor: pointer; }
+  .mailprev { margin-top: 10px; border-radius: 14px; background: #fffaf0; color: #3b2f5c; padding: 14px 16px; font-size: 12.5px; line-height: 1.55; }
+  .mailprev .h { font-size: 11px; color: #7c6f99; border-bottom: 1px solid #e9dcf7; padding-bottom: 6px; margin-bottom: 8px; }
+  .mailprev b { color: #7c3aed; }
+  .lbl { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; opacity: .65; margin-top: 10px; display: block; }
+  /* ===== 1 · centre de contrôle ===== */
+  .d1 .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 14px; }
+  @media (max-width: 1100px) { .d1 .kpis { grid-template-columns: repeat(3, 1fr); } }
+  .d1 .kpi { padding: 14px 16px; } .d1 .kpi .v { font-size: 26px; font-weight: 700; line-height: 1.1; } .d1 .kpi .l { font-size: 11.5px; opacity: .7; }
+  .d1 .kpi svg { width: 100%; height: 30px; margin-top: 6px; }
+  .d1 .row2 { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 1000px) { .d1 .row2 { grid-template-columns: 1fr; } }
+  .d1 .card { padding: 18px; }
+  .d1 .bars { display: flex; align-items: flex-end; gap: 4px; height: 120px; }
+  .d1 .bars i { flex: 1; border-radius: 6px 6px 2px 2px; background: linear-gradient(#a78bfa, #6366f1); position: relative; min-height: 3px; }
+  .d1 .bars i span { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 9.5px; opacity: .7; font-style: normal; }
+  .d1 .bx { display: flex; justify-content: space-between; font-size: 10px; opacity: .55; margin-top: 4px; }
+  .d1 .svc { display: flex; align-items: center; gap: 8px; font-size: 12.5px; margin: 7px 0; } .d1 .svc .n { width: 92px; } .d1 .svc .track { flex: 1; height: 8px; border-radius: 99px; background: rgb(255 255 255 / .08); overflow: hidden; } .d1 .svc .track i { display: block; height: 100%; }
+  .d1 .health { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 6px 0; border-bottom: 1px solid rgb(255 255 255 / .06); } .d1 .health .led { width: 9px; height: 9px; border-radius: 50%; flex: none; } .d1 .health .e { margin-left: auto; font-size: 11px; opacity: .7; }
+  .d1 .feed div { display: flex; gap: 10px; font-size: 12.5px; padding: 7px 0; border-bottom: 1px solid rgb(255 255 255 / .06); } .d1 .feed small { margin-left: auto; opacity: .55; white-space: nowrap; }
+  .d1 table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 12px; }
+  .d1 th { text-align: left; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: rgb(255 255 255 / .55); padding: 8px; border-bottom: 1px solid rgb(255 255 255 / .1); }
+  .d1 td { padding: 10px 8px; border-bottom: 1px solid rgb(255 255 255 / .06); vertical-align: middle; }
+  .d1 .who { display: flex; align-items: center; gap: 10px; } .d1 .who small { display: block; color: rgb(255 255 255 / .55); font-size: 11.5px; }
+  .d1 .acts { display: flex; gap: 5px; justify-content: flex-end; }
+  .d1 .expire { font-size: 10.5px; color: #fde68a; display: block; }
+  .d1 .tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  /* ===== 2 · galaxie ===== */
+  .d2 .wrap { display: grid; grid-template-columns: 1fr 340px; gap: 14px; }
+  @media (max-width: 1000px) { .d2 .wrap { grid-template-columns: 1fr; } }
+  .d2 .sky { position: relative; height: 560px; overflow: hidden; background: radial-gradient(ellipse at 50% 50%, rgb(99 102 241 / .25), transparent 60%), rgb(2 6 23 / .75); }
+  .d2 .sky .orbit { position: absolute; left: 50%; top: 50%; border: 1px dashed rgb(255 255 255 / .1); border-radius: 50%; transform: translate(-50%, -50%); }
+  .d2 .sky .orbit span { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 10px; opacity: .45; white-space: nowrap; background: rgb(2 6 23 / .8); padding: 0 6px; }
+  .d2 .core { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #fff7cc, #fde047 50%, #f59e0b); box-shadow: 0 0 40px #fde047; color: #78350f; font-weight: 800; font-size: 12px; text-align: center; line-height: 1.1; }
+  .d2 .star { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; cursor: pointer; transition: transform .2s; }
+  .d2 .star:hover, .d2 .star.sel { transform: translate(-50%, -50%) scale(1.5); z-index: 3; }
+  .d2 .star b { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); font-size: 10.5px; font-weight: 500; white-space: nowrap; opacity: .8; margin-top: 3px; }
+  .d2 .star.banned::after { content: '✕'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 9px; color: #fff; font-weight: 800; }
+  .d2 .keys { position: absolute; left: 14px; top: 12px; display: flex; gap: 12px; font-size: 11px; opacity: .85; flex-wrap: wrap; }
+  .d2 .keys i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+  .d2 .panel { padding: 20px; }
+  .d2 .panel .head { display: flex; gap: 12px; align-items: center; } .d2 .panel .head .av { width: 54px; height: 54px; font-size: 17px; }
+  .d2 .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 14px 0; }
+  .d2 .facts div { padding: 10px; border-radius: 14px; background: rgb(255 255 255 / .05); font-size: 11.5px; } .d2 .facts b { display: block; font-size: 18px; }
+  /* ===== 3 · modération ===== */
+  .d3 .wrap { display: grid; grid-template-columns: 230px 1fr; gap: 14px; }
+  @media (max-width: 900px) { .d3 .wrap { grid-template-columns: 1fr; } }
+  .d3 .nav { padding: 12px; display: flex; flex-direction: column; gap: 4px; align-self: start; }
+  .d3 .nav button { font: inherit; font-size: 13px; text-align: left; padding: 10px 12px; border-radius: 14px; border: 0; background: transparent; color: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .d3 .nav button.on { background: rgb(167 139 250 / .2); } .d3 .nav button span.c { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: rgb(255 255 255 / .12); }
+  .d3 .nav button span.c.hot { background: #f59e0b; color: #1e1b4b; font-weight: 700; }
+  .d3 .main { padding: 18px; }
+  .d3 .task { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 16px; background: rgb(255 255 255 / .04); margin-bottom: 8px; }
+  .d3 .task .t { flex: 1; min-width: 0; } .d3 .task .t b { display: block; font-size: 13px; } .d3 .task .t small { font-size: 12px; opacity: .7; }
+  .d3 .tl { border-left: 2px solid rgb(255 255 255 / .12); margin-left: 8px; padding-left: 16px; }
+  .d3 .tl div { position: relative; padding: 7px 0; font-size: 12.5px; } .d3 .tl div::before { content: ''; position: absolute; left: -22px; top: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--c, #a78bfa); }
+  .d3 .tl small { display: block; opacity: .55; font-size: 11px; }
+  .d3 .reason { font-size: 12px; font-style: italic; color: #fecaca; margin-top: 3px; }
+  /* ===== 4 · fiche riche ===== */
+  .d4 .wrap { display: grid; grid-template-columns: 340px 1fr; gap: 14px; }
+  @media (max-width: 900px) { .d4 .wrap { grid-template-columns: 1fr; } }
+  .d4 .list { padding: 12px; max-height: 760px; overflow: auto; }
+  .d4 .item { display: flex; align-items: center; gap: 10px; padding: 9px; border-radius: 14px; cursor: pointer; }
+  .d4 .item:hover { background: rgb(255 255 255 / .05); } .d4 .item.sel { background: rgb(167 139 250 / .2); }
+  .d4 .item .t { flex: 1; min-width: 0; } .d4 .item .t b { display: block; font-size: 13px; } .d4 .item .t small { display: block; font-size: 11px; opacity: .6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .d4 .detail { padding: 24px; }
+  .d4 .cover { height: 90px; border-radius: 18px; margin: -6px -6px 0; background: linear-gradient(120deg, rgb(167 139 250 / .5), rgb(56 189 248 / .35)), url(/sahara_night.jpeg) 50% 60%/cover; }
+  .d4 .head { display: flex; gap: 16px; align-items: flex-end; margin-top: -34px; padding: 0 8px; } .d4 .head .av { width: 76px; height: 76px; font-size: 24px; border: 4px solid #0f172a; }
+  .d4 .head h2 { margin: 0 0 4px; font-size: 21px; }
+  .d4 .grid3 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 18px 0; }
+  .d4 .grid3 div { padding: 12px; border-radius: 14px; background: rgb(255 255 255 / .05); font-size: 11.5px; } .d4 .grid3 b { display: block; font-size: 19px; }
+  .d4 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } @media (max-width: 800px) { .d4 .cols { grid-template-columns: 1fr; } }
+  .d4 .box { padding: 14px; border-radius: 16px; background: rgb(255 255 255 / .04); }
+  .d4 .box h4 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; opacity: .65; font-weight: 500; }
+  .d4 .svcchip { display: inline-flex; gap: 5px; align-items: center; padding: 4px 10px; border-radius: 999px; background: rgb(255 255 255 / .08); font-size: 11.5px; margin: 0 5px 5px 0; }
+  .d4 .sess { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px solid rgb(255 255 255 / .06); }
+  .d4 .zone { margin-top: 14px; padding: 14px; border-radius: 16px; border: 1px solid rgb(248 113 113 / .35); background: rgb(127 29 29 / .15); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .d4 .zone p { flex: 1 0 100%; margin: 0 0 4px; font-size: 12px; opacity: .85; }
+  .d4 textarea { width: 100%; min-height: 60px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgb(255 255 255 / .2); background: rgb(255 255 255 / .06); color: #fff; font: inherit; font-size: 12.5px; }
+  .empty { text-align: center; padding: 30px; opacity: .65; font-size: 13px; }
+  /* ===== V1 · cockpit vivant ===== */
+  .v1 .hello { display: flex; align-items: center; gap: 16px; padding: 18px 22px; margin-bottom: 14px; flex-wrap: wrap; }
+  .v1 .hello h2 { margin: 0; font-size: 22px; } .v1 .hello .sub { opacity: .7; font-size: 13px; }
+  .v1 .pulse { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgb(251 191 36 / .15); color: #fde68a; font-size: 13px; font-weight: 600; }
+  .v1 .pulse i { width: 9px; height: 9px; border-radius: 50%; background: #fbbf24; animation: pl 1.6s infinite; }
+  @keyframes pl { 0% { box-shadow: 0 0 0 0 rgb(251 191 36 / .6); } 100% { box-shadow: 0 0 0 10px rgb(251 191 36 / 0); } }
+  .v1 .todo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; } @media (max-width: 900px) { .v1 .todo { grid-template-columns: 1fr; } }
+  .v1 .todo > div { padding: 14px 16px; display: flex; gap: 12px; align-items: center; border-left: 4px solid var(--c); }
+  .v1 .todo .ic { font-size: 22px; } .v1 .todo b { display: block; font-size: 13.5px; } .v1 .todo small { font-size: 12px; opacity: .7; } .v1 .todo .btn { margin-left: auto; }
+  .v1 .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 14px; } @media (max-width: 1100px) { .v1 .kpis { grid-template-columns: repeat(3, 1fr); } }
+  .v1 .kpi { padding: 14px 16px; } .v1 .kpi .v { font-size: 26px; font-weight: 700; } .v1 .kpi .l { font-size: 11.5px; opacity: .7; } .v1 .kpi svg { width: 100%; height: 28px; margin-top: 4px; }
+  .v1 .delta { font-size: 11.5px; font-weight: 600; margin-left: 6px; } .up { color: #34d399; } .down { color: #f87171; }
+  .v1 .row { display: grid; gap: 14px; margin-bottom: 14px; } .v1 .card { padding: 18px; }
+  .v1 .r3 { grid-template-columns: 1fr 1.6fr 1.2fr; } .v1 .r2 { grid-template-columns: 1.3fr 1fr; } @media (max-width: 1000px) { .v1 .r3, .v1 .r2 { grid-template-columns: 1fr; } }
+  .v1 .donut { display: flex; align-items: center; gap: 16px; } .v1 .donut svg { width: 130px; height: 130px; flex: none; }
+  .v1 .donut ul { list-style: none; margin: 0; padding: 0; font-size: 12.5px; } .v1 .donut li { margin: 5px 0; display: flex; gap: 8px; align-items: center; } .v1 .donut li i { width: 10px; height: 10px; border-radius: 3px; }
+  .v1 .area svg { width: 100%; height: 150px; } .v1 .area .pt { cursor: pointer; } .v1 .area .pt:hover { r: 5; }
+  .v1 .funnel div { position: relative; margin: 7px 0; height: 30px; border-radius: 10px; background: rgb(255 255 255 / .05); overflow: hidden; font-size: 12px; }
+  .v1 .funnel div i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, rgb(167 139 250 / .55), rgb(56 189 248 / .45)); }
+  .v1 .funnel div span { position: relative; display: flex; justify-content: space-between; padding: 0 10px; line-height: 30px; }
+  .v1 .uptime { display: flex; gap: 2px; } .v1 .uptime i { flex: 1; height: 18px; border-radius: 2px; }
+  .v1 .hrow { display: grid; grid-template-columns: 110px 1fr 70px; gap: 10px; align-items: center; font-size: 12.5px; margin: 7px 0; }
+  .v1 .heat { display: grid; grid-template-columns: 30px repeat(24, 1fr); gap: 2px; font-size: 9.5px; } .v1 .heat i { aspect-ratio: 1; border-radius: 3px; } .v1 .heat span { opacity: .55; align-self: center; }
+  .v1 table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 12px; }
+  .v1 th { text-align: left; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: rgb(255 255 255 / .55); padding: 8px; border-bottom: 1px solid rgb(255 255 255 / .1); cursor: pointer; user-select: none; white-space: nowrap; }
+  .v1 th.on { color: #c4b5fd; }
+  .v1 td { padding: 10px 8px; border-bottom: 1px solid rgb(255 255 255 / .06); vertical-align: middle; }
+  .v1 tr.row1 { cursor: pointer; } .v1 tr.row1:hover td { background: rgb(255 255 255 / .03); } .v1 tr.open td { background: rgb(167 139 250 / .08); }
+  .v1 tr.exp td { background: rgb(2 6 23 / .45); padding: 14px 18px; }
+  .v1 .expg { display: grid; grid-template-columns: repeat(4, 1fr) 1.6fr; gap: 10px; align-items: start; } @media (max-width: 900px) { .v1 .expg { grid-template-columns: 1fr 1fr; } }
+  .v1 .expg > div { padding: 10px 12px; border-radius: 12px; background: rgb(255 255 255 / .05); font-size: 11.5px; } .v1 .expg b { display: block; font-size: 17px; }
+  .v1 .who { display: flex; align-items: center; gap: 10px; } .v1 .who small { display: block; color: rgb(255 255 255 / .55); font-size: 11.5px; }
+  .v1 .acts { display: flex; gap: 5px; justify-content: flex-end; }
+  .v1 .bulk { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: rgb(167 139 250 / .18); margin-top: 12px; font-size: 13px; flex-wrap: wrap; }
+  .v1 .expire { font-size: 10.5px; color: #fde68a; display: block; }
+  .v1 input[type=checkbox] { accent-color: #a78bfa; width: 15px; height: 15px; }
+  .v1 .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 12px; opacity: .8; }
+  /* ===== V2 · galaxie de contrôle ===== */
+  .v2 .top { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; margin-bottom: 14px; } @media (max-width: 1000px) { .v2 .top { grid-template-columns: 1fr; } }
+  .v2 .gauges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 18px; text-align: center; }
+  .v2 .gauges svg { width: 120px; height: 120px; } .v2 .gauges b { display: block; font-size: 13px; margin-top: 4px; } .v2 .gauges small { font-size: 11px; opacity: .65; }
+  .v2 .system { position: relative; height: 300px; overflow: hidden; background: radial-gradient(ellipse at 50% 50%, rgb(99 102 241 / .25), transparent 65%), rgb(2 6 23 / .7); }
+  .v2 .system .sun { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff7cc, #fde047 50%, #f59e0b); box-shadow: 0 0 40px #fde047; display: grid; place-items: center; color: #78350f; font-weight: 800; font-size: 11px; }
+  .v2 .system .pl { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; display: grid; place-items: center; font-size: 14px; }
+  .v2 .system .pl b { position: absolute; top: 100%; font-size: 10px; font-weight: 500; white-space: nowrap; margin-top: 2px; opacity: .8; }
+  .v2 .system .o { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 50%; border: 1px dashed rgb(255 255 255 / .1); }
+  .v2 .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; } @media (max-width: 900px) { .v2 .strip { grid-template-columns: 1fr 1fr; } }
+  .v2 .strip > div { padding: 14px; } .v2 .strip b { display: block; font-size: 24px; } .v2 .strip span { font-size: 11.5px; opacity: .7; }
+  /* ===== V3 · ligne claire ===== */
+  .v3 .shell { display: grid; grid-template-columns: 220px 1fr; gap: 14px; } @media (max-width: 900px) { .v3 .shell { grid-template-columns: 1fr; } }
+  .v3 .side { padding: 14px; align-self: start; display: flex; flex-direction: column; gap: 3px; }
+  .v3 .side .brand { font-weight: 700; padding: 6px 10px 12px; } .v3 .side button { font: inherit; font-size: 13px; text-align: left; padding: 9px 10px; border-radius: 12px; border: 0; background: none; color: rgb(255 255 255 / .8); cursor: pointer; display: flex; justify-content: space-between; }
+  .v3 .side button.on { background: rgb(255 255 255 / .1); color: #fff; } .v3 .side .k { margin-top: 12px; padding: 10px; border-radius: 12px; background: rgb(255 255 255 / .05); font-size: 11.5px; opacity: .8; }
+  .v3 kbd { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; padding: 1px 6px; border-radius: 5px; background: rgb(255 255 255 / .12); border: 1px solid rgb(255 255 255 / .2); }
+  .v3 .cmdk { display: flex; align-items: center; gap: 10px; padding: 12px 16px; margin-bottom: 14px; cursor: pointer; opacity: .85; font-size: 13px; }
+  .v3 .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; } @media (max-width: 900px) { .v3 .cards { grid-template-columns: 1fr 1fr; } }
+  .v3 .cards > div { padding: 16px; } .v3 .cards b { display: block; font-size: 24px; font-weight: 600; } .v3 .cards span { font-size: 12px; opacity: .65; }
+  .v3 .tbl { padding: 6px 16px 16px; }
+  .v3 .line { display: grid; grid-template-columns: 2.2fr 1.2fr 1fr .7fr 1fr; gap: 10px; align-items: center; padding: 11px 6px; border-bottom: 1px solid rgb(255 255 255 / .06); font-size: 12.5px; }
+  .v3 .line.h { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; opacity: .55; }
+  .v3.dense .line { padding: 6px; }
+  .palette { position: fixed; inset: 0; background: rgb(2 6 23 / .65); backdrop-filter: blur(4px); display: none; justify-content: center; padding-top: 12vh; z-index: 70; }
+  .palette.open { display: flex; } .palette .box { width: min(560px, 92vw); border-radius: 18px; background: #0f172a; border: 1px solid rgb(255 255 255 / .16); overflow: hidden; align-self: flex-start; }
+  .palette input { width: 100%; padding: 16px 18px; border: 0; border-bottom: 1px solid rgb(255 255 255 / .1); background: transparent; color: #fff; font: inherit; font-size: 15px; outline: none; }
+  .palette .res { max-height: 340px; overflow: auto; padding: 6px; } .palette .res div { padding: 9px 12px; border-radius: 10px; font-size: 13px; cursor: pointer; display: flex; justify-content: space-between; } .palette .res div:hover, .palette .res div.on { background: rgb(167 139 250 / .2); }
+  .palette .res small { opacity: .55; }
+  .topnav { display: flex; gap: 6px; padding: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .topnav button, .sidenav button { font: inherit; font-size: 13.5px; padding: 10px 16px; border-radius: 16px; border: 0; background: transparent; color: rgb(255 255 255 / .8); cursor: pointer; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+  .topnav button.on, .sidenav button.on { background: rgb(167 139 250 / .25); color: #fff; font-weight: 600; box-shadow: inset 0 0 0 1px rgb(196 181 253 / .5); }
+  .topnav button:hover, .sidenav button:hover { background: rgb(255 255 255 / .08); }
+  .cnt { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: rgb(255 255 255 / .12); } .cnt.hot { background: #f59e0b; color: #1e1b4b; font-weight: 700; }
+  .sidelay { display: grid; grid-template-columns: 230px 1fr; gap: 14px; } @media (max-width: 900px) { .sidelay { grid-template-columns: 1fr; } }
+  .sidenav { padding: 14px; display: flex; flex-direction: column; gap: 4px; align-self: start; position: sticky; top: 12px; min-height: 420px; } .sidenav .brand { font-weight: 700; padding: 6px 10px 12px; }
+  .crumb { display: flex; gap: 8px; align-items: center; font-size: 13px; margin: 0 4px 12px; } .crumb .back { margin-left: auto; color: #c4b5fd; text-decoration: none; font-size: 12.5px; }
+  .pagehead { display: flex; align-items: baseline; gap: 14px; margin: 0 4px 12px; flex-wrap: wrap; } .pagehead h2 { margin: 0; font-size: 22px; }
+  .clickable { cursor: pointer; transition: transform .15s, border-color .15s; } .clickable:hover { transform: translateY(-2px); border-color: rgb(196 181 253 / .5); }
+  .v2sys { position: relative; height: 380px; overflow: hidden; background: radial-gradient(ellipse at 50% 50%, rgb(99 102 241 / .25), transparent 65%), rgb(2 6 23 / .7); }
+  .v2sys .sun { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff7cc, #fde047 50%, #f59e0b); box-shadow: 0 0 44px #fde047; display: grid; place-items: center; color: #78350f; font-weight: 800; font-size: 12px; }
+  .v2sys .pl { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; display: grid; place-items: center; font-size: 16px; cursor: help; transition: transform .2s; } .v2sys .pl:hover { transform: translate(-50%, -50%) scale(1.15); }
+  .v2sys .pl b { position: absolute; top: 100%; font-size: 10.5px; font-weight: 500; white-space: nowrap; margin-top: 3px; opacity: .85; }
+  .v2sys .o { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 50%; border: 1px dashed rgb(255 255 255 / .1); }
+  .svcrow { display: grid; grid-template-columns: 110px 1fr 34px; gap: 10px; align-items: center; font-size: 12.5px; margin: 8px 0; } .svcrow .track { height: 8px; border-radius: 99px; background: rgb(255 255 255 / .08); overflow: hidden; } .svcrow .track i { display: block; height: 100%; }
+  .v1 .task { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 14px; background: rgb(255 255 255 / .04); margin-bottom: 8px; } .v1 .task .t { flex: 1; min-width: 0; } .v1 .task .t b { display: block; font-size: 13px; } .v1 .task .t small { font-size: 11.5px; opacity: .65; }
+  .v1 .reason { font-size: 12px; font-style: italic; color: #fecaca; margin-top: 3px; }
+  .v1 .tl { border-left: 2px solid rgb(255 255 255 / .12); margin-left: 8px; padding-left: 16px; } .v1 .tl div { position: relative; padding: 7px 0; font-size: 12.5px; } .v1 .tl div::before { content: ''; position: absolute; left: -22px; top: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--c, #a78bfa); } .v1 .tl small { display: block; opacity: .55; font-size: 11px; }
+</style>
+</head>
+<body>
+<h1 class="top">La console admin, en plusieurs pages</h1>
+<p class="lead">Le Cockpit vivant et les services en orbite, rangés en 4 pages : Vue d'ensemble, Comptes, Services, Modération. Choisis aussi le style de navigation. Tout est cliquable, les données sont des exemples</p>
+<div class="legend">
+  <span><span class="ok-tag">✓ dispo</span> le backend le renvoie déjà, ou on le calcule à partir de ce qu'il renvoie</span>
+  <span><span class="be-tag">＋ backend</span> il faudrait l'ajouter côté serveur</span>
+  <label><input type="checkbox" id="hideBe"> cacher ce qui demande du backend</label>
+  <label><input type="checkbox" id="noTags"> cacher les étiquettes</label>
+</div>
+<div class="tabs" id="tabs"></div>
+<p class="desc" id="desc"></p>
+<div class="stage" id="stage"></div>
+<div class="dlg-bg" id="dlg"><div class="dlg" id="dlgIn"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const OK = '<span class="ok-tag">✓ dispo</span>', BE = '<span class="be-tag">＋ backend</span>'
+const TODAY = new Date('2026-10-09T15:00:00')
+const COLORS = ['#a78bfa', '#38bdf8', '#f472b6', '#34d399', '#fbbf24', '#fb923c', '#22d3ee']
+const SVC = { weather: ['☀️', 'Météo', '#fbbf24'], market_data: ['📈', 'Marchés', '#34d399'], github: ['🐙', 'GitHub', '#a78bfa'], rss: ['📰', 'Actus', '#f472b6'], youtube: ['▶️', 'YouTube', '#f87171'], worldclock: ['🌍', 'Heure', '#38bdf8'], calendar: ['📅', 'Agenda', '#fb923c'], epitech: ['🎓', 'Epitech', '#22d3ee'], custom_api: ['🔧', 'API perso', '#94a3b8'], wellbeing: ['🌙', 'Bien-être', '#c084fc'] }
+const ME = 'u1'
+const d = (days, h = 10) => new Date(TODAY.getTime() - days * 864e5 - (TODAY.getHours() - h) * 36e5).toISOString()
+let users = [
+  { id: 'u1', firstName: 'Morayo', lastName: 'Elegbede', email: 'morayo@morex.app', emailVerified: true, isAdmin: true, isBanned: false, banReason: null, createdAt: d(19), widgetCount: 18, linkedAccountsCount: 2, sessionCount: 2, lang: 'fr', providers: ['github', 'google'], lastSeen: d(0, 14), online: true, svc: { weather: 3, market_data: 6, github: 4, rss: 2, wellbeing: 3 }, errors: 1 },
+  { id: 'u2', firstName: 'Exaucé', lastName: 'Agbodjalou', email: 'exauce@morex.app', emailVerified: true, isAdmin: true, isBanned: false, banReason: null, createdAt: d(19, 9), widgetCount: 11, linkedAccountsCount: 3, sessionCount: 4, lang: 'fr', providers: ['github', 'microsoft', 'epitech'], lastSeen: d(0, 13), online: true, svc: { github: 5, youtube: 2, custom_api: 2, calendar: 2 }, errors: 0 },
+  { id: 'u3', firstName: 'Ada', lastName: 'Lovelace', email: 'ada@example.com', emailVerified: true, isAdmin: false, isBanned: false, banReason: null, createdAt: d(11), widgetCount: 7, linkedAccountsCount: 1, sessionCount: 1, lang: 'en', providers: ['github'], lastSeen: d(1), online: false, svc: { github: 3, rss: 2, weather: 2 }, errors: 0 },
+  { id: 'u4', firstName: 'Alan', lastName: 'Turing', email: 'alan@example.com', emailVerified: false, isAdmin: false, isBanned: false, banReason: null, createdAt: d(0, 9), widgetCount: 0, linkedAccountsCount: 0, sessionCount: 0, lang: 'en', providers: [], lastSeen: null, online: false, svc: {}, errors: 0 },
+  { id: 'u5', firstName: 'Grace', lastName: 'Hopper', email: 'grace@example.com', emailVerified: true, isAdmin: false, isBanned: true, banReason: 'Création de dizaines de widgets RSS identiques pour saturer le serveur', createdAt: d(14), widgetCount: 41, linkedAccountsCount: 0, sessionCount: 0, lang: 'en', providers: [], lastSeen: d(3), online: false, svc: { rss: 41 }, errors: 12 },
+  { id: 'u6', firstName: 'Margaret', lastName: 'Hamilton', email: 'margaret@example.com', emailVerified: true, isAdmin: false, isBanned: false, banReason: null, createdAt: d(7), widgetCount: 15, linkedAccountsCount: 1, sessionCount: 1, lang: 'en', providers: ['google'], lastSeen: d(0, 11), online: true, svc: { market_data: 5, weather: 4, worldclock: 3, youtube: 3 }, errors: 2 },
+  { id: 'u7', firstName: 'Tim', lastName: 'Berners-Lee', email: 'tim@example.com', emailVerified: false, isAdmin: false, isBanned: false, banReason: null, createdAt: d(0, 1), widgetCount: 0, linkedAccountsCount: 0, sessionCount: 0, lang: 'en', providers: [], lastSeen: null, online: false, svc: {}, errors: 0 },
+  { id: 'u8', firstName: 'Aïcha', lastName: 'Diallo', email: 'aicha@example.com', emailVerified: true, isAdmin: false, isBanned: false, banReason: null, createdAt: d(4), widgetCount: 9, linkedAccountsCount: 1, sessionCount: 2, lang: 'fr', providers: ['epitech'], lastSeen: d(0, 8), online: false, svc: { epitech: 2, calendar: 2, weather: 2, wellbeing: 3 }, errors: 0 },
+  { id: 'u9', firstName: 'Carlos', lastName: 'Ruiz', email: 'carlos@example.com', emailVerified: true, isAdmin: false, isBanned: false, banReason: null, createdAt: d(2), widgetCount: 6, linkedAccountsCount: 0, sessionCount: 1, lang: 'es', providers: [], lastSeen: d(2), online: false, svc: { youtube: 3, market_data: 3 }, errors: 3 },
+  { id: 'u10', firstName: 'Kofi', lastName: 'Mensah', email: 'kofi@example.com', emailVerified: true, isAdmin: false, isBanned: false, banReason: null, createdAt: d(1), widgetCount: 4, linkedAccountsCount: 1, sessionCount: 1, lang: 'fr', providers: ['google'], lastSeen: d(0, 12), online: true, svc: { weather: 2, rss: 2 }, errors: 0 },
+  { id: 'u11', firstName: 'Lucía', lastName: 'Gómez', email: 'lucia@example.com', emailVerified: false, isAdmin: false, isBanned: false, banReason: null, createdAt: d(0, 4), widgetCount: 0, linkedAccountsCount: 0, sessionCount: 0, lang: 'es', providers: [], lastSeen: null, online: false, svc: {}, errors: 0 },
+  { id: 'u12', firstName: 'Yuki', lastName: 'Tanaka', email: 'yuki@example.com', emailVerified: true, isAdmin: false, isBanned: true, banReason: 'Faux compte signalé par plusieurs utilisateurs', createdAt: d(9), widgetCount: 2, linkedAccountsCount: 0, sessionCount: 0, lang: 'en', providers: [], lastSeen: d(6), online: false, svc: { custom_api: 2 }, errors: 2 },
+]
+let audit = [
+  { who: 'Exaucé', what: 'a banni Yuki Tanaka', why: 'Faux compte signalé par plusieurs utilisateurs', at: d(6, 16), c: '#f87171' },
+  { who: 'Morayo', what: "a confirmé l'e-mail de Carlos Ruiz", why: "L'e-mail de confirmation n'arrivait pas", at: d(2, 15), c: '#34d399' },
+  { who: 'Exaucé', what: 'a banni Grace Hopper', why: 'Création de dizaines de widgets RSS identiques', at: d(3, 11), c: '#f87171' },
+  { who: 'Morayo', what: 'a renommé « kofi m » en Kofi Mensah', why: null, at: d(1, 10), c: '#a78bfa' },
+]
+let q = '', filter = 'all', design = +(location.hash.slice(1) || 1), sel = 'u3', modTab = 'todo'
+// ---------- helpers
+const rel = (iso) => { if (!iso) return 'jamais'; const m = Math.round((TODAY - new Date(iso)) / 6e4); return m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : m < 2880 ? 'hier' : `il y a ${Math.round(m / 1440)} j` }
+const ini = (u) => (u.firstName[0] + (u.lastName[0] || '')).toUpperCase()
+const col = (u) => COLORS[[...u.id].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORS.length]
+const av = (u, online = true) => `<span class="av" style="background:${col(u)}33;color:${col(u)}">${ini(u)}${online && u.online ? '<i class="dot needs-be" title="En ligne"></i>' : ''}</span>`
+const flag = { fr: '🇫🇷', en: '🇬🇧', es: '🇪🇸' }
+const PROV = { github: ['GH', '#e5e7eb'], google: ['G', '#f87171'], microsoft: ['MS', '#38bdf8'], epitech: ['EPI', '#22d3ee'] }
+const provs = (u) => u.providers.map((p) => `<span class="prov" style="color:${PROV[p][1]}" title="${p}">${PROV[p][0]}</span>`).join('') || '<span class="muted">—</span>'
+const hoursLeft = (u) => Math.max(0, 24 - Math.round((TODAY - new Date(u.createdAt)) / 36e5))
+const badges = (u) => [u.isAdmin && '<span class="badge b-admin">★ Admin</span>', u.isBanned && '<span class="badge b-ban">⛔ Banni</span>',
+  !u.emailVerified && `<span class="badge b-unconf" title="Supprimé automatiquement 24 h après l'inscription">✉ Non confirmé</span>`,
+  u.emailVerified && !u.isBanned && !u.isAdmin && '<span class="badge b-ok">● Actif</span>'].filter(Boolean).join(' ')
+const why = (u) => u.id === ME ? "C'est toi" : u.isAdmin ? 'Un admin ne peut pas être banni ni supprimé' : ''
+const list = () => users.filter((u) => (filter === 'all' || (filter === 'unconf' && !u.emailVerified) || (filter === 'ban' && u.isBanned) || (filter === 'admin' && u.isAdmin) || (filter === 'online' && u.online))
+  && `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q.toLowerCase())).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+const stats = () => ({ all: users.length, unconf: users.filter((u) => !u.emailVerified).length, ban: users.filter((u) => u.isBanned).length, admin: users.filter((u) => u.isAdmin).length,
+  online: users.filter((u) => u.online).length, widgets: users.reduce((a, u) => a + u.widgetCount, 0), confirmRate: Math.round(users.filter((u) => u.emailVerified).length / users.length * 100) })
+const perDay = () => Array.from({ length: 14 }, (_, i) => users.filter((u) => Math.floor((TODAY - new Date(u.createdAt)) / 864e5) === 13 - i).length)
+const spark = (vals, c) => { const mx = Math.max(...vals, 1); return `<svg viewBox="0 0 100 30" preserveAspectRatio="none"><path d="${vals.map((v, i) => `${i ? 'L' : 'M'}${i / (vals.length - 1) * 100} ${28 - v / mx * 24}`).join(' ')}" fill="none" stroke="${c}" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>` }
+const svcTotals = () => { const t = {}; users.forEach((u) => Object.entries(u.svc).forEach(([k, v]) => (t[k] = (t[k] || 0) + v))); return Object.entries(t).sort((a, b) => b[1] - a[1]) }
+const tools = (extra = '') => { const s = stats(); return `<div class="tools" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><input class="search" id="q" placeholder="🔍 Nom ou e-mail…" value="${q}">
+  <div class="chips">${[['all', `Tous ${s.all}`], ['unconf', `Non confirmés ${s.unconf}`], ['ban', `Bannis ${s.ban}`], ['admin', `Admins ${s.admin}`], ['online', `En ligne ${s.online}`]].map(([k, l]) => `<button class="${filter === k ? 'on' : ''} ${k === 'online' ? 'needs-be' : ''}" data-f="${k}">${l}</button>`).join('')}</div>${extra}</div>` }
+function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 3000) }
+// ---------- dialogs (same rules as the real API: reason required, emails sent)
+const PRESETS = { ban: ['Spam / abus du serveur', 'Faux compte', 'Contenu ou comportement abusif', 'Compte compromis (sécurité)'], del: ['Demande de la personne', 'Faux compte', 'Abus répétés', 'Compte de test'] }
+const MAILS = { ban: (u, r) => `<div class="h">À : ${u.email} · Objet : <b>Ton compte Morex a été suspendu</b></div>Un administrateur a suspendu ton compte. Motif indiqué : « <b>${r || '…'}</b> ».<br><br>Tu es déconnecté partout et ne peux pas te reconnecter tant que c'est suspendu. Si tu penses que c'est une erreur ou que tu veux t'expliquer, réponds simplement à cet email — une vraie personne le lira.`,
+  del: (u, r) => `<div class="h">À : ${u.email} · Objet : <b>Ton compte Morex a été supprimé</b></div>Un administrateur a supprimé définitivement ton compte et tout ce qu'il contenait. Motif indiqué : « <b>${r || '…'}</b> ».<br><br>Ce n'est pas réversible de notre côté. Si tu penses que c'est une erreur ou que tu veux t'expliquer, réponds à cet email — une vraie personne le lira.` }
+function open(html, ready) { document.getElementById('dlgIn').innerHTML = html; document.getElementById('dlg').classList.add('open'); ready?.() }
+function close() { document.getElementById('dlg').classList.remove('open') }
+function reasonDialog(kind, u) {
+  const isBan = kind === 'ban'
+  open(`<div class="big">${isBan ? '⛔' : '🗑️'}</div><h3>${isBan ? 'Suspendre' : 'Supprimer définitivement'} le compte de ${u.firstName} ${u.lastName}</h3>
+    <p>${isBan ? 'La personne est <b>déconnectée partout tout de suite</b> et ne peut plus se connecter. Tu pourras la réactiver.' : `<b>C'est irréversible</b> : ses ${u.widgetCount} widgets, son journal, ses comptes liés et ses sessions disparaissent.`}</p>
+    <span class="lbl">Motif (obligatoire) · ${OK}</span><div class="presets">${PRESETS[kind].map((p) => `<button data-preset="${p}">${p}</button>`).join('')}</div>
+    <textarea id="rs" rows="2" placeholder="Explique le motif, il sera envoyé à la personne…"></textarea>
+    ${isBan ? '' : `<span class="lbl">Pour confirmer, tape son e-mail</span><input id="cf" placeholder="${u.email}">`}
+    <span class="lbl">Aperçu de l'e-mail qu'elle recevra · ${OK}</span><div class="mailprev" id="mp">${MAILS[kind](u, '')}</div>
+    <div class="row"><button class="btn" data-close>Annuler</button><button class="btn danger" id="go" disabled>${isBan ? 'Suspendre et prévenir par e-mail' : 'Supprimer et prévenir par e-mail'}</button></div>`, () => {
+    const rs = document.getElementById('rs'), go = document.getElementById('go'), cf = document.getElementById('cf'), mp = document.getElementById('mp')
+    const check = () => { mp.innerHTML = MAILS[kind](u, rs.value.trim()); go.disabled = !rs.value.trim() || (cf && cf.value.trim().toLowerCase() !== u.email) }
+    rs.oninput = check; if (cf) cf.oninput = check
+    document.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => { rs.value = b.dataset.preset; check(); rs.focus() }))
+    go.onclick = () => {
+      const r = rs.value.trim()
+      if (isBan) { Object.assign(u, { isBanned: true, banReason: r, sessionCount: 0, online: false }); audit.unshift({ who: 'Morayo', what: `a banni ${u.firstName} ${u.lastName}`, why: r, at: TODAY.toISOString(), c: '#f87171' }); toast(`⛔ ${u.firstName} est suspendu · e-mail envoyé`) }
+      else { users = users.filter((x) => x.id !== u.id); audit.unshift({ who: 'Morayo', what: `a supprimé le compte de ${u.firstName} ${u.lastName}`, why: r, at: TODAY.toISOString(), c: '#f87171' }); toast(`🗑️ Compte supprimé · e-mail envoyé avant la suppression`); if (sel === u.id) sel = list()[0]?.id }
+      close(); draw()
+    }
+    rs.focus()
+  })
+}
+const acts = {
+  ban: (u) => reasonDialog('ban', u), del: (u) => reasonDialog('del', u),
+  unban: (u) => { Object.assign(u, { isBanned: false, banReason: null }); audit.unshift({ who: 'Morayo', what: `a réactivé ${u.firstName} ${u.lastName}`, why: null, at: TODAY.toISOString(), c: '#34d399' }); toast(`✓ ${u.firstName} est réactivé · e-mail « compte réactivé » envoyé`); draw() },
+  confirm: (u) => { u.emailVerified = true; audit.unshift({ who: 'Morayo', what: `a confirmé l'e-mail de ${u.firstName} ${u.lastName}`, why: null, at: TODAY.toISOString(), c: '#34d399' }); toast(`✓ E-mail de ${u.firstName} confirmé à la main`); draw() },
+  rename: (u) => open(`<div class="big">✎</div><h3>Renommer</h3><input id="fn" value="${u.firstName}"><input id="ln" value="${u.lastName}"><div class="row"><button class="btn" data-close>Annuler</button><button class="btn primary" id="go">Enregistrer</button></div>`, () => {
+    document.getElementById('go').onclick = () => { const f = document.getElementById('fn').value.trim(), l = document.getElementById('ln').value.trim(); if (!f || !l) return toast('400 · Le prénom et le nom ne peuvent pas être vides'); Object.assign(u, { firstName: f, lastName: l }); close(); toast('✓ Nom modifié'); draw() } }),
+  logout: (u) => { u.sessionCount = 0; u.online = false; toast(`↪ ${u.firstName} est déconnecté de tous ses appareils`); draw() },
+  mail: (u) => open(`<div class="big">✉️</div><h3>Écrire à ${u.firstName} ${BE}</h3><p>Un message envoyé par e-mail, depuis la console.</p><input placeholder="Objet"><textarea rows="4" placeholder="Ton message…"></textarea><div class="row"><button class="btn" data-close>Annuler</button><button class="btn primary" data-close>Envoyer</button></div>`),
+  resend: (u) => toast(`✉ Nouvel e-mail de confirmation envoyé à ${u.email}`),
+  csv: () => { const rows = [['prénom', 'nom', 'email', 'confirmé', 'admin', 'banni', 'inscrit', 'widgets'], ...users.map((u) => [u.firstName, u.lastName, u.email, u.emailVerified, u.isAdmin, u.isBanned, u.createdAt.slice(0, 10), u.widgetCount])]; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map((r) => r.join(';')).join('\n')], { type: 'text/csv' })); a.download = 'morex-comptes.csv'; a.click(); toast('⬇ morex-comptes.csv téléchargé') },
+}
+const B = (a, u, label, cls = '', title = '') => { const w = (a === 'ban' || a === 'del' || a === 'logout') ? why(u) : ''; return `<button class="btn ${cls}" data-a="${a}" data-id="${u.id}" ${w ? 'disabled' : ''} title="${w || title}">${label}</button>` }
+
+// ===== shared extras for the 3 variants
+let sortKey = 'createdAt', sortDir = -1, openRow = null, picked = new Set(), page = 0, v3sec = 'overview', dense = false
+const PER = 8
+const sorted = () => list().sort((a, b) => { const x = a[sortKey], y = b[sortKey]; return (typeof x === 'string' ? x.localeCompare(y) : (x ?? -1) - (y ?? -1)) * sortDir })
+const lastWeek = { all: 9, unconf: 1, ban: 1, widgets: 96, confirmRate: 82, online: 2 }
+const delta = (now, before, invert = false) => { const d = now - before; if (!d) return '<span class="delta" style="opacity:.5">=</span>'; const good = invert ? d < 0 : d > 0; return `<span class="delta ${good ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}</span>` }
+const funnel = () => { const n = users.length; return [['Inscrits', n, OK], ['E-mail confirmé', users.filter((u) => u.emailVerified).length, OK], ['Au moins 1 widget', users.filter((u) => u.widgetCount > 0).length, OK], ['Un compte lié', users.filter((u) => u.linkedAccountsCount > 0).length, OK]].map(([l, v, t]) => [l, v, Math.round(v / n * 100), t]) }
+const donut = (parts, size = 130) => { const tot = parts.reduce((a, p) => a + p[1], 0) || 1, r = 48, C = 2 * Math.PI * r; let off = 0; return `<svg viewBox="0 0 130 130">${parts.map(([, v, c]) => { const len = v / tot * C, s = `<circle cx="65" cy="65" r="${r}" fill="none" stroke="${c}" stroke-width="16" stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}" transform="rotate(-90 65 65)"/>`; off += len; return s }).join('')}<text x="65" y="62" text-anchor="middle" fill="#fff" font-size="22" font-weight="700" font-family="Poppins">${tot}</text><text x="65" y="80" text-anchor="middle" fill="rgb(255 255 255 / .6)" font-size="10" font-family="Poppins">comptes</text></svg>` }
+const statusParts = () => [['Actifs', users.filter((u) => u.emailVerified && !u.isBanned && !u.isAdmin).length, '#34d399'], ['Admins', users.filter((u) => u.isAdmin).length, '#a78bfa'], ['Non confirmés', users.filter((u) => !u.emailVerified).length, '#fbbf24'], ['Suspendus', users.filter((u) => u.isBanned).length, '#f87171']]
+const areaChart = () => { const pd = perDay(), cum = pd.map((_, i) => pd.slice(0, i + 1).reduce((a, b) => a + b, 0) + 0), mx = Math.max(...cum, 1), W = 400, H = 140
+  const pts = cum.map((v, i) => [i / (cum.length - 1) * W, H - 12 - v / mx * (H - 30)])
+  const days = pd.map((_, i) => new Date(TODAY.getTime() - (13 - i) * 864e5).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }))
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a78bfa" stop-opacity=".5"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></linearGradient></defs>
+  <path d="M0 ${H} ${pts.map((p) => `L${p[0]} ${p[1]}`).join(' ')} L${W} ${H}Z" fill="url(#ag)"/><path d="${pts.map((p, i) => `${i ? 'L' : 'M'}${p[0]} ${p[1]}`).join(' ')}" fill="none" stroke="#c4b5fd" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+  ${pts.map((p, i) => `<circle class="pt" cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fff"><title>${days[i]} : ${pd[i]} inscription(s), ${cum[i]} au total</title></circle>`).join('')}</svg>` }
+const uptime = (bad) => `<div class="uptime">${Array.from({ length: 24 }, (_, i) => `<i style="background:${bad.includes(i) ? '#f87171' : bad.map((b) => b + 1).includes(i) ? '#fbbf24' : '#34d399'}" title="${i} h"></i>`).join('')}</div>`
+const heat = () => { const days = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim']; return `<div class="heat">${days.map((d, di) => `<span>${d}</span>${Array.from({ length: 24 }, (_, h) => { const v = Math.max(0, Math.sin((h - 6) / 24 * Math.PI) * (di > 4 ? .7 : 1) + (h === 21 ? .3 : 0) - (h < 7 ? .6 : 0)); return `<i style="background:rgb(167 139 250 / ${(.08 + v * .85).toFixed(2)})" title="${d} ${h} h"></i>` }).join('')}`).join('')}</div>` }
+const sortTh = (k, l, cls = '') => `<th class="${sortKey === k ? 'on' : ''} ${cls}" data-sort="${k}">${l} ${sortKey === k ? (sortDir < 0 ? '↓' : '↑') : ''}</th>`
+function bulkDo(kind) {
+  const us = users.filter((u) => picked.has(u.id))
+  if (kind === 'confirm') { us.filter((u) => !u.emailVerified).forEach((u) => (u.emailVerified = true)); toast(`✓ ${us.length} compte(s) confirmé(s)`) }
+  if (kind === 'csv') { acts.csv() }
+  if (kind === 'ban') { const ok = us.filter((u) => !why(u)); open(`<div class="big">⛔</div><h3>Suspendre ${ok.length} compte(s)</h3><p>${us.length - ok.length ? `${us.length - ok.length} compte(s) protégé(s) (toi ou un admin) seront ignorés. ` : ''}Chaque personne recevra un e-mail avec ce motif.</p><span class="lbl">Motif (obligatoire)</span><div class="presets">${PRESETS.ban.map((p) => `<button data-preset="${p}">${p}</button>`).join('')}</div><textarea id="rs" rows="2"></textarea><div class="row"><button class="btn" data-close>Annuler</button><button class="btn danger" id="go" disabled>Suspendre ${ok.length} compte(s)</button></div>`, () => {
+    const rs = document.getElementById('rs'), go = document.getElementById('go'); rs.oninput = () => (go.disabled = !rs.value.trim()); document.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => { rs.value = b.dataset.preset; go.disabled = false }))
+    go.onclick = () => { ok.forEach((u) => Object.assign(u, { isBanned: true, banReason: rs.value.trim(), sessionCount: 0, online: false })); picked.clear(); close(); toast(`⛔ ${ok.length} compte(s) suspendu(s) · e-mails envoyés`); draw() } }) ; return }
+  picked.clear(); draw()
+}
+// ===================== multi-page admin =====================
+let pg = (location.hash.slice(1).split('-')[0] || 'overview'), navStyle = location.hash.includes('-side') ? 'side' : 'top'
+const PAGES = [['overview', '◫', 'Vue d\'ensemble'], ['accounts', '👥', 'Comptes'], ['services', '🪐', 'Services'], ['moderation', '🛡', 'Modération']]
+const go = (p, f) => { pg = p; if (f) { filter = f; page = 0 } location.hash = p; draw(); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+const counts = () => ({ accounts: users.length, moderation: users.filter((u) => !u.emailVerified).length + users.filter((u) => u.isBanned).length, services: 2 })
+function hello() { const h = TODAY.getHours(), w = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir'; return `<div class="glass hello">${av(users[0], false)}<div><h2>${w}, Morayo</h2><div class="sub">${TODAY.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · voici l'état de Morex</div></div><span class="pulse"><i></i>3 points demandent ton attention</span></div>` }
+// ---- Vue d'ensemble
+function pOverview() {
+  const s = stats(), unc = users.filter((u) => !u.emailVerified)
+  return `<div class="v1">${hello()}
+  <div class="todo">
+    <div class="glass" style="--c:#fbbf24"><span class="ic">⏳</span><div><b>${unc.length} comptes vont expirer ${OK}</b><small>le premier dans ${Math.min(...unc.map(hoursLeft))} h s'il n'est pas confirmé</small></div><button class="btn sm" data-go="moderation">Voir →</button></div>
+    <div class="glass needs-be" style="--c:#f87171"><span class="ic">📰</span><div><b>2 flux RSS injoignables ${BE}</b><small>4 widgets d'actualités sans données</small></div><button class="btn sm" data-go="services">Voir →</button></div>
+    <div class="glass needs-be" style="--c:#38bdf8"><span class="ic">📈</span><div><b>CoinGecko sature ${BE}</b><small>12 refus « trop de demandes » aujourd'hui</small></div><button class="btn sm" data-go="services">Voir →</button></div>
+  </div>
+  <div class="kpis">
+    <div class="glass kpi clickable" data-go="accounts" data-gof="all"><div class="v">${s.all}${delta(s.all, lastWeek.all)}</div><div class="l">comptes · vs semaine dernière ${OK}</div>${spark(perDay().map((_, i, a) => a.slice(0, i + 1).reduce((x, y) => x + y, 0)), '#a78bfa')}</div>
+    <div class="glass kpi needs-be clickable" data-go="accounts" data-gof="online"><div class="v" style="color:#7dd3fc">${s.online}${delta(s.online, lastWeek.online)}</div><div class="l">en ligne maintenant ${BE}</div>${spark([1, 2, 1, 3, 2, 4, 3, 4], '#7dd3fc')}</div>
+    <div class="glass kpi clickable" data-go="moderation"><div class="v" style="color:#fde68a">${s.unconf}${delta(s.unconf, lastWeek.unconf, true)}</div><div class="l">non confirmés ${OK}</div>${spark([0, 1, 0, 1, 2, 1, 3], '#fbbf24')}</div>
+    <div class="glass kpi"><div class="v">${s.confirmRate} %${delta(s.confirmRate, lastWeek.confirmRate)}</div><div class="l">taux de confirmation ${OK}</div>${spark([90, 85, 88, 82, 80, 78, s.confirmRate], '#34d399')}</div>
+    <div class="glass kpi clickable" data-go="services"><div class="v">${s.widgets}${delta(s.widgets, lastWeek.widgets)}</div><div class="l">widgets · ${(s.widgets / s.all).toFixed(1)} / compte ${OK}</div>${spark([60, 72, 80, 88, 96, 104, s.widgets], '#f472b6')}</div>
+    <div class="glass kpi clickable" data-go="moderation"><div class="v" style="color:#fca5a5">${s.ban}${delta(s.ban, lastWeek.ban, true)}</div><div class="l">suspendus ${OK}</div>${spark([0, 0, 1, 1, 1, 2, 2], '#f87171')}</div>
+  </div>
+  <div class="row r3">
+    <div class="glass card"><h3 class="sec">🍩 Répartition ${OK}</h3><div class="donut">${donut(statusParts())}<ul>${statusParts().map(([l, v, c]) => `<li><i style="background:${c}"></i>${l} <b>${v}</b></li>`).join('')}</ul></div></div>
+    <div class="glass card area"><h3 class="sec">📈 Croissance sur 14 jours ${OK}</h3>${areaChart()}<p class="muted" style="margin:6px 0 0">Survole un point pour voir le jour.</p></div>
+    <div class="glass card funnel"><h3 class="sec">🪜 Parcours des nouveaux ${OK}</h3>${funnel().map(([l, v, p]) => `<div><i style="width:${p}%"></i><span><b>${l}</b><span>${v} · ${p} %</span></span></div>`).join('')}</div>
+  </div>
+  <div class="glass card"><h3 class="sec">🆕 Derniers inscrits ${OK} <button class="btn sm" style="margin-left:auto" data-go="accounts">Tous les comptes →</button></h3>${sorted().slice(0, 4).map((u) => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgb(255 255 255 / .06)">${av(u)}<div style="flex:1"><b style="font-size:13px">${u.firstName} ${u.lastName}</b> <span class="muted">${u.email}</span></div>${badges(u)}<span class="muted" style="width:80px;text-align:right">${rel(u.createdAt)}</span></div>`).join('')}</div></div>`
+}
+// ---- Comptes
+function pAccounts() {
+  const all = sorted(), pages = Math.max(1, Math.ceil(all.length / PER)); page = Math.min(page, pages - 1)
+  const rows = all.slice(page * PER, page * PER + PER)
+  return `<div class="v1"><div class="pagehead"><h2>👥 Comptes</h2><span class="muted">${users.length} comptes · clique un en-tête pour trier, une ligne pour la déplier, coche pour agir sur plusieurs</span></div>
+  <div class="glass card">${tools(`<button class="btn" data-a="csv" data-id="x">⬇ CSV ${OK}</button>`)}
+  ${picked.size ? `<div class="bulk"><b>${picked.size} sélectionné(s)</b><button class="btn sm" data-bulk="confirm">✉ Confirmer</button><button class="btn sm danger" data-bulk="ban">⛔ Suspendre…</button><button class="btn sm" data-bulk="csv">⬇ Exporter</button><button class="btn sm" data-bulk="none">✕ Annuler</button></div>` : ''}
+  ${!rows.length ? '<div class="empty">Aucun compte ne correspond 🔭</div>' : `<table><tr><th style="width:28px"><input type="checkbox" data-pickall ${rows.every((u) => picked.has(u.id)) ? 'checked' : ''}></th>${sortTh('firstName', 'Compte')}<th>Statut</th>${sortTh('createdAt', 'Inscrit')}${sortTh('lastSeen', `Vu ${BE}`, 'needs-be')}${sortTh('widgetCount', 'Widgets')}<th>Connexions</th><th></th></tr>
+  ${rows.map((u) => `<tr class="row1 ${openRow === u.id ? 'open' : ''}" data-open="${u.id}"><td><input type="checkbox" data-pick="${u.id}" ${picked.has(u.id) ? 'checked' : ''}></td>
+    <td><div class="who">${av(u)}<span>${u.firstName} ${u.lastName}${u.id === ME ? ' <span class="muted">(toi)</span>' : ''}<small>${u.email}</small></span></div></td>
+    <td>${badges(u)}${!u.emailVerified ? `<span class="expire">⏳ expire dans ${hoursLeft(u)} h</span>` : ''}</td><td class="muted">${rel(u.createdAt)}</td><td class="muted needs-be">${u.online ? '<span class="badge b-online">● en ligne</span>' : rel(u.lastSeen)}</td>
+    <td class="num">${u.widgetCount}${u.errors ? ` <span class="needs-be" style="color:#fca5a5">⚠${u.errors}</span>` : ''}</td><td>${provs(u)}</td>
+    <td><div class="acts">${!u.emailVerified ? B('confirm', u, '✉', 'sm', 'Confirmer') : ''}${u.isBanned ? B('unban', u, '↺', 'sm', 'Réactiver') : B('ban', u, '⛔', 'sm', 'Suspendre')}${B('del', u, '🗑', 'sm danger', 'Supprimer')}<span class="muted">${openRow === u.id ? '▴' : '▾'}</span></div></td></tr>
+    ${openRow === u.id ? `<tr class="exp"><td colspan="8"><div class="expg"><div><b>${u.widgetCount}</b>widgets ${OK}</div><div><b>${u.linkedAccountsCount}</b>comptes liés ${OK}</div><div><b>${u.sessionCount}</b>sessions ${OK}</div><div class="needs-be"><b>${u.errors}</b>en erreur ${BE}</div>
+      <div>${u.isBanned ? `<span style="color:#fecaca">⛔ « ${u.banReason} »</span> ${OK}<br>` : ''}<span class="needs-be">${Object.entries(u.svc).map(([k, n]) => `${SVC[k][0]} ${n}`).join(' · ') || 'aucun widget'} ${BE}</span><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${B('rename', u, '✎ Renommer', 'sm')}${B('logout', u, '↪ Déconnecter partout', 'sm needs-be')}${B('mail', u, '✉ Écrire', 'sm needs-be')}</div></div></div></td></tr>` : ''}`).join('')}</table>
+  <div class="pager"><span>${page * PER + 1}–${Math.min(all.length, page * PER + PER)} sur ${all.length}</span><span><button class="btn sm" data-page="-1" ${page ? '' : 'disabled'}>‹</button> ${page + 1} / ${pages} <button class="btn sm" data-page="1" ${page < pages - 1 ? '' : 'disabled'}>›</button></span></div>`}</div></div>`
+}
+// ---- Services
+function pServices() {
+  const tot = svcTotals(), mx = Math.max(...tot.map((x) => x[1]), 1)
+  const planets = tot.slice(0, 8).map(([k, v], i, arr) => { const a = i / arr.length * Math.PI * 2 - Math.PI / 2, R = 27 + (i % 2) * 13, sz = 26 + v / mx * 34; return `<div class="pl" style="left:${50 + Math.cos(a) * R}%;top:${50 + Math.sin(a) * R * 0.95}%;width:${sz}px;height:${sz}px;background:${SVC[k][2]}55;border:1px solid ${SVC[k][2]};box-shadow:0 0 16px ${SVC[k][2]}" title="${SVC[k][1]} : ${v} widgets chez ${users.filter((u) => u.svc[k]).length} comptes">${SVC[k][0]}<b>${SVC[k][1]} · ${v}</b></div>` }).join('')
+  const health = [['Météo', [], 'Open-Meteo'], ['Marchés', [9, 10, 14], 'CoinGecko · 429 ×12'], ['GitHub', [], '5 000 appels/h'], ['YouTube', [], 'quota 6 400 / 10 000'], ['Actus (RSS)', [3, 4, 5, 6], '2 flux injoignables'], ['Agenda', [], 'fichiers .ics']]
+  return `<div class="v1"><div class="pagehead"><h2>🪐 Services</h2><span class="muted">Comment les 10 services sont utilisés, et s'ils vont bien</span></div>
+  <div class="row r2"><div class="glass system v2sys needs-be"><div class="o" style="width:54%;height:76%"></div><div class="o" style="width:80%;height:100%"></div><div class="sun">MOREX</div>${planets}<span style="position:absolute;left:14px;top:12px;font-size:13px;font-weight:600">🪐 Les services en orbite ${BE}</span><span class="muted" style="position:absolute;left:14px;bottom:12px">taille de la planète = nombre de widgets · survole pour le détail</span></div>
+    <div class="glass card needs-be"><h3 class="sec">🧩 Classement ${BE}</h3>${tot.map(([k, v]) => `<div class="svcrow"><span>${SVC[k][0]} ${SVC[k][1]}</span><span class="track"><i style="width:${v / mx * 100}%;background:${SVC[k][2]}"></i></span><b class="num">${v}</b></div>`).join('')}</div></div>
+  <div class="row r2">
+    <div class="glass card needs-be"><h3 class="sec">🩺 Santé des services, dernières 24 h ${BE}</h3>${health.map(([n, bad, t]) => `<div class="hrow"><span>${n}</span>${uptime(bad)}<span class="muted" style="font-size:10.5px">${bad.length ? `${Math.round((24 - bad.length) / 24 * 100)} %` : '100 %'}</span></div><div class="muted" style="margin:-4px 0 8px 120px;font-size:10.5px">${t}</div>`).join('')}</div>
+    <div class="glass card needs-be"><h3 class="sec">🔥 Quand Morex est utilisé ${BE}</h3>${heat()}<p class="muted" style="margin:8px 0 0">Plus c'est violet, plus il y a de monde connecté à cette heure-là.</p></div>
+  </div></div>`
+}
+// ---- Modération
+function pModeration() {
+  const unc = users.filter((u) => !u.emailVerified).sort((a, b) => hoursLeft(a) - hoursLeft(b)), bans = users.filter((u) => u.isBanned)
+  const task = (u, right) => `<div class="task">${av(u)}<div class="t"><b>${u.firstName} ${u.lastName}</b><small>${u.email}</small></div>${right}</div>`
+  return `<div class="v1"><div class="pagehead"><h2>🛡 Modération</h2><span class="muted">Ce qui demande une décision, et l'historique des décisions</span></div>
+  <div class="row r2">
+    <div class="glass card"><h3 class="sec">⏳ À confirmer avant expiration ${OK}</h3><p class="muted" style="margin:-6px 0 10px">Le serveur supprime un compte non confirmé 24 h après l'inscription.</p>${unc.map((u) => task(u, `<span style="color:#fde68a;font-size:12px;white-space:nowrap">reste ${hoursLeft(u)} h</span>${B('resend', u, '↻ Renvoyer', 'sm needs-be')}${B('confirm', u, '✉ Confirmer', 'sm')}`)).join('') || '<div class="empty">Rien à confirmer ✨</div>'}</div>
+    <div class="glass card"><h3 class="sec">⛔ Comptes suspendus ${OK}</h3>${bans.map((u) => `<div class="task">${av(u)}<div class="t"><b>${u.firstName} ${u.lastName}</b><small>${u.email}</small><div class="reason">« ${u.banReason} »</div></div>${B('unban', u, '↺ Réactiver', 'sm')}${B('del', u, '🗑', 'sm danger', 'Supprimer')}</div>`).join('') || '<div class="empty">Personne n\'est suspendu</div>'}</div>
+  </div>
+  <div class="glass card needs-be"><h3 class="sec">🕓 Journal : qui a fait quoi, et pourquoi ${BE}</h3><div class="tl">${audit.map((a) => `<div style="--c:${a.c}"><b>${a.who}</b> ${a.what}${a.why ? ` · <i>« ${a.why} »</i>` : ''}<small>${rel(a.at)}</small></div>`).join('')}</div></div></div>`
+}
+const RENDER = { overview: pOverview, accounts: pAccounts, services: pServices, moderation: pModeration }
+function draw() {
+  const c = counts()
+  const nav = PAGES.map(([k, i, l]) => `<button class="${pg === k ? 'on' : ''} ${k === 'services' ? '' : ''}" data-go="${k}"><span>${i} ${l}</span>${c[k] ? `<span class="cnt ${k === 'accounts' ? '' : 'hot'}" title="${k === 'services' ? 'services en difficulté' : k === 'moderation' ? 'comptes qui attendent une décision' : 'comptes'}">${k === 'services' ? '⚠ ' : ''}${c[k]}</span>` : ''}</button>`).join('')
+  document.getElementById('tabs').innerHTML = `<span class="muted" style="align-self:center">Navigation :</span><button class="${navStyle === 'top' ? 'on' : ''}" data-nav="top">Onglets en haut</button><button class="${navStyle === 'side' ? 'on' : ''}" data-nav="side">Barre latérale</button>`
+  document.getElementById('desc').textContent = ''
+  const crumb = `<div class="crumb"><span class="muted">🛡 Admin</span> <span class="muted">›</span> <b>${PAGES.find((p) => p[0] === pg)[2]}</b><a class="back" href="#" data-dash>← Retour au dashboard</a></div>`
+  document.getElementById('stage').innerHTML = navStyle === 'top'
+    ? `<div class="glass topnav">${nav}</div>${crumb}${RENDER[pg]()}`
+    : `<div class="sidelay"><div class="glass sidenav"><div class="brand">🛡 Admin · Morex</div>${nav}<div class="muted" style="margin-top:auto;padding:10px;font-size:11.5px">Connectée en tant que<br><b style="color:#fff">Morayo</b> · admin</div></div><div>${crumb}${RENDER[pg]()}</div></div>`
+  const qi = document.getElementById('q'); if (qi) qi.oninput = (e) => { q = e.target.value; page = 0; draw(); const n = document.getElementById('q'); n.focus(); n.setSelectionRange(q.length, q.length) }
+}
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-go],[data-nav],[data-dash],[data-f],[data-a],[data-close],[data-sort],[data-open],[data-pick],[data-pickall],[data-bulk],[data-page]')
+  if (!t) { if (e.target.id === 'dlg') close(); return }
+  if (t.dataset.go) go(t.dataset.go, t.dataset.gof)
+  else if (t.dataset.nav) { navStyle = t.dataset.nav; draw() }
+  else if (t.dataset.dash !== undefined) { e.preventDefault(); toast('← Retour au dashboard (dans l\'app : /dashboard)') }
+  else if (t.dataset.f) { filter = t.dataset.f; page = 0; draw() }
+  else if (t.dataset.sort) { if (sortKey === t.dataset.sort) sortDir *= -1; else { sortKey = t.dataset.sort; sortDir = -1 } draw() }
+  else if (t.dataset.pick) { e.stopPropagation(); picked.has(t.dataset.pick) ? picked.delete(t.dataset.pick) : picked.add(t.dataset.pick); draw() }
+  else if (t.dataset.pickall !== undefined) { const ids = sorted().slice(page * PER, page * PER + PER).map((u) => u.id); const all = ids.every((i) => picked.has(i)); ids.forEach((i) => (all ? picked.delete(i) : picked.add(i))); draw() }
+  else if (t.dataset.bulk) bulkDo(t.dataset.bulk)
+  else if (t.dataset.page) { page += +t.dataset.page; draw() }
+  else if (t.dataset.close !== undefined) close()
+  else if (t.dataset.a) { if (!t.disabled) { e.stopPropagation(); acts[t.dataset.a](users.find((u) => u.id === t.dataset.id)) } }
+  else if (t.dataset.open) { openRow = openRow === t.dataset.open ? null : t.dataset.open; draw() }
+})
+window.addEventListener('hashchange', () => { const h = location.hash.slice(1); if (RENDER[h] && h !== pg) { pg = h; draw() } })
+document.addEventListener('keydown', (e) => e.key === 'Escape' && close())
+document.getElementById('hideBe').onchange = (e) => document.body.classList.toggle('hide-be', e.target.checked)
+document.getElementById('noTags').onchange = (e) => document.body.classList.toggle('no-tags', e.target.checked)
+draw()
+</script>
+</body>
+</html>

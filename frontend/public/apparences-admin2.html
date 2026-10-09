@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Morex console admin v2</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .55), rgb(15 12 50 / .82)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1.top { text-align: center; font-weight: 600; margin: 0; padding-top: 28px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .78); margin: 8px auto 12px; max-width: 920px; padding: 0 16px; font-size: 14px; }
+  .legend { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; font-size: 12px; margin-bottom: 14px; align-items: center; }
+  .legend label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; padding: 5px 12px; border-radius: 999px; background: rgb(255 255 255 / .08); }
+  .tabs { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; padding: 0 12px; }
+  .tabs button { font: inherit; font-size: 13px; padding: 8px 16px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .25); background: transparent; color: #fff; cursor: pointer; }
+  .tabs button.on { background: #fff; color: #1e1b4b; font-weight: 600; }
+  .desc { text-align: center; font-size: 13px; color: rgb(255 255 255 / .82); margin: 6px auto 18px; max-width: 860px; padding: 0 12px; }
+  .stage { max-width: 1240px; margin: 0 auto; padding: 0 20px 70px; }
+  .glass { background: rgb(15 23 42 / .74); border: 1px solid rgb(255 255 255 / .12); border-radius: 24px; backdrop-filter: blur(18px); }
+  .ok-tag, .be-tag { display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: .04em; padding: 1px 7px; border-radius: 999px; vertical-align: middle; margin-left: 6px; text-transform: uppercase; }
+  .ok-tag { background: rgb(52 211 153 / .18); color: #6ee7b7; } .be-tag { background: rgb(251 191 36 / .2); color: #fcd34d; }
+  body.hide-be .needs-be { display: none !important; }
+  body.no-tags .ok-tag, body.no-tags .be-tag { display: none; }
+  .btn { font: inherit; font-size: 12.5px; padding: 7px 13px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .22); background: rgb(255 255 255 / .06); color: #fff; cursor: pointer; white-space: nowrap; }
+  .btn:hover:not(:disabled) { background: rgb(255 255 255 / .14); } .btn:disabled { opacity: .35; cursor: not-allowed; }
+  .btn.danger { border-color: rgb(248 113 113 / .55); color: #fecaca; } .btn.primary { background: #fff; color: #1e1b4b; border-color: #fff; font-weight: 600; }
+  .btn.sm { padding: 4px 10px; font-size: 11.5px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .b-admin { background: rgb(167 139 250 / .22); color: #ddd6fe; } .b-ban { background: rgb(248 113 113 / .22); color: #fecaca; }
+  .b-unconf { background: rgb(251 191 36 / .2); color: #fde68a; } .b-ok { background: rgb(52 211 153 / .16); color: #a7f3d0; } .b-online { background: rgb(56 189 248 / .18); color: #bae6fd; }
+  .av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 12px; flex: none; position: relative; }
+  .av .dot { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: #34d399; border: 2px solid #0f172a; }
+  .muted { color: rgb(255 255 255 / .58); font-size: 12px; }
+  .num { font-family: 'JetBrains Mono', monospace; }
+  h3.sec { margin: 0 0 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .search { flex: 1; min-width: 200px; padding: 10px 16px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .18); background: rgb(255 255 255 / .07); color: #fff; font: inherit; font-size: 13px; outline: none; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; } .chips button { font: inherit; font-size: 12px; padding: 7px 13px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .2); background: transparent; color: #fff; cursor: pointer; }
+  .chips button.on { background: rgb(167 139 250 / .3); border-color: #c4b5fd; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(140px); padding: 11px 18px; border-radius: 14px; background: #1e1b4b; border: 1px solid rgb(255 255 255 / .2); font-size: 13px; transition: .3s; z-index: 80; max-width: 90vw; }
+  .toast.show { transform: translateX(-50%); }
+  .prov { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-size: 10px; font-weight: 800; background: rgb(255 255 255 / .1); margin-right: 3px; }
+  /* dialogs */
+  .dlg-bg { position: fixed; inset: 0; background: rgb(2 6 23 / .7); display: none; place-items: center; z-index: 60; backdrop-filter: blur(5px); padding: 16px; }
+  .dlg-bg.open { display: grid; }
+  .dlg { width: min(560px, 100%); max-height: 92vh; overflow: auto; padding: 24px; border-radius: 24px; background: #0f172a; border: 1px solid rgb(255 255 255 / .15); }
+  .dlg h3 { margin: 4px 0 6px; } .dlg p { font-size: 13px; color: rgb(255 255 255 / .82); line-height: 1.55; margin: 6px 0; }
+  .dlg textarea, .dlg input { width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid rgb(255 255 255 / .2); background: rgb(255 255 255 / .06); color: #fff; font: inherit; font-size: 13px; margin: 6px 0 10px; resize: vertical; }
+  .dlg .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  .dlg .big { font-size: 34px; }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; } .presets button { font: inherit; font-size: 11.5px; padding: 5px 11px; border-radius: 999px; border: 1px dashed rgb(255 255 255 / .3); background: transparent; color: #fff; cursor: pointer; }
+  .mailprev { margin-top: 10px; border-radius: 14px; background: #fffaf0; color: #3b2f5c; padding: 14px 16px; font-size: 12.5px; line-height: 1.55; }
+  .mailprev .h { font-size: 11px; color: #7c6f99; border-bottom: 1px solid #e9dcf7; padding-bottom: 6px; margin-bottom: 8px; }
+  .mailprev b { color: #7c3aed; }
+  .lbl { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; opacity: .65; margin-top: 10px; display: block; }
+  /* ===== 1 · centre de contrôle ===== */
+  .d1 .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 14px; }
+  @media (max-width: 1100px) { .d1 .kpis { grid-template-columns: repeat(3, 1fr); } }
+  .d1 .kpi { padding: 14px 16px; } .d1 .kpi .v { font-size: 26px; font-weight: 700; line-height: 1.1; } .d1 .kpi .l { font-size: 11.5px; opacity: .7; }
+  .d1 .kpi svg { width: 100%; height: 30px; margin-top: 6px; }
+  .d1 .row2 { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 1000px) { .d1 .row2 { grid-template-columns: 1fr; } }
+  .d1 .card { padding: 18px; }
+  .d1 .bars { display: flex; align-items: flex-end; gap: 4px; height: 120px; }
+  .d1 .bars i { flex: 1; border-radius: 6px 6px 2px 2px; background: linear-gradient(#a78bfa, #6366f1); position: relative; min-height: 3px; }
+  .d1 .bars i span { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 9.5px; opacity: .7; font-style: normal; }
+  .d1 .bx { display: flex; justify-content: space-between; font-size: 10px; opacity: .55; margin-top: 4px; }
+  .d1 .svc { display: flex; align-items: center; gap: 8px; font-size: 12.5px; margin: 7px 0; } .d1 .svc .n { width: 92px; } .d1 .svc .track { flex: 1; height: 8px; border-radius: 99px; background: rgb(255 255 255 / .08); overflow: hidden; } .d1 .svc .track i { display: block; height: 100%; }
+  .d1 .health { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 6px 0; border-bottom: 1px solid rgb(255 255 255 / .06); } .d1 .health .led { width: 9px; height: 9px; border-radius: 50%; flex: none; } .d1 .health .e { margin-left: auto; font-size: 11px; opacity: .7; }
+  .d1 .feed div { display: flex; gap: 10px; font-size: 12.5px; padding: 7px 0; border-bottom: 1px solid rgb(255 255 255 / .06); } .d1 .feed small { margin-left: auto; opacity: .55; white-space: nowrap; }
+  .d1 table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 12px; }
+  .d1 th { text-align: left; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: rgb(255 255 255 / .55); padding: 8px; border-bottom: 1px solid rgb(255 255 255 / .1); }
+  .d1 td { padding: 10px 8px; border-bottom: 1px solid rgb(255 255 255 / .06); vertical-align: middle; }
+  .d1 .who { display: flex; align-items: center; gap: 10px; } .d1 .who small { display: block; color: rgb(255 255 255 / .55); font-size: 11.5px; }
+  .d1 .acts { display: flex; gap: 5px; justify-content: flex-end; }
+  .d1 .expire { font-size: 10.5px; color: #fde68a; display: block; }
+  .d1 .tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  /* ===== 2 · galaxie ===== */
+  .d2 .wrap { display: grid; grid-template-columns: 1fr 340px; gap: 14px; }
+  @media (max-width: 1000px) { .d2 .wrap { grid-template-columns: 1fr; } }
+  .d2 .sky { position: relative; height: 560px; overflow: hidden; background: radial-gradient(ellipse at 50% 50%, rgb(99 102 241 / .25), transparent 60%), rgb(2 6 23 / .75); }
+  .d2 .sky .orbit { position: absolute; left: 50%; top: 50%; border: 1px dashed rgb(255 255 255 / .1); border-radius: 50%; transform: translate(-50%, -50%); }
+  .d2 .sky .orbit span { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 10px; opacity: .45; white-space: nowrap; background: rgb(2 6 23 / .8); padding: 0 6px; }
+  .d2 .core { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #fff7cc, #fde047 50%, #f59e0b); box-shadow: 0 0 40px #fde047; color: #78350f; font-weight: 800; font-size: 12px; text-align: center; line-height: 1.1; }
+  .d2 .star { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; cursor: pointer; transition: transform .2s; }
+  .d2 .star:hover, .d2 .star.sel { transform: translate(-50%, -50%) scale(1.5); z-index: 3; }
+  .d2 .star b { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); font-size: 10.5px; font-weight: 500; white-space: nowrap; opacity: .8; margin-top: 3px; }
+  .d2 .star.banned::after { content: '✕'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 9px; color: #fff; font-weight: 800; }
+  .d2 .keys { position: absolute; left: 14px; top: 12px; display: flex; gap: 12px; font-size: 11px; opacity: .85; flex-wrap: wrap; }
+  .d2 .keys i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+  .d2 .panel { padding: 20px; }
+  .d2 .panel .head { display: flex; gap: 12px; align-items: center; } .d2 .panel .head .av { width: 54px; height: 54px; font-size: 17px; }
+  .d2 .facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 14px 0; }
+  .d2 .facts div { padding: 10px; border-radius: 14px; background: rgb(255 255 255 / .05); font-size: 11.5px; } .d2 .facts b { display: block; font-size: 18px; }
+  /* ===== 3 · modération ===== */
+  .d3 .wrap { display: grid; grid-template-columns: 230px 1fr; gap: 14px; }
+  @media (max-width: 900px) { .d3 .wrap { grid-template-columns: 1fr; } }
+  .d3 .nav { padding: 12px; display: flex; flex-direction: column; gap: 4px; align-self: start; }
+  .d3 .nav button { font: inherit; font-size: 13px; text-align: left; padding: 10px 12px; border-radius: 14px; border: 0; background: transparent; color: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .d3 .nav button.on { background: rgb(167 139 250 / .2); } .d3 .nav button span.c { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: rgb(255 255 255 / .12); }
+  .d3 .nav button span.c.hot { background: #f59e0b; color: #1e1b4b; font-weight: 700; }
+  .d3 .main { padding: 18px; }
+  .d3 .task { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 16px; background: rgb(255 255 255 / .04); margin-bottom: 8px; }
+  .d3 .task .t { flex: 1; min-width: 0; } .d3 .task .t b { display: block; font-size: 13px; } .d3 .task .t small { font-size: 12px; opacity: .7; }
+  .d3 .tl { border-left: 2px solid rgb(255 255 255 / .12); margin-left: 8px; padding-left: 16px; }
+  .d3 .tl div { position: relative; padding: 7px 0; font-size: 12.5px; } .d3 .tl div::before { content: ''; position: absolute; left: -22px; top: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--c, #a78bfa); }
+  .d3 .tl small { display: block; opacity: .55; font-size: 11px; }
+  .d3 .reason { font-size: 12px; font-style: italic; color: #fecaca; margin-top: 3px; }
+  /* ===== 4 · fiche riche ===== */
+  .d4 .wrap { display: grid; grid-template-columns: 340px 1fr; gap: 14px; }
+  @media (max-width: 900px) { .d4 .wrap { grid-template-columns: 1fr; } }
+  .d4 .list { padding: 12px; max-height: 760px; overflow: auto; }
+  .d4 .item { display: flex; align-items: center; gap: 10px; padding: 9px; border-radius: 14px; cursor: pointer; }
+  .d4 .item:hover { background: rgb(255 255 255 / .05); } .d4 .item.sel { background: rgb(167 139 250 / .2); }
+  .d4 .item .t { flex: 1; min-width: 0; } .d4 .item .t b { display: block; font-size: 13px; } .d4 .item .t small { display: block; font-size: 11px; opacity: .6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .d4 .detail { padding: 24px; }
+  .d4 .cover { height: 90px; border-radius: 18px; margin: -6px -6px 0; background: linear-gradient(120deg, rgb(167 139 250 / .5), rgb(56 189 248 / .35)), url(/sahara_night.jpeg) 50% 60%/cover; }
+  .d4 .head { display: flex; gap: 16px; align-items: flex-end; margin-top: -34px; padding: 0 8px; } .d4 .head .av { width: 76px; height: 76px; font-size: 24px; border: 4px solid #0f172a; }
+  .d4 .head h2 { margin: 0 0 4px; font-size: 21px; }
+  .d4 .grid3 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 18px 0; }
+  .d4 .grid3 div { padding: 12px; border-radius: 14px; background: rgb(255 255 255 / .05); font-size: 11.5px; } .d4 .grid3 b { display: block; font-size: 19px; }
+  .d4 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } @media (max-width: 800px) { .d4 .cols { grid-template-columns: 1fr; } }
+  .d4 .box { padding: 14px; border-radius: 16px; background: rgb(255 255 255 / .04); }
+  .d4 .box h4 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; opacity: .65; font-weight: 500; }
+  .d4 .svcchip { display: inline-flex; gap: 5px; align-items: center; padding: 4px 10px; border-radius: 999px; background: rgb(255 255 255 / .08); font-size: 11.5px; margin: 0 5px 5px 0; }
+  .d4 .sess { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px solid rgb(255 255 255 / .06); }
+  .d4 .zone { margin-top: 14px; padding: 14px; border-radius: 16px; border: 1px solid rgb(248 113 113 / .35); background: rgb(127 29 29 / .15); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .d4 .zone p { flex: 1 0 100%; margin: 0 0 4px; font-size: 12px; opacity: .85; }
+  .d4 textarea { width: 100%; min-height: 60px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgb(255 255 255 / .2); background: rgb(255 255 255 / .06); color: #fff; font: inherit; font-size: 12.5px; }
+  .empty { text-align: center; padding: 30px; opacity: .65; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1 class="top">La console admin, version à fond</h1>
+<p class="lead">Quatre façons de concevoir l'écran admin, avec beaucoup plus d'informations que la liste actuelle. Tout est cliquable (recherche, filtres, étoiles, actions, fenêtres avec motif et aperçu de l'e-mail envoyé). Les données sont des exemples</p>
+<div class="legend">
+  <span><span class="ok-tag">✓ dispo</span> le backend le renvoie déjà, ou on le calcule à partir de ce qu'il renvoie</span>
+  <span><span class="be-tag">＋ backend</span> il faudrait l'ajouter côté serveur</span>
+  <label><input type="checkbox" id="hideBe"> cacher ce qui demande du backend</label>
+  <label><input type="checkbox" id="noTags"> cacher les étiquettes</label>
+</div>
+<div class="tabs" id="tabs"></div>
+<p class="desc" id="desc"></p>
+<div class="stage" id="stage"></div>
+<div class="dlg-bg" id="dlg"><div class="dlg" id="dlgIn"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const OK = '<span class="ok-tag">✓ dispo</span>', BE = '<span class="be-tag">＋ backend</span>'
+const TODAY = new Date('2026-10-09T15:00:00')
+const COLORS = ['#a78bfa', '#38bdf8', '#f472b6', '#34d399', '#fbbf24', '#fb923c', '#22d3ee']
+const SVC = { weather: ['☀️', 'Météo', '#fbbf24'], market_data: ['📈', 'Marchés', '#34d399'], github: ['🐙', 'GitHub', '#a78bfa'], rss: ['📰', 'Actus', '#f472b6'], youtube: ['▶️', 'YouTube', '#f87171'], worldclock: ['🌍', 'Heure', '#38bdf8'], calendar: ['📅', 'Agenda', '#fb923c'], epitech: ['🎓', 'Epitech', '#22d3ee'], custom_api: ['🔧', 'API perso', '#94a3b8'], wellbeing: ['🌙', 'Bien-être', '#c084fc'] }
+const ME = 'u1'
+const d = (days, h = 10) => new Date(TODAY.getTime() - days * 864e5 - (TODAY.getHours() - h) * 36e5).toISOString()
+let users = [
+  { id: 'u1', firstName: 'Morayo', lastName: 'Elegbede', email: 'morayo@morex.app', emailVerified: true, isAdmin: true, isBanned: false, banReason: null, createdAt: d(19), widgetCount: 18, linkedAccountsCount: 2, sessionCount: 2, lang: 'fr', providers: ['github', 'google'], lastSeen: d(0, 14), online: true, svc: { weather: 3, market_data: 6, github: 4, rss: 2, wellbeing: 3 }, errors: 1 },
+  { id: 'u2', firstName: 'Exaucé', lastName: 'Agbodjalou', email: 'exauce@morex.app', emailVerified: true, isAdmin: true, isBanned: false, banReason: null, createdAt: d(19, 9), widgetCount: 11, linkedAccountsCount: 3, sessionCount: 4, lang: 'fr', providers: ['github', 'microsoft', 'epitech'], lastSeen: d(0, 13), online: true, svc: { github: 5, youtube: 2, custom_api: 2, calendar: 2 }, errors: 0 },
+  { id: 'u3', firstName: 'Ada', lastName: 'Lovelace', email: 'ada@example.com', emailVerified: true, isAdmin: false, isBanned: false, banReason: null, createdAt: d(11), widgetCount: 7, linkedAccountsCount: 1, sessionCount: 1, lang: 'en', providers: ['github'], lastSeen: d(1), online: false, svc: { github: 3, rss: 2, weather: 2 }, errors: 0 },
+  { id: 'u4', firstName: 'Alan', lastName: 'Turing', email: 'alan@example.com', emailVerified: false, isAdmin: false, isBanned: false, banReason: null, createdAt: d(0, 9), widgetCount: 0, linkedAccountsCount: 0, sessionCount: 0, lang: 'en', providers: [], lastSeen: null, online: false, svc: {}, errors: 0 },
+  { id: 'u5', firstName: 'Grace', lastName: 'Hopper', email: 'grace@example.com', emailVerified: true, isAdmin: false, isBanned: true, banReason: 'Création de dizaines de widgets RSS identiques pour saturer le serveur', createdAt: d(14), widgetCount: 41, linkedAccountsCount: 0, sessionCount: 0, lang: 'en', providers: [], lastSeen: d(3), online: false, svc: { rss: 41 }, errors: 12 },
+  { id: 'u6', firstName: 'Margaret', lastName: 'Hamilton', email: 'margaret@example.com', emailVerified: true, isAdmin: false, isBanned: false, banReason: null, createdAt: d(7), widgetCount: 15, linkedAccountsCount: 1, sessionCount: 1, lang: 'en', providers: ['google'], lastSeen: d(0, 11), online: true, svc: { market_data: 5, weather: 4, worldclock: 3, youtube: 3 }, errors: 2 },
+  { id: 'u7', firstName: 'Tim', lastName: 'Berners-Lee', email: 'tim@example.com', emailVerified: false, isAdmin: false, isBanned: false, banReason: null, createdAt: d(0, 1), widgetCount: 0, linkedAccountsCount: 0, sessionCount: 0, lang: 'en', providers: [], lastSeen: null, online: false, svc: {}, errors: 0 },
+  { id: 'u8', firstName: 'Aïcha', lastName: 'Diallo', email: 'aicha@example.com', emailVerified: true, isAdmin: false, isBanned: false, banReason: null, createdAt: d(4), widgetCount: 9, linkedAccountsCount: 1, sessionCount: 2, lang: 'fr', providers: ['epitech'], lastSeen: d(0, 8), online: false, svc: { epitech: 2, calendar: 2, weather: 2, wellbeing: 3 }, errors: 0 },
+  { id: 'u9', firstName: 'Carlos', lastName: 'Ruiz', email: 'carlos@example.com', emailVerified: true, isAdmin: false, isBanned: false, banReason: null, createdAt: d(2), widgetCount: 6, linkedAccountsCount: 0, sessionCount: 1, lang: 'es', providers: [], lastSeen: d(2), online: false, svc: { youtube: 3, market_data: 3 }, errors: 3 },
+  { id: 'u10', firstName: 'Kofi', lastName: 'Mensah', email: 'kofi@example.com', emailVerified: true, isAdmin: false, isBanned: false, banReason: null, createdAt: d(1), widgetCount: 4, linkedAccountsCount: 1, sessionCount: 1, lang: 'fr', providers: ['google'], lastSeen: d(0, 12), online: true, svc: { weather: 2, rss: 2 }, errors: 0 },
+  { id: 'u11', firstName: 'Lucía', lastName: 'Gómez', email: 'lucia@example.com', emailVerified: false, isAdmin: false, isBanned: false, banReason: null, createdAt: d(0, 4), widgetCount: 0, linkedAccountsCount: 0, sessionCount: 0, lang: 'es', providers: [], lastSeen: null, online: false, svc: {}, errors: 0 },
+  { id: 'u12', firstName: 'Yuki', lastName: 'Tanaka', email: 'yuki@example.com', emailVerified: true, isAdmin: false, isBanned: true, banReason: 'Faux compte signalé par plusieurs utilisateurs', createdAt: d(9), widgetCount: 2, linkedAccountsCount: 0, sessionCount: 0, lang: 'en', providers: [], lastSeen: d(6), online: false, svc: { custom_api: 2 }, errors: 2 },
+]
+let audit = [
+  { who: 'Exaucé', what: 'a banni Yuki Tanaka', why: 'Faux compte signalé par plusieurs utilisateurs', at: d(6, 16), c: '#f87171' },
+  { who: 'Morayo', what: "a confirmé l'e-mail de Carlos Ruiz", why: "L'e-mail de confirmation n'arrivait pas", at: d(2, 15), c: '#34d399' },
+  { who: 'Exaucé', what: 'a banni Grace Hopper', why: 'Création de dizaines de widgets RSS identiques', at: d(3, 11), c: '#f87171' },
+  { who: 'Morayo', what: 'a renommé « kofi m » en Kofi Mensah', why: null, at: d(1, 10), c: '#a78bfa' },
+]
+let q = '', filter = 'all', design = +(location.hash.slice(1) || 1), sel = 'u3', modTab = 'todo'
+// ---------- helpers
+const rel = (iso) => { if (!iso) return 'jamais'; const m = Math.round((TODAY - new Date(iso)) / 6e4); return m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : m < 2880 ? 'hier' : `il y a ${Math.round(m / 1440)} j` }
+const ini = (u) => (u.firstName[0] + (u.lastName[0] || '')).toUpperCase()
+const col = (u) => COLORS[[...u.id].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORS.length]
+const av = (u, online = true) => `<span class="av" style="background:${col(u)}33;color:${col(u)}">${ini(u)}${online && u.online ? '<i class="dot needs-be" title="En ligne"></i>' : ''}</span>`
+const flag = { fr: '🇫🇷', en: '🇬🇧', es: '🇪🇸' }
+const PROV = { github: ['GH', '#e5e7eb'], google: ['G', '#f87171'], microsoft: ['MS', '#38bdf8'], epitech: ['EPI', '#22d3ee'] }
+const provs = (u) => u.providers.map((p) => `<span class="prov" style="color:${PROV[p][1]}" title="${p}">${PROV[p][0]}</span>`).join('') || '<span class="muted">—</span>'
+const hoursLeft = (u) => Math.max(0, 24 - Math.round((TODAY - new Date(u.createdAt)) / 36e5))
+const badges = (u) => [u.isAdmin && '<span class="badge b-admin">★ Admin</span>', u.isBanned && '<span class="badge b-ban">⛔ Banni</span>',
+  !u.emailVerified && `<span class="badge b-unconf" title="Supprimé automatiquement 24 h après l'inscription">✉ Non confirmé</span>`,
+  u.emailVerified && !u.isBanned && !u.isAdmin && '<span class="badge b-ok">● Actif</span>'].filter(Boolean).join(' ')
+const why = (u) => u.id === ME ? "C'est toi" : u.isAdmin ? 'Un admin ne peut pas être banni ni supprimé' : ''
+const list = () => users.filter((u) => (filter === 'all' || (filter === 'unconf' && !u.emailVerified) || (filter === 'ban' && u.isBanned) || (filter === 'admin' && u.isAdmin) || (filter === 'online' && u.online))
+  && `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q.toLowerCase())).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+const stats = () => ({ all: users.length, unconf: users.filter((u) => !u.emailVerified).length, ban: users.filter((u) => u.isBanned).length, admin: users.filter((u) => u.isAdmin).length,
+  online: users.filter((u) => u.online).length, widgets: users.reduce((a, u) => a + u.widgetCount, 0), confirmRate: Math.round(users.filter((u) => u.emailVerified).length / users.length * 100) })
+const perDay = () => Array.from({ length: 14 }, (_, i) => users.filter((u) => Math.floor((TODAY - new Date(u.createdAt)) / 864e5) === 13 - i).length)
+const spark = (vals, c) => { const mx = Math.max(...vals, 1); return `<svg viewBox="0 0 100 30" preserveAspectRatio="none"><path d="${vals.map((v, i) => `${i ? 'L' : 'M'}${i / (vals.length - 1) * 100} ${28 - v / mx * 24}`).join(' ')}" fill="none" stroke="${c}" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>` }
+const svcTotals = () => { const t = {}; users.forEach((u) => Object.entries(u.svc).forEach(([k, v]) => (t[k] = (t[k] || 0) + v))); return Object.entries(t).sort((a, b) => b[1] - a[1]) }
+const tools = (extra = '') => { const s = stats(); return `<div class="tools" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><input class="search" id="q" placeholder="🔍 Nom ou e-mail…" value="${q}">
+  <div class="chips">${[['all', `Tous ${s.all}`], ['unconf', `Non confirmés ${s.unconf}`], ['ban', `Bannis ${s.ban}`], ['admin', `Admins ${s.admin}`], ['online', `En ligne ${s.online}`]].map(([k, l]) => `<button class="${filter === k ? 'on' : ''} ${k === 'online' ? 'needs-be' : ''}" data-f="${k}">${l}</button>`).join('')}</div>${extra}</div>` }
+function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 3000) }
+// ---------- dialogs (same rules as the real API: reason required, emails sent)
+const PRESETS = { ban: ['Spam / abus du serveur', 'Faux compte', 'Contenu ou comportement abusif', 'Compte compromis (sécurité)'], del: ['Demande de la personne', 'Faux compte', 'Abus répétés', 'Compte de test'] }
+const MAILS = { ban: (u, r) => `<div class="h">À : ${u.email} · Objet : <b>Ton compte Morex a été suspendu</b></div>Un administrateur a suspendu ton compte. Motif indiqué : « <b>${r || '…'}</b> ».<br><br>Tu es déconnecté partout et ne peux pas te reconnecter tant que c'est suspendu. Si tu penses que c'est une erreur ou que tu veux t'expliquer, réponds simplement à cet email — une vraie personne le lira.`,
+  del: (u, r) => `<div class="h">À : ${u.email} · Objet : <b>Ton compte Morex a été supprimé</b></div>Un administrateur a supprimé définitivement ton compte et tout ce qu'il contenait. Motif indiqué : « <b>${r || '…'}</b> ».<br><br>Ce n'est pas réversible de notre côté. Si tu penses que c'est une erreur ou que tu veux t'expliquer, réponds à cet email — une vraie personne le lira.` }
+function open(html, ready) { document.getElementById('dlgIn').innerHTML = html; document.getElementById('dlg').classList.add('open'); ready?.() }
+function close() { document.getElementById('dlg').classList.remove('open') }
+function reasonDialog(kind, u) {
+  const isBan = kind === 'ban'
+  open(`<div class="big">${isBan ? '⛔' : '🗑️'}</div><h3>${isBan ? 'Suspendre' : 'Supprimer définitivement'} le compte de ${u.firstName} ${u.lastName}</h3>
+    <p>${isBan ? 'La personne est <b>déconnectée partout tout de suite</b> et ne peut plus se connecter. Tu pourras la réactiver.' : `<b>C'est irréversible</b> : ses ${u.widgetCount} widgets, son journal, ses comptes liés et ses sessions disparaissent.`}</p>
+    <span class="lbl">Motif (obligatoire) · ${OK}</span><div class="presets">${PRESETS[kind].map((p) => `<button data-preset="${p}">${p}</button>`).join('')}</div>
+    <textarea id="rs" rows="2" placeholder="Explique le motif, il sera envoyé à la personne…"></textarea>
+    ${isBan ? '' : `<span class="lbl">Pour confirmer, tape son e-mail</span><input id="cf" placeholder="${u.email}">`}
+    <span class="lbl">Aperçu de l'e-mail qu'elle recevra · ${OK}</span><div class="mailprev" id="mp">${MAILS[kind](u, '')}</div>
+    <div class="row"><button class="btn" data-close>Annuler</button><button class="btn danger" id="go" disabled>${isBan ? 'Suspendre et prévenir par e-mail' : 'Supprimer et prévenir par e-mail'}</button></div>`, () => {
+    const rs = document.getElementById('rs'), go = document.getElementById('go'), cf = document.getElementById('cf'), mp = document.getElementById('mp')
+    const check = () => { mp.innerHTML = MAILS[kind](u, rs.value.trim()); go.disabled = !rs.value.trim() || (cf && cf.value.trim().toLowerCase() !== u.email) }
+    rs.oninput = check; if (cf) cf.oninput = check
+    document.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => { rs.value = b.dataset.preset; check(); rs.focus() }))
+    go.onclick = () => {
+      const r = rs.value.trim()
+      if (isBan) { Object.assign(u, { isBanned: true, banReason: r, sessionCount: 0, online: false }); audit.unshift({ who: 'Morayo', what: `a banni ${u.firstName} ${u.lastName}`, why: r, at: TODAY.toISOString(), c: '#f87171' }); toast(`⛔ ${u.firstName} est suspendu · e-mail envoyé`) }
+      else { users = users.filter((x) => x.id !== u.id); audit.unshift({ who: 'Morayo', what: `a supprimé le compte de ${u.firstName} ${u.lastName}`, why: r, at: TODAY.toISOString(), c: '#f87171' }); toast(`🗑️ Compte supprimé · e-mail envoyé avant la suppression`); if (sel === u.id) sel = list()[0]?.id }
+      close(); draw()
+    }
+    rs.focus()
+  })
+}
+const acts = {
+  ban: (u) => reasonDialog('ban', u), del: (u) => reasonDialog('del', u),
+  unban: (u) => { Object.assign(u, { isBanned: false, banReason: null }); audit.unshift({ who: 'Morayo', what: `a réactivé ${u.firstName} ${u.lastName}`, why: null, at: TODAY.toISOString(), c: '#34d399' }); toast(`✓ ${u.firstName} est réactivé · e-mail « compte réactivé » envoyé`); draw() },
+  confirm: (u) => { u.emailVerified = true; audit.unshift({ who: 'Morayo', what: `a confirmé l'e-mail de ${u.firstName} ${u.lastName}`, why: null, at: TODAY.toISOString(), c: '#34d399' }); toast(`✓ E-mail de ${u.firstName} confirmé à la main`); draw() },
+  rename: (u) => open(`<div class="big">✎</div><h3>Renommer</h3><input id="fn" value="${u.firstName}"><input id="ln" value="${u.lastName}"><div class="row"><button class="btn" data-close>Annuler</button><button class="btn primary" id="go">Enregistrer</button></div>`, () => {
+    document.getElementById('go').onclick = () => { const f = document.getElementById('fn').value.trim(), l = document.getElementById('ln').value.trim(); if (!f || !l) return toast('400 · Le prénom et le nom ne peuvent pas être vides'); Object.assign(u, { firstName: f, lastName: l }); close(); toast('✓ Nom modifié'); draw() } }),
+  logout: (u) => { u.sessionCount = 0; u.online = false; toast(`↪ ${u.firstName} est déconnecté de tous ses appareils`); draw() },
+  mail: (u) => open(`<div class="big">✉️</div><h3>Écrire à ${u.firstName} ${BE}</h3><p>Un message envoyé par e-mail, depuis la console.</p><input placeholder="Objet"><textarea rows="4" placeholder="Ton message…"></textarea><div class="row"><button class="btn" data-close>Annuler</button><button class="btn primary" data-close>Envoyer</button></div>`),
+  resend: (u) => toast(`✉ Nouvel e-mail de confirmation envoyé à ${u.email}`),
+  csv: () => { const rows = [['prénom', 'nom', 'email', 'confirmé', 'admin', 'banni', 'inscrit', 'widgets'], ...users.map((u) => [u.firstName, u.lastName, u.email, u.emailVerified, u.isAdmin, u.isBanned, u.createdAt.slice(0, 10), u.widgetCount])]; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rows.map((r) => r.join(';')).join('\n')], { type: 'text/csv' })); a.download = 'morex-comptes.csv'; a.click(); toast('⬇ morex-comptes.csv téléchargé') },
+}
+const B = (a, u, label, cls = '', title = '') => { const w = (a === 'ban' || a === 'del' || a === 'logout') ? why(u) : ''; return `<button class="btn ${cls}" data-a="${a}" data-id="${u.id}" ${w ? 'disabled' : ''} title="${w || title}">${label}</button>` }
+// ---------- 1 · Centre de contrôle
+function d1() {
+  const s = stats(), pd = perDay(), tot = svcTotals(), mx = Math.max(...tot.map((x) => x[1]), 1)
+  const kpi = (v, l, tag, sp = '', extra = '') => `<div class="glass kpi ${extra}"><div class="v">${v}</div><div class="l">${l} ${tag}</div>${sp}</div>`
+  const health = [['Météo', 'ok', 'Open-Meteo répond', 0], ['Marchés', 'warn', 'CoinGecko : 12 refus « 429 » aujourd\'hui', 12], ['GitHub', 'ok', '5 000 appels/h (comptes liés)', 0], ['YouTube', 'warn', 'Quota du jour : 6 400 / 10 000', 0], ['Actus (RSS)', 'bad', '2 flux injoignables', 2], ['Heure / Bien-être', 'ok', 'aucune API externe', 0]]
+  const led = { ok: '#34d399', warn: '#fbbf24', bad: '#f87171' }
+  return `<div class="d1">
+  <div class="kpis">
+    ${kpi(s.all, 'comptes', OK, spark(pd.map((_, i) => pd.slice(0, i + 1).reduce((a, b) => a + b, 0)), '#a78bfa'))}
+    ${kpi(`${s.online} <span style="font-size:13px;color:#7dd3fc">● en ligne</span>`, 'connectés maintenant', BE, '', 'needs-be')}
+    ${kpi(s.unconf, 'en attente de confirmation', OK, `<div class="muted" style="margin-top:6px">le plus urgent expire dans ${Math.min(...users.filter((u) => !u.emailVerified).map(hoursLeft))} h</div>`)}
+    ${kpi(`${s.confirmRate} %`, 'taux de confirmation', OK)}
+    ${kpi(s.widgets, 'widgets au total', OK, `<div class="muted" style="margin-top:6px">${(s.widgets / s.all).toFixed(1)} par compte en moyenne</div>`)}
+    ${kpi(s.ban, 'comptes suspendus', OK)}
+  </div>
+  <div class="row2">
+    <div class="glass card"><h3 class="sec">📈 Inscriptions, 14 derniers jours ${OK}</h3><div class="bars">${pd.map((v) => `<i style="height:${v / Math.max(...pd, 1) * 100}%"><span>${v || ''}</span></i>`).join('')}</div><div class="bx"><span>il y a 14 j</span><span>aujourd'hui</span></div><p class="muted" style="margin:8px 0 0">Calculé à partir de la date d'inscription (<span class="num">createdAt</span>) de chaque compte.</p></div>
+    <div class="glass card needs-be"><h3 class="sec">🧩 Services les plus utilisés ${BE}</h3>${tot.slice(0, 6).map(([k, v]) => `<div class="svc"><span class="n">${SVC[k][0]} ${SVC[k][1]}</span><span class="track"><i style="width:${v / mx * 100}%;background:${SVC[k][2]}"></i></span><span class="num" style="width:26px;text-align:right">${v}</span></div>`).join('')}</div>
+    <div class="glass card needs-be"><h3 class="sec">🩺 Santé des services ${BE}</h3>${health.map(([n, st, t]) => `<div class="health"><span class="led" style="background:${led[st]};box-shadow:0 0 8px ${led[st]}"></span>${n}<span class="e">${t}</span></div>`).join('')}</div>
+  </div>
+  <div class="row2" style="grid-template-columns:1fr 1fr">
+    <div class="glass card needs-be"><h3 class="sec">🕓 Activité de la modération ${BE}</h3><div class="feed">${audit.slice(0, 5).map((a) => `<div><span style="color:${a.c}">●</span><span><b>${a.who}</b> ${a.what}${a.why ? `<br><span class="muted">« ${a.why} »</span>` : ''}</span><small>${rel(a.at)}</small></div>`).join('')}</div></div>
+    <div class="glass card"><h3 class="sec">🌐 Langues et connexions ${BE}</h3>
+      <p class="muted" style="margin:0 0 8px">Langue choisie par les comptes</p><div class="svc">${['fr', 'en', 'es'].map((l) => { const n = users.filter((u) => u.lang === l).length; return `<span>${flag[l]} <b>${n}</b></span>` }).join(' · ')}</div>
+      <p class="muted" style="margin:12px 0 8px">Comptes connectés avec</p><div class="svc">${Object.keys(PROV).map((p) => `<span>${provs({ providers: [p] })} <b>${users.filter((u) => u.providers.includes(p)).length}</b></span>`).join(' · ')}</div>
+      <p class="muted" style="margin:12px 0 0">Le nombre de comptes liés existe déjà (<span class="num">linkedAccountsCount</span>) ${OK} ; le détail par fournisseur et la langue demandent du backend.</p></div>
+  </div>
+  <div class="glass card">${tools(`<button class="btn" data-a="csv" data-id="x">⬇ Exporter en CSV ${OK}</button>`)}
+  ${!list().length ? '<div class="empty">Aucun compte ne correspond 🔭</div>' : `<table><tr><th>Compte</th><th>Statut</th><th>Inscrit</th><th class="needs-be">Vu ${BE}</th><th>Widgets</th><th>Connexions</th><th>Sessions</th><th></th></tr>
+  ${list().map((u) => `<tr><td><div class="who">${av(u)}<span>${u.firstName} ${u.lastName}${u.id === ME ? ' <span class="muted">(toi)</span>' : ''}<small>${u.email}</small></span></div></td>
+    <td>${badges(u)}${!u.emailVerified ? `<span class="expire">⏳ supprimé dans ${hoursLeft(u)} h si non confirmé</span>` : ''}${u.isBanned ? `<span class="muted" style="display:block;max-width:220px;font-style:italic">« ${u.banReason} »</span>` : ''}</td>
+    <td class="muted">${rel(u.createdAt)}</td><td class="muted needs-be">${u.online ? '<span class="badge b-online">● en ligne</span>' : rel(u.lastSeen)}</td><td class="num">${u.widgetCount}${u.errors ? ` <span class="needs-be" style="color:#fca5a5" title="widgets en erreur">⚠${u.errors}</span>` : ''}</td><td>${provs(u)}</td><td class="num">${u.sessionCount}</td>
+    <td><div class="acts">${!u.emailVerified ? B('confirm', u, '✉', 'sm', "Confirmer l'e-mail à la main") : ''}${B('rename', u, '✎', 'sm', 'Renommer')}${u.isBanned ? B('unban', u, '↺', 'sm', 'Réactiver') : B('ban', u, '⛔', 'sm', 'Suspendre')}${B('del', u, '🗑', 'sm danger', 'Supprimer')}</div></td></tr>`).join('')}</table>`}</div></div>`
+}
+// ---------- 2 · Galaxie
+function d2() {
+  const v = list(), u = users.find((x) => x.id === sel) || v[0]; if (u) sel = u.id
+  const W = 760, H = 560, cx = 50, cy = 50
+  const ring = (x) => x.isAdmin ? 0 : !x.emailVerified ? 3 : x.isBanned ? 3 : x.widgetCount > 8 ? 1 : 2
+  const R = [15, 26, 36, 45]
+  const byRing = {}; v.forEach((x) => (byRing[ring(x)] = (byRing[ring(x)] || []).concat(x)))
+  const stars = Object.entries(byRing).flatMap(([r, arr]) => arr.map((x, i) => { const a = (i / arr.length) * Math.PI * 2 + +r; return { x, left: cx + Math.cos(a) * R[r], top: cy + Math.sin(a) * R[r] * 0.82 } }))
+  const color = (x) => x.isBanned ? '#f87171' : x.isAdmin ? '#c4b5fd' : !x.emailVerified ? '#fbbf24' : '#7dd3fc'
+  return `<div class="d2"><div class="glass" style="padding:14px;margin-bottom:14px">${tools()}</div><div class="wrap">
+  <div class="glass sky">${R.map((r, i) => `<div class="orbit" style="width:${r * 2}%;height:${r * 2 * 0.82}%"><span>${['admins', 'très actifs (+8 widgets)', 'membres', 'non confirmés & suspendus'][i]}</span></div>`).join('')}
+    <div class="core">MOREX<br>${users.length}</div>
+    ${stars.map(({ x, left, top }) => { const sz = 10 + Math.min(x.widgetCount, 20); return `<div class="star ${x.isBanned ? 'banned' : ''} ${x.id === sel ? 'sel' : ''}" data-sel="${x.id}" style="left:${left}%;top:${top}%;width:${sz}px;height:${sz}px;background:${color(x)};box-shadow:0 0 ${sz}px ${color(x)}" title="${x.firstName} ${x.lastName}"><b>${x.firstName}</b></div>` }).join('')}
+    <div class="keys"><span><i style="background:#c4b5fd"></i>admin</span><span><i style="background:#7dd3fc"></i>membre</span><span><i style="background:#fbbf24"></i>non confirmé</span><span><i style="background:#f87171"></i>suspendu</span><span>taille de l'étoile = nombre de widgets ${OK}</span></div></div>
+  <div class="glass panel">${!u ? '<div class="empty">Aucun compte</div>' : `<div class="head">${av(u)}<div><b style="font-size:16px">${u.firstName} ${u.lastName}</b><div class="muted">${u.email}</div><div style="margin-top:6px">${badges(u)}</div></div></div>
+    ${u.isBanned ? `<p class="muted" style="font-style:italic;color:#fecaca;margin:12px 0 0">Motif : « ${u.banReason} » ${OK}</p>` : ''}
+    <div class="facts"><div><b>${u.widgetCount}</b>widgets ${OK}</div><div><b>${u.linkedAccountsCount}</b>comptes liés ${OK}</div><div><b>${u.sessionCount}</b>sessions ${OK}</div><div class="needs-be"><b style="font-size:13px">${u.online ? '● en ligne' : rel(u.lastSeen)}</b>dernière visite ${BE}</div></div>
+    <p class="muted">Inscrit ${rel(u.createdAt)} ${OK} ${!u.emailVerified ? `· <span style="color:#fde68a">supprimé dans ${hoursLeft(u)} h</span>` : ''}</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">${B('rename', u, '✎ Renommer')}${!u.emailVerified ? B('confirm', u, '✉ Confirmer') : ''}${u.isBanned ? B('unban', u, '↺ Réactiver') : B('ban', u, '⛔ Suspendre', 'danger')}${B('del', u, '🗑 Supprimer', 'danger')}</div>`}</div></div></div>`
+}
+// ---------- 3 · Modération
+function d3() {
+  const s = stats(), unc = users.filter((u) => !u.emailVerified).sort((a, b) => hoursLeft(a) - hoursLeft(b)), errs = users.filter((u) => u.errors > 0 && !u.isBanned), bans = users.filter((u) => u.isBanned)
+  const tabs = [['todo', '📥 À traiter', unc.length + errs.length, true], ['bans', '⛔ Suspendus', bans.length], ['all', '👥 Tous les comptes', s.all], ['log', '🕓 Journal de modération', audit.length]]
+  let main = ''
+  if (modTab === 'todo') main = `<h3 class="sec">⏳ Comptes qui vont expirer ${OK}</h3><p class="muted" style="margin:-6px 0 10px">Non confirmés : le serveur les supprime 24 h après l'inscription. Si la personne n'a pas reçu l'e-mail, tu peux confirmer à sa place.</p>
+    ${unc.map((u) => `<div class="task">${av(u)}<div class="t"><b>${u.firstName} ${u.lastName}</b><small>${u.email} · inscrit ${rel(u.createdAt)} · <span style="color:#fde68a">reste ${hoursLeft(u)} h</span></small></div>${B('resend', u, '↻ Renvoyer l\'e-mail', 'sm needs-be')}${B('confirm', u, '✉ Confirmer', 'sm')}</div>`).join('') || '<div class="empty">Rien à traiter ✨</div>'}
+    <div class="needs-be"><h3 class="sec" style="margin-top:18px">⚠ Comptes avec des widgets en erreur ${BE}</h3>${errs.map((u) => `<div class="task">${av(u)}<div class="t"><b>${u.firstName} ${u.lastName}</b><small>${u.errors} widget(s) en erreur sur ${u.widgetCount}</small></div>${B('mail', u, '✉ Prévenir', 'sm')}</div>`).join('')}</div>`
+  if (modTab === 'bans') main = `<h3 class="sec">⛔ Comptes suspendus ${OK}</h3>${bans.map((u) => `<div class="task">${av(u)}<div class="t"><b>${u.firstName} ${u.lastName}</b><small>${u.email}</small><div class="reason">« ${u.banReason} »</div></div>${B('unban', u, '↺ Réactiver', 'sm')}${B('del', u, '🗑', 'sm danger', 'Supprimer définitivement')}</div>`).join('') || '<div class="empty">Personne n\'est suspendu</div>'}`
+  if (modTab === 'all') main = `${tools()}<div style="margin-top:12px">${list().map((u) => `<div class="task">${av(u)}<div class="t"><b>${u.firstName} ${u.lastName}</b><small>${u.email} · ${u.widgetCount} widgets · inscrit ${rel(u.createdAt)}</small><div style="margin-top:4px">${badges(u)}</div></div>${B('rename', u, '✎', 'sm')}${u.isBanned ? B('unban', u, '↺', 'sm') : B('ban', u, '⛔', 'sm')}${B('del', u, '🗑', 'sm danger')}</div>`).join('')}</div>`
+  if (modTab === 'log') main = `<div class="needs-be"><h3 class="sec">🕓 Qui a fait quoi, et pourquoi ${BE}</h3><p class="muted" style="margin:-6px 0 12px">Chaque action d'un admin est gardée avec son auteur, sa date et son motif : la modération est transparente et on peut toujours se justifier.</p><div class="tl">${audit.map((a) => `<div style="--c:${a.c}"><b>${a.who}</b> ${a.what}${a.why ? ` · <i>« ${a.why} »</i>` : ''}<small>${rel(a.at)}</small></div>`).join('')}</div></div>`
+  return `<div class="d3"><div class="wrap"><div class="glass nav">${tabs.map(([k, l, c, hot]) => `<button class="${modTab === k ? 'on' : ''} ${k === 'log' ? 'needs-be' : ''}" data-mod="${k}">${l}<span class="c ${hot && c ? 'hot' : ''}">${c}</span></button>`).join('')}</div><div class="glass main">${main}</div></div></div>`
+}
+// ---------- 4 · Fiche riche
+function d4() {
+  const v = list(), u = users.find((x) => x.id === sel) || v[0]; if (u) sel = u.id
+  const tl = u ? [[u.createdAt, 'Inscription', '#a78bfa', OK], u.emailVerified && [u.createdAt, 'E-mail confirmé', '#34d399', BE], ...u.providers.map((p, i) => [u.createdAt, `Compte ${p} connecté`, '#38bdf8', BE]), u.isBanned && [u.lastSeen, 'Suspendu', '#f87171', BE], u.lastSeen && [u.lastSeen, 'Dernière visite', '#7dd3fc', BE]].filter(Boolean) : []
+  return `<div class="d4"><div class="glass" style="padding:14px;margin-bottom:14px">${tools()}</div><div class="wrap">
+  <div class="glass list">${v.map((x) => `<div class="item ${x.id === sel ? 'sel' : ''}" data-sel="${x.id}">${av(x)}<div class="t"><b>${x.firstName} ${x.lastName}</b><small>${x.email}</small></div>${x.isBanned ? '⛔' : !x.emailVerified ? '✉' : x.isAdmin ? '★' : ''}</div>`).join('') || '<div class="empty">Aucun compte</div>'}</div>
+  <div class="glass detail">${!u ? '<div class="empty">Choisis un compte</div>' : `<div class="cover"></div><div class="head">${av(u)}<div><h2>${u.firstName} ${u.lastName} <span class="needs-be" style="font-size:16px">${flag[u.lang]}</span></h2><div class="muted">${u.email} · inscrit ${rel(u.createdAt)}</div><div style="margin-top:6px">${badges(u)} ${u.online ? '<span class="badge b-online needs-be">● en ligne</span>' : ''}</div></div></div>
+    ${u.isBanned ? `<p style="margin:14px 8px 0;font-size:13px;color:#fecaca">⛔ Suspendu · motif : <i>« ${u.banReason} »</i> ${OK}</p>` : ''}
+    <div class="grid3"><div><b>${u.widgetCount}</b>widgets ${OK}</div><div><b>${u.linkedAccountsCount}</b>comptes liés ${OK}</div><div><b>${u.sessionCount}</b>sessions ${OK}</div><div class="needs-be"><b>${u.errors}</b>widgets en erreur ${BE}</div></div>
+    <div class="cols">
+      <div class="box needs-be"><h4>Ses widgets, par service ${BE}</h4>${Object.entries(u.svc).map(([k, n]) => `<span class="svcchip">${SVC[k][0]} ${SVC[k][1]} <b>${n}</b></span>`).join('') || '<span class="muted">Aucun widget</span>'}<p class="muted" style="margin:8px 0 0">Seulement le nombre par service : jamais le contenu (villes, dépôts, journal…).</p></div>
+      <div class="box needs-be"><h4>Historique du compte ${BE}</h4><div style="border-left:2px solid rgb(255 255 255 / .12);padding-left:14px;margin-left:4px">${tl.map(([at, t, c]) => `<div style="position:relative;font-size:12.5px;padding:5px 0"><span style="position:absolute;left:-20px;top:9px;width:9px;height:9px;border-radius:50%;background:${c}"></span>${t}<span class="muted"> · ${rel(at)}</span></div>`).join('')}</div></div>
+      <div class="box"><h4>Connexions ${OK}</h4>${provs(u)} <span class="muted">${u.linkedAccountsCount} compte(s) lié(s)</span><h4 style="margin-top:14px" class="needs-be">Sessions ouvertes ${BE}</h4>${Array.from({ length: Math.min(u.sessionCount, 3) }, (_, i) => `<div class="sess needs-be"><span>${['💻 Chrome · Linux', '📱 Safari · iPhone', '💻 Firefox · Windows'][i]}</span><span class="muted">${i ? rel(u.lastSeen) : 'maintenant'}</span></div>`).join('')}${u.sessionCount ? `<div style="margin-top:8px">${B('logout', u, '↪ Déconnecter partout', 'sm')}</div>` : ''}</div>
+      <div class="box needs-be"><h4>Note interne ${BE}</h4><textarea placeholder="Visible seulement par les admins (ex. « a écrit au support le 3/10 »)…"></textarea></div>
+    </div>
+    <div class="box" style="margin-top:14px"><h4>Actions ${OK}</h4><div style="display:flex;gap:6px;flex-wrap:wrap">${B('rename', u, '✎ Renommer')}${!u.emailVerified ? B('confirm', u, '✉ Confirmer l\'e-mail') : ''}${B('mail', u, '✉ Écrire', 'needs-be')}</div></div>
+    <div class="zone"><p>Zone sensible — la personne reçoit un e-mail avec le motif ${why(u) ? '· ' + why(u) : ''}</p>${u.isBanned ? B('unban', u, '↺ Réactiver') : B('ban', u, '⛔ Suspendre', 'danger')}${B('del', u, '🗑 Supprimer le compte', 'danger')}</div>`}</div></div></div>`
+}
+const D = {
+  1: ['Centre de contrôle', 'Une vraie salle de contrôle : 6 compteurs avec mini-courbes, les inscriptions des 14 derniers jours, les services les plus utilisés, la santé des API (CoinGecko qui sature, quota YouTube…), le fil de la modération, puis le tableau complet avec « supprimé dans X h », le motif des bannissements, les fournisseurs de connexion et l\'export CSV', d1],
+  2: ['Galaxie des comptes', 'Chaque compte est une étoile en orbite autour de Morex : orbite intérieure les admins, puis les très actifs, les membres, et à l\'extérieur les non confirmés et suspendus. Taille = nombre de widgets, couleur = statut. Clique une étoile pour voir sa fiche et agir', d2],
+  3: ['Boîte de modération', 'Organisé comme une boîte mail : « À traiter » (comptes qui vont expirer, triés par urgence ; widgets en erreur), « Suspendus » avec leur motif, « Tous les comptes », et le journal « qui a fait quoi et pourquoi »', d3],
+  4: ['Fiche complète', 'La liste à gauche, et une fiche détaillée à droite : bandeau, langue, ses widgets par service (sans jamais montrer leur contenu), l\'historique du compte, ses sessions avec « déconnecter partout », une note interne entre admins, et la zone sensible', d4],
+}
+function draw() {
+  document.getElementById('tabs').innerHTML = Object.entries(D).map(([k, [n]]) => `<button class="${+k === design ? 'on' : ''}" data-d="${k}">${k} · ${n}</button>`).join('')
+  document.getElementById('desc').textContent = D[design][1]
+  document.getElementById('stage').innerHTML = D[design][2]()
+  const qi = document.getElementById('q'); if (qi) qi.oninput = (e) => { q = e.target.value; draw(); const n = document.getElementById('q'); n.focus(); n.setSelectionRange(q.length, q.length) }
+}
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-d],[data-f],[data-a],[data-sel],[data-close],[data-mod]')
+  if (!t) { if (e.target.id === 'dlg') close(); return }
+  if (t.dataset.d) { design = +t.dataset.d; location.hash = design; draw() }
+  else if (t.dataset.f) { filter = t.dataset.f; draw() }
+  else if (t.dataset.mod) { modTab = t.dataset.mod; draw() }
+  else if (t.dataset.sel) { sel = t.dataset.sel; draw() }
+  else if (t.dataset.close !== undefined) close()
+  else if (t.dataset.a && !t.disabled) acts[t.dataset.a](users.find((u) => u.id === t.dataset.id))
+})
+document.addEventListener('keydown', (e) => e.key === 'Escape' && close())
+document.getElementById('hideBe').onchange = (e) => document.body.classList.toggle('hide-be', e.target.checked)
+document.getElementById('noTags').onchange = (e) => document.body.classList.toggle('no-tags', e.target.checked)
+draw()
+</script>
+</body>
+</html>
