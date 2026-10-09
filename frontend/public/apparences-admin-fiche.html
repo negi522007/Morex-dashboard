@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morex fiche compte</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 28px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .75); margin: 8px auto 18px; font-size: 14px; max-width: 920px; padding: 0 16px; }
+  .tabs { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+  .tabs button { font: inherit; font-size: 13.5px; padding: 8px 18px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .25); background: transparent; color: #fff; cursor: pointer; }
+  .tabs button.on { background: #fff; color: #1e1b4b; font-weight: 600; }
+  .stage { max-width: 1440px; margin: 0 auto; padding: 0 28px 80px; }
+  .glass { background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); border-radius: 24px; backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+  .muted { color: rgb(255 255 255 / .62); }
+  .num { font-family: 'JetBrains Mono', monospace; }
+  .head { display: flex; align-items: baseline; gap: 16px; margin: 0 4px 22px; flex-wrap: wrap; }
+  .head h2 { margin: 0; font-size: 40px; font-weight: 700; letter-spacing: -.03em; background: linear-gradient(90deg, #fff, #818cf8 60%, #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .btn { font: inherit; font-size: 13.5px; padding: 9px 16px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .22); background: rgb(255 255 255 / .06); color: #fff; cursor: pointer; white-space: nowrap; }
+  .btn:hover:not(:disabled) { background: rgb(255 255 255 / .14); } .btn.danger { border-color: rgb(248 113 113 / .55); color: #fecaca; } .btn:disabled { opacity: .35; cursor: not-allowed; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .b-admin { background: rgb(167 139 250 / .22); color: #ddd6fe; } .b-ok { background: rgb(52 211 153 / .16); color: #a7f3d0; } .b-wait { background: rgb(251 191 36 / .2); color: #fde68a; } .b-ban { background: rgb(248 113 113 / .22); color: #fecaca; }
+  .av { border-radius: 50%; flex: none; object-fit: cover; background: rgb(255 255 255 / .1); }
+
+  /* la liste (commune) */
+  .md { display: grid; grid-template-columns: 400px 1fr; gap: 22px; align-items: start; } @media (max-width: 1000px) { .md { grid-template-columns: 1fr; } }
+  .list { padding: 14px; position: sticky; top: 16px; }
+  .search { width: 100%; height: 46px; padding: 0 18px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .18); background: rgb(255 255 255 / .07); color: #fff; font: inherit; font-size: 14.5px; outline: none; margin-bottom: 10px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; } .chip { font: inherit; font-size: 12.5px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .2); background: transparent; color: #fff; cursor: pointer; } .chip.on { background: rgb(167 139 250 / .3); border-color: rgb(196 181 253 / .6); }
+  .grp { font-size: 11.5px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: rgb(255 255 255 / .45); margin: 12px 10px 6px; }
+  .li { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 16px; cursor: pointer; border: 1px solid transparent; transition: background .2s, transform .2s; position: relative; }
+  .li:hover { background: rgb(255 255 255 / .06); } .li.on { background: linear-gradient(90deg, rgb(167 139 250 / .28), rgb(56 189 248 / .12)); border-color: rgb(196 181 253 / .45); transform: translateX(4px); }
+  .li.on::before { content: ''; position: absolute; left: -8px; top: 22%; bottom: 22%; width: 3px; border-radius: 3px; background: #38bdf8; box-shadow: 0 0 10px #38bdf8; }
+  .li .g { flex: 1; min-width: 0; } .li b { display: block; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .li small { color: rgb(255 255 255 / .55); font-size: 12px; }
+  .li .w { font-size: 12px; color: rgb(255 255 255 / .55); text-align: right; } .li .w b { font-size: 15px; color: #fff; }
+  .li .dot { width: 9px; height: 9px; border-radius: 50%; position: absolute; left: 44px; top: 44px; border: 2px solid #1e1b4b; }
+  .kbd { margin-top: 12px; font-size: 12px; color: rgb(255 255 255 / .45); text-align: center; } .kbd i { font-style: normal; padding: 1px 6px; border-radius: 5px; border: 1px solid rgb(255 255 255 / .25); margin: 0 2px; }
+
+  /* parcours du compte (commun) */
+  .path { display: grid; grid-template-columns: repeat(4, 1fr); position: relative; margin: 6px 0; }
+  .path::before { content: ''; position: absolute; left: 12.5%; right: 12.5%; top: 21px; height: 3px; border-radius: 3px; background: rgb(255 255 255 / .1); }
+  .path .fill { position: absolute; left: 12.5%; top: 21px; height: 3px; border-radius: 3px; background: linear-gradient(90deg, #a78bfa, #38bdf8, #34d399); box-shadow: 0 0 10px #38bdf8; }
+  .step { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; position: relative; }
+  .step .o { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; background: rgb(15 23 42); border: 2px solid rgb(255 255 255 / .18); color: rgb(255 255 255 / .4); }
+  .step.done .o { border-color: var(--c); background: radial-gradient(circle at 35% 30%, #fff, var(--c) 50%, rgb(15 23 42) 120%); color: #0f172a; box-shadow: 0 0 18px var(--c); font-weight: 700; }
+  .step b { font-size: 13.5px; } .step small { font-size: 12px; color: rgb(255 255 255 / .55); }
+  .step.todo b { color: rgb(255 255 255 / .5); }
+  .danger-zone { margin-top: 26px; padding: 18px 20px; border-radius: 18px; border: 1px dashed rgb(248 113 113 / .45); background: rgb(127 29 29 / .15); display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .danger-zone .t { flex: 1; min-width: 220px; } .danger-zone b { color: #fecaca; display: block; } .danger-zone small { font-size: 12.5px; color: rgb(255 255 255 / .6); }
+
+  /* A profil */
+  .pa { overflow: hidden; }
+  .pa .banner { height: 150px; position: relative; background: linear-gradient(120deg, var(--c), #38bdf8 60%, transparent), url(/accueil_photo.jpg) 50% 40%/cover; }
+  .pa .banner::after { content: ''; position: absolute; inset: 0; background: linear-gradient(transparent 40%, rgb(15 23 42 / .85)); }
+  .pa .idrow { display: flex; align-items: flex-end; gap: 22px; padding: 0 34px; margin-top: -64px; position: relative; z-index: 1; flex-wrap: wrap; }
+  .pa .idrow .av { width: 128px; height: 128px; box-shadow: 0 0 0 5px rgb(15 23 42), 0 0 0 7px var(--c), 0 0 40px var(--c); }
+  .pa .idrow h3 { margin: 0; font-size: 32px; letter-spacing: -.02em; } .pa .idrow p { margin: 2px 0 0; color: rgb(255 255 255 / .65); }
+  .pa .idrow .quick { margin-left: auto; display: flex; gap: 8px; padding-bottom: 6px; }
+  .pa .body { padding: 26px 34px 32px; }
+  .pa .kv { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 26px; }
+  .pa .kv div { padding: 18px; border-radius: 18px; background: rgb(255 255 255 / .05); border: 1px solid rgb(255 255 255 / .07); }
+  .pa .kv b { display: block; font-size: 30px; font-weight: 600; } .pa .kv span { font-size: 13px; color: rgb(255 255 255 / .6); }
+  .sec { font-size: 12.5px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: #38bdf8; margin: 0 0 14px; }
+
+  /* B passeport */
+  .pp { padding: 30px; }
+  .passport { border-radius: 22px; background: linear-gradient(160deg, #1e1b4b, #0f172a 60%); border: 1px solid rgb(255 255 255 / .14); padding: 28px; position: relative; overflow: hidden; }
+  .passport::before { content: ''; position: absolute; inset: 0; opacity: .12; background: repeating-radial-gradient(circle at 80% 20%, #fff 0 1px, transparent 1px 14px); }
+  .passport .top { display: flex; justify-content: space-between; align-items: center; font-size: 12px; letter-spacing: .3em; color: #fde68a; font-weight: 600; position: relative; }
+  .passport .top img { height: 30px; }
+  .passport .main { display: grid; grid-template-columns: 150px 1fr; gap: 28px; margin-top: 22px; position: relative; }
+  .passport .ph { width: 150px; height: 180px; border-radius: 16px; object-fit: cover; background: rgb(255 255 255 / .1); box-shadow: 0 0 0 3px rgb(253 230 138 / .5); }
+  .passport .f { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; }
+  .passport .f span { display: block; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: rgb(255 255 255 / .45); }
+  .passport .f b { font-size: 16px; font-weight: 600; }
+  .passport .mrz { margin-top: 22px; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: .18em; color: rgb(255 255 255 / .55); line-height: 1.6; position: relative; word-break: break-all; }
+  .stamps { display: flex; gap: 18px; flex-wrap: wrap; margin: 24px 0 0; }
+  .stamp { width: 130px; height: 130px; border-radius: 50%; border: 3px double var(--c); color: var(--c); display: grid; place-items: center; text-align: center; font-weight: 700; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; transform: rotate(var(--r)); opacity: .9; padding: 14px; }
+  .stamp small { display: block; font-size: 10.5px; letter-spacing: .05em; font-weight: 500; margin-top: 4px; }
+  .stamp.off { --c: rgb(255 255 255 / .2); opacity: .5; border-style: dashed; }
+
+  /* C cockpit */
+  .ck { padding: 30px; }
+  .ck .idc { display: flex; align-items: center; gap: 22px; }
+  .ck .ring { position: relative; width: 140px; height: 140px; flex: none; } .ck .ring svg { position: absolute; inset: 0; } .ck .ring img { position: absolute; inset: 16px; width: 108px; height: 108px; }
+  .ck .idc h3 { margin: 0; font-size: 30px; } .ck .idc p { margin: 4px 0 10px; color: rgb(255 255 255 / .62); }
+  .gauges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 28px 0; }
+  .gauges div { padding: 16px; border-radius: 18px; background: rgb(255 255 255 / .05); display: flex; align-items: center; gap: 12px; }
+  .gauges svg { width: 58px; height: 58px; flex: none; } .gauges b { display: block; font-size: 22px; } .gauges span { font-size: 12.5px; color: rgb(255 255 255 / .6); }
+</style>
+</head>
+<body>
+<h1>Liste + fiche, en mieux</h1>
+<p class="lead">3 versions de la fiche, avec la même liste améliorée à gauche : recherche et filtres dans la liste, comptes groupés par statut, nombre de widgets visible, navigation au clavier avec ↑ et ↓. Clique sur un compte pour voir sa fiche.</p>
+<div class="tabs" id="tabs"></div>
+<div class="stage" id="stage"></div>
+<script>
+const AV = (cfg) => 'https://api.dicebear.com/9.x/avataaars/svg?' + new URLSearchParams({ skinColor: 'ae5d29', top: 'curly', hairColor: '2c1b18', eyes: 'happy', eyebrows: 'defaultNatural', mouth: 'smile', accessories: 'none', facialHair: 'none', clothing: 'hoodie', clothesColor: '5199e4', backgroundColor: 'c0aede', ...cfg })
+const D = 864e5, NOW = Date.now()
+const U = [
+  { n: 'Morayo ELEGBEDE', e: 'bachiratou09@gmail.com', st: 'admin', at: NOW - 57 * 6e4, w: 0, l: 0, s: 2, me: true, av: {}, c: '#a78bfa' },
+  { n: 'Morayo09 Morayo09', e: 'morayo.elegbede@epitech.eu', st: 'ok', at: NOW - 10 * D, w: 7, l: 1, s: 1, av: { top: 'bigHair', backgroundColor: 'b6e3f4' }, c: '#38bdf8' },
+  { n: 'Morayo Demo', e: 'demo.morex@example.com', st: 'ok', at: NOW - 15 * D, w: 18, l: 0, s: 26, av: { top: 'curvy' }, c: '#34d399' },
+  { n: 'loic45@gmail.com', e: 'loic45@gmail.com', st: 'ok', at: NOW - 19 * D, w: 1, l: 0, s: 2, av: { top: 'shortFlat', skinColor: 'ffdbb4', backgroundColor: 'd1d4f9' }, c: '#fbbf24' },
+  { n: 'exauce12@gmail.com', e: 'exauce12@gmail.com', st: 'ok', at: NOW - 19 * D, w: 0, l: 0, s: 1, av: { top: 'fro' }, c: '#f472b6' },
+  { n: 'Alan Turing', e: 'alan@example.com', st: 'wait', at: NOW - 6 * 36e5, w: 0, l: 0, s: 0, av: { top: 'shortWaved', skinColor: 'edb98a' }, c: '#fbbf24' },
+]
+const STC = { admin: '#a78bfa', ok: '#34d399', wait: '#fbbf24', ban: '#f87171' }
+const rel = (t) => { const m = (NOW - t) / 6e4; return m < 60 ? `il y a ${Math.round(m)} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `il y a ${Math.round(m / 1440)} j` }
+const date = (t) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+const badge = (u) => u.st === 'admin' ? '<span class="badge b-admin">★ Admin</span>' : u.st === 'wait' ? `<span class="badge b-wait">⏳ expire dans ${24 - Math.round((NOW - u.at) / 36e5)} h</span>` : u.st === 'ban' ? '<span class="badge b-ban">⛔ Suspendu</span>' : '<span class="badge b-ok">● Actif</span>'
+const img = (u, s) => `<img class="av" src="${AV(u.av)}" width="${s}" height="${s}" alt="">`
+const steps = (u) => [['Inscrit', true, rel(u.at), '#a78bfa', '✦'], ['E-mail confirmé', u.st !== 'wait', u.st !== 'wait' ? 'confirmé' : 'en attente', '#38bdf8', '✉'], ['Premier widget', u.w > 0, u.w ? `${u.w} widget${u.w > 1 ? 's' : ''}` : 'aucun pour l\'instant', '#34d399', '◧'], ['Compte lié', u.l > 0, u.l ? `${u.l} lié${u.l > 1 ? 's' : ''}` : 'aucun', '#f472b6', '⛓']]
+const path = (u) => { const s = steps(u), done = s.filter((x) => x[1]).length; return `<div class="path"><span class="fill" style="width:${Math.max(0, done - 1) / 3 * 75}%"></span>${s.map(([l, ok, d, c, i]) => `<div class="step ${ok ? 'done' : 'todo'}" style="--c:${c}"><span class="o">${ok ? '✓' : i}</span><b>${l}</b><small>${d}</small></div>`).join('')}</div>` }
+const danger = (u) => `<div class="danger-zone"><div class="t"><b>Zone sensible</b><small>${u.me ? 'C\'est ton compte : impossible de le suspendre ou le supprimer d\'ici.' : 'Un e-mail avec le motif est envoyé à la personne. La suppression est définitive.'}</small></div><button class="btn danger" ${u.me ? 'disabled' : ''}>⛔ Suspendre…</button><button class="btn danger" ${u.me ? 'disabled' : ''}>🗑 Supprimer…</button></div>`
+let sel = 1, cur = 1
+
+function list() {
+  const groups = [['Admins', U.filter((u) => u.st === 'admin')], ['En attente', U.filter((u) => u.st === 'wait')], ['Actifs', U.filter((u) => u.st === 'ok')]]
+  return `<div class="glass list"><input class="search" placeholder="🔍 Nom ou e-mail…"><div class="chips"><button class="chip on">Tous 6</button><button class="chip">En attente 1</button><button class="chip">Suspendus 0</button><button class="chip">Admins 1</button><button class="chip">⬇ CSV</button></div>
+    ${groups.filter((g) => g[1].length).map(([g, us]) => `<div class="grp">${g} · ${us.length}</div>${us.map((u) => { const i = U.indexOf(u); return `<div class="li ${i === sel ? 'on' : ''}" data-sel="${i}">${img(u, 44)}<span class="dot" style="background:${STC[u.st]}"></span><div class="g"><b>${u.n}${u.me ? ' <span class="muted" style="font-weight:400">(toi)</span>' : ''}</b><small>${u.e}</small></div><div class="w"><b>${u.w}</b><br>widgets</div></div>` }).join('')}`).join('')}
+    <div class="kbd"><i>↑</i><i>↓</i> pour passer d'un compte à l'autre</div></div>`
+}
+const ring = (p, c, s = 58, w = 6) => { const r = (s - w) / 2, C = 2 * Math.PI * r; return `<svg viewBox="0 0 ${s} ${s}"><circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="none" stroke="rgb(255 255 255 / .1)" stroke-width="${w}"/><circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${p * C} ${C}" transform="rotate(-90 ${s / 2} ${s / 2})" style="filter:drop-shadow(0 0 5px ${c})"/></svg>` }
+
+const V = {
+  1: ['Fiche profil', (u) => `<div class="glass pa" style="--c:${u.c}"><div class="banner"></div>
+    <div class="idrow">${img(u, 128)}<div style="padding-bottom:6px"><h3>${u.n}</h3><p>${u.e}</p><div style="margin-top:8px">${badge(u)}</div></div><div class="quick"><button class="btn">✎ Renommer</button>${u.st === 'wait' ? '<button class="btn">✉ Confirmer</button>' : ''}<button class="btn">⬇ Exporter</button></div></div>
+    <div class="body"><div class="kv"><div><b>${u.w}</b><span>widgets</span></div><div><b>${u.l}</b><span>comptes liés</span></div><div><b>${u.s}</b><span>sessions</span></div><div><b>${Math.max(0, Math.round((NOW - u.at) / D))}</b><span>jours sur Morex</span></div></div>
+    <p class="sec">Son parcours</p>${path(u)}<p class="muted" style="font-size:13px;margin:18px 0 0">Inscrit le ${date(u.at)}</p>${danger(u)}</div></div>`],
+  2: ['Passeport spatial', (u) => { const d = steps(u); return `<div class="glass pp"><div class="passport"><div class="top"><span>PASSEPORT · MOREX</span><img src="/logo.svg" alt=""></div>
+    <div class="main"><img class="ph" src="${AV(u.av)}" alt=""><div class="f"><div><span>Nom</span><b>${u.n}</b></div><div><span>Statut</span><b>${{ admin: 'Commandant', ok: 'Voyageur', wait: 'En transit', ban: 'Suspendu' }[u.st]}</b></div><div><span>Contact</span><b style="font-size:14px">${u.e}</b></div><div><span>Délivré le</span><b>${date(u.at)}</b></div><div><span>Widgets</span><b>${u.w}</b></div><div><span>Sessions</span><b>${u.s}</b></div></div></div>
+    <div class="mrz">P&lt;MRX${u.n.toUpperCase().replace(/[^A-Z]/g, '&lt;').slice(0, 24).padEnd(24, '&lt;')}<br>${u.e.toUpperCase().replace(/[^A-Z0-9]/g, '&lt;').slice(0, 30).padEnd(30, '&lt;')}${String(u.w).padStart(2, '0')}</div></div>
+    <p class="sec" style="margin-top:26px">Ses tampons</p><div class="stamps">${d.map(([l, ok, s, c], i) => `<div class="stamp ${ok ? '' : 'off'}" style="--c:${c};--r:${[-8, 6, -4, 9][i]}deg"><div>${l}<small>${s}</small></div></div>`).join('')}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:24px"><button class="btn">✎ Renommer</button>${u.st === 'wait' ? '<button class="btn">✉ Confirmer</button>' : ''}<button class="btn">⬇ Exporter</button></div>${danger(u)}</div>` }],
+  3: ['Cockpit', (u) => { const days = Math.max(0, Math.round((NOW - u.at) / D)); return `<div class="glass ck"><div class="idc"><div class="ring">${ring(steps(u).filter((x) => x[1]).length / 4, u.c, 140, 8)}${img(u, 108)}</div><div><h3>${u.n}</h3><p>${u.e}</p>${badge(u)} <span class="muted" style="font-size:13px;margin-left:8px">profil complété à ${steps(u).filter((x) => x[1]).length * 25} %</span></div></div>
+    <div class="gauges"><div>${ring(Math.min(1, u.w / 20), '#a78bfa')}<span><b>${u.w}</b>widgets</span></div><div>${ring(Math.min(1, u.l / 3), '#f472b6')}<span><b>${u.l}</b>comptes liés</span></div><div>${ring(Math.min(1, u.s / 30), '#38bdf8')}<span><b>${u.s}</b>sessions</span></div><div>${ring(Math.min(1, days / 30), '#34d399')}<span><b>${days}</b>jours sur Morex</span></div></div>
+    <p class="sec">Son parcours</p>${path(u)}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:24px"><button class="btn">✎ Renommer</button>${u.st === 'wait' ? '<button class="btn">✉ Confirmer</button>' : ''}<button class="btn">⬇ Exporter</button></div>${danger(u)}</div>` }],
+}
+function draw() {
+  document.getElementById('tabs').innerHTML = Object.entries(V).map(([k, [n]]) => `<button class="${+k === cur ? 'on' : ''}" data-v="${k}">${k} · ${n}</button>`).join('')
+  document.getElementById('stage').innerHTML = `<div class="head"><h2>Comptes</h2><span class="muted">6 comptes · 1 admin · 26 widgets au total</span></div><div class="md">${list()}${V[cur][1](U[sel])}</div>`
+}
+document.addEventListener('click', (e) => { const v = e.target.closest('[data-v]'); if (v) { cur = +v.dataset.v; draw() } const s = e.target.closest('[data-sel]'); if (s) { sel = +s.dataset.sel; draw() } })
+document.addEventListener('keydown', (e) => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); sel = (sel + (e.key === 'ArrowDown' ? 1 : U.length - 1)) % U.length; draw() } })
+cur = +(location.hash.slice(1) || 1); draw()
+</script>
+</body>
+</html>

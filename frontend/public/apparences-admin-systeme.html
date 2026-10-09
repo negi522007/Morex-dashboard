@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morex système solaire</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 28px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .75); margin: 8px auto 18px; font-size: 14px; max-width: 900px; padding: 0 16px; }
+  .tabs { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+  .tabs button { font: inherit; font-size: 13.5px; padding: 8px 18px; border-radius: 999px; border: 1px solid rgb(255 255 255 / .25); background: transparent; color: #fff; cursor: pointer; }
+  .tabs button.on { background: #fff; color: #1e1b4b; font-weight: 600; }
+  .stage { max-width: 1000px; margin: 0 auto; padding: 0 24px 80px; }
+  .box { position: relative; height: 600px; border-radius: 26px; overflow: hidden; border: 1px solid rgb(255 255 255 / .12);
+    background: radial-gradient(ellipse at 50% 50%, rgb(99 102 241 / .3), transparent 62%), rgb(2 6 23 / .72); }
+  .box svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .stars circle { animation: tw 3s ease-in-out infinite; } @keyframes tw { 50% { opacity: .25; } }
+  .pick { position: absolute; left: 20px; bottom: 18px; padding: 10px 16px; border-radius: 16px; background: rgb(15 23 42 / .82); border: 1px solid rgb(255 255 255 / .15); font-size: 13.5px; backdrop-filter: blur(8px); }
+  .pick b { color: var(--c); }
+  .hint { position: absolute; left: 22px; top: 16px; font-size: 13px; color: rgb(255 255 255 / .6); }
+  .planet { cursor: pointer; } .planet:hover .body, .planet.on .body { filter: brightness(1.25); }
+  .lbl { font-size: 13px; font-weight: 600; fill: #fff; paint-order: stroke; stroke: rgb(2 6 23 / .8); stroke-width: 4px; }
+  .lbl.small { font-size: 11px; font-weight: 500; fill: rgb(255 255 255 / .75); }
+  .err { animation: err 1.6s ease-in-out infinite; } @keyframes err { 50% { opacity: .25; } }
+  .sunpulse { animation: sp 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; } @keyframes sp { 50% { transform: scale(1.08); opacity: .7; } }
+</style>
+</head>
+<body>
+<h1>Le système solaire de la page Services</h1>
+<p class="lead">4 versions du système solaire. Mêmes données partout : chaque planète est un service, sa taille = son nombre de widgets, un anneau rouge = des widgets en erreur. Clique une planète pour la sélectionner (dans la vraie page, sa fiche s'ouvre à côté).</p>
+<div class="tabs" id="tabs"></div>
+<div class="stage"><div class="box" id="box"></div></div>
+<script>
+const S = [
+  { n: 'Actus', i: '📰', c: '#f97316', w: 47, u: 6, e: 4 }, { n: 'Bourse', i: '₿', c: '#f59e0b', w: 14, u: 5, e: 2 }, { n: 'Météo', i: '☀️', c: '#0ea5e9', w: 13, u: 8, e: 0 },
+  { n: 'GitHub', i: '🐙', c: '#a78bfa', w: 12, u: 4, e: 0 }, { n: 'YouTube', i: '▶', c: '#ff0033', w: 8, u: 3, e: 0 }, { n: 'Bien-être', i: '✨', c: '#ec4899', w: 6, u: 4, e: 0 },
+  { n: 'Agenda', i: '📅', c: '#f43f5e', w: 4, u: 2, e: 0 }, { n: 'API perso', i: '{ }', c: '#10b981', w: 4, u: 2, e: 1 }, { n: 'Horloge', i: '🌍', c: '#6366f1', w: 3, u: 3, e: 0 },
+]
+const W = 1000, H = 600, CX = W / 2, CY = H / 2, MX = Math.max(...S.map((s) => s.w))
+const rad = (s) => 14 + Math.sqrt(s.w / MX) * 30
+let sel = 0, cur = +(location.hash.slice(1) || 1), raf = 0, t0 = performance.now()
+const stars = Array.from({ length: 120 }, (_, i) => { const a = Math.sin(i * 12.9898) * 43758.5453, b = Math.sin(i * 78.233) * 12345.678; return `<circle cx="${(a - Math.floor(a)) * W}" cy="${(b - Math.floor(b)) * H}" r="${(i % 3) * .5 + .5}" fill="#fff" opacity=".7" style="animation-delay:${-(i % 9) * .35}s"/>` }).join('')
+const defs = () => `<defs>${S.map((s, i) => `<radialGradient id="g${i}" cx="34%" cy="30%" r="75%"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="${s.c}"/><stop offset=".8" stop-color="${s.c}" stop-opacity=".55"/><stop offset="1" stop-color="#0f172a"/></radialGradient>`).join('')}
+  <radialGradient id="sun" cx="40%" cy="38%"><stop offset="0" stop-color="#fff7cc"/><stop offset=".5" stop-color="#fde047"/><stop offset="1" stop-color="#f59e0b"/></radialGradient>
+  <radialGradient id="corona"><stop offset="0" stop-color="#fde047" stop-opacity=".55"/><stop offset="1" stop-color="#fde047" stop-opacity="0"/></radialGradient>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`
+const sun = (r = 56) => `<circle cx="${CX}" cy="${CY}" r="${r * 2.2}" fill="url(#corona)" class="sunpulse"/><circle cx="${CX}" cy="${CY}" r="${r}" fill="url(#sun)" filter="url(#glow)"/><text x="${CX}" y="${CY + 5}" text-anchor="middle" font-size="15" font-weight="800" fill="#78350f">MOREX</text>`
+function planet(s, i, x, y, r, opts = {}) {
+  const on = i === sel
+  return `<g class="planet ${on ? 'on' : ''}" data-i="${i}">
+    ${on ? `<circle cx="${x}" cy="${y}" r="${r + 9}" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/>` : ''}
+    ${s.e ? `<circle class="err" cx="${x}" cy="${y}" r="${r + 5}" fill="none" stroke="#f87171" stroke-width="2.5"/>` : ''}
+    ${opts.ring ? `<ellipse cx="${x}" cy="${y}" rx="${r * 1.7}" ry="${r * .42}" fill="none" stroke="${s.c}" stroke-opacity=".7" stroke-width="2.5" transform="rotate(-18 ${x} ${y})"/>` : ''}
+    <circle class="body" cx="${x}" cy="${y}" r="${r}" fill="url(#g${i})" style="filter:drop-shadow(0 0 ${on ? 22 : 12}px ${s.c})"/>
+    ${opts.shade ? `<circle cx="${x + r * .35}" cy="${y + r * .3}" r="${r}" fill="#020617" opacity=".35" clip-path="circle(${r}px at ${x}px ${y}px)"/>` : ''}
+    <text x="${x}" y="${y + r * .22}" text-anchor="middle" font-size="${r * .7}">${s.i}</text>
+    <text class="lbl" x="${x}" y="${y + r + 18}" text-anchor="middle">${s.n}</text>
+    ${opts.count ? `<text class="lbl small" x="${x}" y="${y + r + 32}" text-anchor="middle">${s.w} widgets</text>` : ''}</g>`
+}
+const pick = () => { const s = S[sel]; return `<div class="pick" style="--c:${s.c}"><b>${s.n}</b> · ${s.w} widgets · ${s.u} comptes${s.e ? ` · <span style="color:#fca5a5">⚠ ${s.e} en erreur</span>` : ' · tout va bien'}</div>` }
+
+const V = {
+  // 1 : orbites qui tournent pour de vrai (chaque service sur son orbite, les plus gros plus près du soleil)
+  1: ['Orbites qui tournent', 'chaque service tourne lentement sur sa propre orbite, les plus utilisés au plus près du soleil ; la rotation s\'arrête au survol', (t) => {
+    const orbits = S.map((s, i) => ({ rx: 120 + i * 40, ry: (120 + i * 40) * .5, speed: 0.00006 * (1.6 - i * .12), phase: i * 2.1 }))
+    return `${orbits.map((o) => `<ellipse cx="${CX}" cy="${CY}" rx="${o.rx}" ry="${o.ry}" fill="none" stroke="rgb(255 255 255 / .1)" stroke-dasharray="3 7"/>`).join('')}${sun(50)}
+      ${S.map((s, i) => { const o = orbits[i], a = o.phase + t * o.speed; return planet(s, i, CX + Math.cos(a) * o.rx, CY + Math.sin(a) * o.ry, rad(s) * .8) }).join('')}` }],
+  // 2 : vue inclinée en 3D, planètes ombrées, la plus grosse avec un anneau
+  2: ['Vue en perspective', 'le système vu de biais, comme dans l\'espace : orbites inclinées, planètes ombrées, les plus proches devant, la plus grosse a un anneau', (t) => {
+    const items = S.map((s, i) => { const R = 150 + (i % 3) * 110, a = i * 2.4 + t * 0.00004; return { s, i, x: CX + Math.cos(a) * R * 1.25, y: CY + Math.sin(a) * R * .38, z: Math.sin(a), R } })
+    const rings = [150, 260, 370].map((R) => `<ellipse cx="${CX}" cy="${CY}" rx="${R * 1.25}" ry="${R * .38}" fill="none" stroke="rgb(255 255 255 / .12)"/>`).join('')
+    const back = items.filter((p) => p.z < 0).sort((a, b) => a.z - b.z), front = items.filter((p) => p.z >= 0).sort((a, b) => a.z - b.z)
+    const draw = (p) => planet(p.s, p.i, p.x, p.y, rad(p.s) * (.75 + p.z * .2), { shade: true, ring: p.i === 0 })
+    return `${rings}${back.map(draw).join('')}${sun(52)}${front.map(draw).join('')}` }],
+  // 3 : rayons : chaque planète est reliée au soleil par un rayon dont l'épaisseur = nombre de comptes
+  3: ['Rayons d\'usage', 'chaque service est relié au soleil par un rayon lumineux : plus il est épais, plus de comptes l\'utilisent ; le nombre de widgets est écrit sous la planète', (t) => {
+    const pts = S.map((s, i) => { const a = i / S.length * Math.PI * 2 - Math.PI / 2 + t * 0.00002, R = i % 2 ? 250 : 175; return { s, i, x: CX + Math.cos(a) * R * 1.35, y: CY + Math.sin(a) * R * .95 } })
+    const mu = Math.max(...S.map((s) => s.u))
+    return `${pts.map((p) => `<line x1="${CX}" y1="${CY}" x2="${p.x}" y2="${p.y}" stroke="${p.s.c}" stroke-opacity="${p.i === sel ? .8 : .35}" stroke-width="${2 + p.s.u / mu * 10}" stroke-linecap="round" style="filter:drop-shadow(0 0 6px ${p.s.c})"/>`).join('')}
+      ${sun(54)}${pts.map((p) => planet(p.s, p.i, p.x, p.y, rad(p.s) * .85, { count: true })).join('')}` }],
+  // 4 : galaxie en spirale : du plus utilisé (au centre) au moins utilisé (au bout des bras)
+  4: ['Galaxie en spirale', 'les services rangés le long d\'un bras de galaxie, du plus utilisé près du cœur au moins utilisé au bout ; la galaxie tourne doucement', (t) => {
+    const rot = t * 0.00003, arm = (k) => { const a = k * 0.9 + rot, R = 70 + k * 38; return [CX + Math.cos(a) * R * 1.3, CY + Math.sin(a) * R * .85] }
+    const path = Array.from({ length: 100 }, (_, j) => arm(j / 100 * 9.2)).map(([x, y], j) => `${j ? 'L' : 'M'}${x},${y}`).join(' ')
+    const path2 = Array.from({ length: 100 }, (_, j) => { const k = j / 100 * 9.2, a = k * 0.9 + rot + Math.PI, R = 70 + k * 38; return [CX + Math.cos(a) * R * 1.3, CY + Math.sin(a) * R * .85] }).map(([x, y], j) => `${j ? 'L' : 'M'}${x},${y}`).join(' ')
+    return `<path d="${path}" fill="none" stroke="#a78bfa" stroke-opacity=".35" stroke-width="26" stroke-linecap="round" filter="url(#glow)"/><path d="${path2}" fill="none" stroke="#38bdf8" stroke-opacity=".22" stroke-width="22" stroke-linecap="round" filter="url(#glow)"/>
+      ${sun(46)}${S.map((s, i) => { const [x, y] = arm(i + .6); return planet(s, i, x, y, rad(s) * .8, { count: true }) }).join('')}` }],
+}
+let paused = false
+function frame(now) {
+  // While a planet is hovered the scene freezes (and isn't redrawn), so it can be clicked
+  if (paused && frame.drawn) { t0 = now - frame.t; raf = requestAnimationFrame(frame); return }
+  const t = now - t0; frame.t = t; frame.drawn = true
+  document.getElementById('svg').innerHTML = `${defs()}<g class="stars">${stars}</g>${V[cur][2](t)}`
+  raf = requestAnimationFrame(frame)
+}
+function draw() {
+  cancelAnimationFrame(raf)
+  document.getElementById('tabs').innerHTML = Object.entries(V).map(([k, [n]]) => `<button class="${+k === cur ? 'on' : ''}" data-v="${k}">${k} · ${n}</button>`).join('')
+  document.getElementById('box').innerHTML = `<svg id="svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"></svg><span class="hint">${V[cur][1]}</span>${pick()}`
+  raf = requestAnimationFrame(frame)
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (b) { cur = +b.dataset.v; location.hash = cur; frame.drawn = false; draw() } const p = e.target.closest('.planet'); if (p) { sel = +p.dataset.i; document.querySelector('.pick').outerHTML = pick(); frame.drawn = false; paused = false } })
+document.addEventListener('mouseover', (e) => { paused = !!e.target.closest('.planet') })
+draw()
+</script>
+</body>
+</html>

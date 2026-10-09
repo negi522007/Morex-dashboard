@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morex chiffres admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 28px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .75); margin: 8px auto 26px; font-size: 14px; max-width: 860px; padding: 0 16px; }
+  .wrap { max-width: 1500px; margin: 0 auto; padding: 0 28px 80px; }
+  h2.part { font-size: 24px; font-weight: 600; margin: 40px 6px 6px; }
+  .part-sub { color: rgb(255 255 255 / .65); margin: 0 6px 18px; font-size: 14px; }
+  .num { display: inline-block; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: #fff; color: #1e1b4b; margin: 0 0 10px 6px; }
+  .num span { font-weight: 400; margin-left: 6px; }
+  section { margin-bottom: 28px; }
+  .glass { background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); border-radius: 24px; backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+  .muted { color: rgb(255 255 255 / .65); }
+  .g6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 20px; } @media (max-width: 1100px) { .g6 { grid-template-columns: repeat(3, 1fr); } }
+  .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; } .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 1000px) { .g2, .g3 { grid-template-columns: 1fr; } }
+  .card { padding: 24px 26px; } .card h3 { margin: 0 0 16px; font-size: 17px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+  .card h3 small { margin-left: auto; font-size: 13px; font-weight: 500; color: #6ee7b7; }
+
+  /* KPI A : icône en pastille dégradée, comme les widgets */
+  .ka { padding: 22px; display: flex; flex-direction: column; gap: 14px; position: relative; overflow: hidden; transition: transform .2s; cursor: pointer; }
+  .ka:hover { transform: translateY(-3px); }
+  .ka .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 22px; background: linear-gradient(135deg, var(--k1), var(--k2)); box-shadow: 0 8px 22px -6px var(--k1); }
+  .ka .v { font-size: 38px; font-weight: 600; letter-spacing: -.02em; line-height: 1; }
+  .ka .l { font-size: 14px; color: rgb(255 255 255 / .7); }
+  .ka .x { font-size: 12.5px; color: #6ee7b7; font-weight: 600; }
+  .ka::after { content: ''; position: absolute; right: -40px; top: -40px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, var(--k1), transparent 70%); opacity: .25; }
+
+  /* KPI B : anneaux */
+  .kb { padding: 22px; display: flex; align-items: center; gap: 16px; }
+  .kb svg { width: 78px; height: 78px; flex: none; }
+  .kb .v { font-size: 30px; font-weight: 600; line-height: 1; } .kb .l { font-size: 13.5px; color: rgb(255 255 255 / .7); margin-top: 4px; }
+
+  /* KPI C : un tableau de bord en une bande */
+  .kc { display: grid; grid-template-columns: repeat(6, 1fr); padding: 8px; }
+  @media (max-width: 1100px) { .kc { grid-template-columns: repeat(3, 1fr); } }
+  .kc > div { padding: 22px 24px; position: relative; }
+  .kc > div + div::before { content: ''; position: absolute; left: 0; top: 22%; bottom: 22%; width: 1px; background: rgb(255 255 255 / .12); }
+  .kc .v { font-size: 44px; font-weight: 300; letter-spacing: -.03em; line-height: 1; }
+  .kc .l { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--k1); margin-top: 10px; font-weight: 600; }
+  .kc .x { font-size: 12.5px; color: rgb(255 255 255 / .6); margin-top: 4px; }
+
+  /* KPI D : planètes */
+  .kd { padding: 26px 18px 22px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+  .kd .pl { width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; font-weight: 700; position: relative;
+    background: radial-gradient(circle at 32% 28%, rgb(255 255 255 / .55), var(--k1) 38%, var(--k2) 100%); box-shadow: 0 0 34px -4px var(--k1), inset -10px -12px 24px rgb(0 0 0 / .35); }
+  .kd .pl::after { content: ''; position: absolute; inset: 32px -16px; border-radius: 50%; border: 2px solid rgb(255 255 255 / .35); transform: rotate(-18deg); }
+  .kd .l { font-size: 14px; color: rgb(255 255 255 / .75); }
+
+  /* Répartition */
+  .legend { list-style: none; margin: 0; padding: 0; font-size: 15px; }
+  .legend li { display: flex; align-items: center; gap: 10px; margin: 12px 0; } .legend i { width: 12px; height: 12px; border-radius: 4px; flex: none; } .legend b { margin-left: auto; }
+  .legend em { font-style: normal; color: rgb(255 255 255 / .55); font-size: 13px; width: 50px; text-align: right; }
+  .stack { display: flex; height: 26px; border-radius: 999px; overflow: hidden; margin: 6px 0 18px; background: rgb(255 255 255 / .06); }
+  .stack i { display: block; height: 100%; transition: width .6s; } .stack i + i { border-left: 2px solid rgb(2 6 23 / .6); }
+  .sky { position: relative; height: 230px; border-radius: 18px; background: radial-gradient(ellipse at 50% 60%, rgb(99 102 241 / .25), transparent 70%), rgb(2 6 23 / .55); overflow: hidden; }
+  .sky .st { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; animation: tw 3s ease-in-out infinite; }
+  .sky .st b { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 6px; font-size: 11px; font-weight: 500; white-space: nowrap; opacity: .8; }
+  @keyframes tw { 50% { opacity: .55; } }
+  .sky svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .bigdonut { display: flex; align-items: center; gap: 34px; flex-wrap: wrap; } .bigdonut svg { width: 210px; height: 210px; flex: none; } .bigdonut .legend { flex: 1; min-width: 200px; }
+
+  /* Croissance */
+  .chart { width: 100%; height: 240px; display: block; overflow: visible; }
+  .axis { display: flex; justify-content: space-between; font-size: 12px; color: rgb(255 255 255 / .5); margin-top: 8px; }
+  .big { font-size: 40px; font-weight: 600; letter-spacing: -.02em; } .big small { font-size: 15px; color: #6ee7b7; margin-left: 8px; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Les chiffres de la vue d'ensemble</h1>
+<p class="lead">Des propositions pour les 6 chiffres, la répartition des comptes et la croissance. Les valeurs sont les tiennes en ce moment : 6 comptes, 1 admin, 26 widgets, aucun compte en attente.</p>
+<div class="wrap" id="w"></div>
+<script>
+const K = [
+  { v: '6', l: 'comptes', x: '+1 cette semaine', ic: '👥', k1: '#a78bfa', k2: '#6366f1', p: 1 },
+  { v: '0', l: 'non confirmés', x: 'aucun en attente', ic: '⏳', k1: '#fbbf24', k2: '#f97316', p: 0 },
+  { v: '100 %', l: 'confirmés', x: '6 sur 6', ic: '✉️', k1: '#34d399', k2: '#10b981', p: 1 },
+  { v: '26', l: 'widgets', x: '4,3 par compte', ic: '🧩', k1: '#f472b6', k2: '#db2777', p: .72 },
+  { v: '0', l: 'suspendus', x: 'personne', ic: '⛔', k1: '#f87171', k2: '#dc2626', p: 0 },
+  { v: '1', l: 'admin', x: 'toi', ic: '★', k1: '#38bdf8', k2: '#6366f1', p: 1 / 6 },
+]
+const PARTS = [['Actifs', 5, '#34d399'], ['Admins', 1, '#a78bfa'], ['Non confirmés', 0, '#fbbf24'], ['Suspendus', 0, '#f87171']]
+const TOTAL = 6
+const GROWTH = [4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6]
+const DAYS = GROWTH.map((_, i) => { const d = new Date(); d.setDate(d.getDate() - 13 + i); return d })
+const fmt = (d) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+const sec = (n, name, why, html) => `<section><span class="num">${n} · ${name}<span>${why}</span></span>${html}</section>`
+
+function ring(p, c, size = 78, w = 8) {
+  const r = (size - w) / 2, C = 2 * Math.PI * r
+  return `<svg viewBox="0 0 ${size} ${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="rgb(255 255 255 / .1)" stroke-width="${w}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${Math.max(p * C, p ? 0.01 : 0)} ${C}" transform="rotate(-90 ${size / 2} ${size / 2})" style="filter:drop-shadow(0 0 6px ${c})"/></svg>`
+}
+function donut(size = 210) {
+  const r = 80, C = 2 * Math.PI * r; let off = 0
+  const arcs = PARTS.filter((p) => p[1]).map(([l, v, c]) => { const len = v / TOTAL * C, gap = 4; const s = `<circle cx="105" cy="105" r="${r}" fill="none" stroke="${c}" stroke-width="22" stroke-dasharray="${len - gap} ${C - len + gap}" stroke-dashoffset="${-off}" transform="rotate(-90 105 105)" style="filter:drop-shadow(0 0 8px ${c}88)"><title>${l} : ${v}</title></circle>`; off += len; return s }).join('')
+  return `<svg viewBox="0 0 210 210"><circle cx="105" cy="105" r="${r}" fill="none" stroke="rgb(255 255 255 / .06)" stroke-width="22"/>${arcs}<text x="105" y="108" text-anchor="middle" font-size="44" font-weight="700" fill="#fff">${TOTAL}</text><text x="105" y="134" text-anchor="middle" font-size="14" fill="rgb(255 255 255 / .6)">comptes</text></svg>`
+}
+const legend = () => `<ul class="legend">${PARTS.map(([l, v, c]) => `<li><i style="background:${c}"></i>${l}<b>${v}</b><em>${Math.round(v / TOTAL * 100)} %</em></li>`).join('')}</ul>`
+// courbe lissée (Catmull-Rom → Bézier)
+function smooth(pts) { let d = `M${pts[0][0]},${pts[0][1]}`; for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2; const lo = Math.min(p1[1], p2[1]), hi = Math.max(p1[1], p2[1]), cl = (y) => Math.min(hi, Math.max(lo, y)); d += ` C${p1[0] + (p2[0] - p0[0]) / 6},${cl(p1[1] + (p2[1] - p0[1]) / 6)} ${p2[0] - (p3[0] - p1[0]) / 6},${cl(p2[1] - (p3[1] - p1[1]) / 6)} ${p2[0]},${p2[1]}` } return d }
+function pts(vals, W, H, pad = 16) { const max = Math.max(...vals) + 1, min = Math.max(0, Math.min(...vals) - 1); return vals.map((v, i) => [i / (vals.length - 1) * W, H - pad - (v - min) / (max - min) * (H - pad * 2)]) }
+const axis = () => `<div class="axis"><span>${fmt(DAYS[0])}</span><span>${fmt(DAYS[7])}</span><span>aujourd'hui</span></div>`
+
+const KPI = [
+  ['Pastilles colorées', 'une icône dans une pastille dégradée, comme les icônes des widgets du dashboard, et une précision sous le chiffre',
+    `<div class="g6">${K.map((k) => `<div class="glass ka" style="--k1:${k.k1};--k2:${k.k2}"><span class="ic">${k.ic}</span><div><div class="v">${k.v}</div><div class="l">${k.l}</div></div><div class="x">${k.x}</div></div>`).join('')}</div>`],
+  ['Anneaux', 'chaque chiffre entouré d\'un anneau lumineux qui montre sa part du total',
+    `<div class="g6">${K.map((k) => `<div class="glass kb">${ring(k.p, k.k1)}<div><div class="v">${k.v}</div><div class="l">${k.l}</div></div></div>`).join('')}</div>`],
+  ['Une seule bande', 'les 6 chiffres dans une seule carte, séparés par de fins traits, chiffres fins et grands',
+    `<div class="glass kc">${K.map((k) => `<div style="--k1:${k.k1}"><div class="v">${k.v}</div><div class="l">${k.l}</div><div class="x">${k.x}</div></div>`).join('')}</div>`],
+  ['Planètes', 'chaque chiffre est une petite planète avec son anneau, dans l\'univers Morex',
+    `<div class="g6">${K.map((k) => `<div class="glass kd" style="--k1:${k.k1};--k2:${k.k2}"><div class="pl">${k.v.replace(' %', '%')}</div><div class="l">${k.l}<br><span class="muted" style="font-size:12.5px">${k.x}</span></div></div>`).join('')}</div>`],
+]
+
+// Répartition : constellation, une étoile par compte
+function constellation() {
+  const stars = []; let i = 0
+  const pos = [[18, 40], [34, 22], [52, 46], [70, 26], [84, 52], [44, 72], [64, 70], [26, 66], [78, 78], [12, 74]]
+  for (const [l, v, c] of PARTS) for (let k = 0; k < v; k++) { stars.push({ x: pos[i][0], y: pos[i][1], c, l }); i++ }
+  const lines = stars.slice(1).map((s, j) => `<line x1="${stars[j].x}%" y1="${stars[j].y}%" x2="${s.x}%" y2="${s.y}%" stroke="rgb(255 255 255 / .18)" stroke-width="1"/>`).join('')
+  return `<div class="sky"><svg>${lines}</svg>${stars.map((s, j) => `<span class="st" style="left:${s.x}%;top:${s.y}%;width:${s.l === 'Admins' ? 18 : 12}px;height:${s.l === 'Admins' ? 18 : 12}px;background:${s.c};box-shadow:0 0 14px ${s.c},0 0 30px ${s.c};animation-delay:${-j * .4}s"><b>${s.l === 'Admins' ? 'toi' : ''}</b></span>`).join('')}</div>`
+}
+const REP = [
+  ['Donut lumineux', 'le donut actuel en plus grand et plus épais, avec les pourcentages dans la légende',
+    `<div class="glass card" style="max-width:720px"><h3>🍩 Répartition</h3><div class="bigdonut">${donut()}${legend()}</div></div>`],
+  ['Barre empilée', 'une seule barre qui se partage entre les 4 statuts, la légende en dessous',
+    `<div class="glass card" style="max-width:720px"><h3>🍩 Répartition <small>${TOTAL} comptes</small></h3><div class="stack">${PARTS.filter((p) => p[1]).map(([l, v, c]) => `<i style="width:${v / TOTAL * 100}%;background:${c}" title="${l} : ${v}"></i>`).join('')}</div>${legend()}</div>`],
+  ['Constellation', 'une étoile par compte, de la couleur de son statut, reliées en constellation (la plus grosse, c\'est toi)',
+    `<div class="glass card" style="max-width:720px"><h3>✨ Les comptes en constellation <small>${TOTAL} étoiles</small></h3>${constellation()}<div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:14px">${PARTS.map(([l, v, c]) => `<span style="display:flex;gap:8px;align-items:center"><i style="width:10px;height:10px;border-radius:50%;background:${c};box-shadow:0 0 8px ${c}"></i>${l} <b>${v}</b></span>`).join('')}</div></div>`],
+]
+
+const W = 800, H = 240
+const CRO = [
+  ['Courbe douce', 'une courbe arrondie avec un dégradé, l\'évolution en gros au-dessus, les dates en bas',
+    (() => { const p = pts(GROWTH, W, H), d = smooth(p); return `<div class="glass card"><h3>📈 Croissance sur 14 jours</h3><div class="big">${GROWTH.at(-1)}<small>+${GROWTH.at(-1) - GROWTH[0]} en 14 jours</small></div>
+      <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#818cf8" stop-opacity=".5"/><stop offset="1" stop-color="#818cf8" stop-opacity="0"/></linearGradient><linearGradient id="gl"><stop offset="0" stop-color="#a78bfa"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs>
+      <path d="${d} L${W},${H} L0,${H}Z" fill="url(#ga)"/><path d="${d}" fill="none" stroke="url(#gl)" stroke-width="3" vector-effect="non-scaling-stroke"/></svg>${axis()}</div>` })()],
+  ['Barres par jour', 'les nouveaux inscrits de chaque jour en barres, et le total cumulé en fine ligne',
+    (() => { const news = GROWTH.map((v, i) => (i ? v - GROWTH[i - 1] : 0)), mx = Math.max(...news, 1), bw = W / GROWTH.length, p = pts(GROWTH, W, H, 24)
+      return `<div class="glass card"><h3>📊 Inscriptions par jour</h3><div class="big">${news.reduce((a, b) => a + b, 0)}<small>nouveaux en 14 jours</small></div>
+      <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${news.map((n, i) => `<rect x="${i * bw + bw * .2}" y="${n ? H - 10 - n / mx * (H - 60) : H - 14}" width="${bw * .6}" height="${n ? n / mx * (H - 60) : 4}" rx="6" fill="${n ? 'url(#gb)' : 'rgb(255 255 255 / .1)'}"><title>${fmt(DAYS[i])} : ${n} inscrit${n > 1 ? 's' : ''}</title></rect>`).join('')}
+      <defs><linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#818cf8"/></linearGradient></defs>
+      <path d="${smooth(p)}" fill="none" stroke="rgb(255 255 255 / .45)" stroke-width="2" stroke-dasharray="6 6" vector-effect="non-scaling-stroke"/></svg>${axis()}</div>` })()],
+  ['La comète', 'la courbe devient la traînée d\'une comète dont la tête brille sur aujourd\'hui',
+    (() => { const p = pts(GROWTH, W, H), d = smooth(p), last = p.at(-1)
+      return `<div class="glass card"><h3>☄️ Croissance sur 14 jours</h3><div class="big">${GROWTH.at(-1)}<small>+${GROWTH.at(-1) - GROWTH[0]} en 14 jours</small></div>
+      <div style="position:relative"><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="gc"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".7" stop-color="#c4b5fd" stop-opacity=".6"/><stop offset="1" stop-color="#fff"/></linearGradient></defs>
+      <path d="${d}" fill="none" stroke="url(#gc)" stroke-width="10" stroke-linecap="round" opacity=".35" vector-effect="non-scaling-stroke"/><path d="${d}" fill="none" stroke="url(#gc)" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+      <span style="position:absolute;left:${last[0] / W * 100}%;top:${last[1] / H * 100}%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#fff;box-shadow:0 0 16px #fff,0 0 36px #a78bfa,0 0 60px #38bdf8"></span></div>${axis()}</div>` })()],
+]
+
+document.getElementById('w').innerHTML =
+  `<h2 class="part">Les 6 chiffres</h2><p class="part-sub">Chaque carte reste cliquable et emmène sur la bonne page.</p>${KPI.map(([n, w, h], i) => sec(`A${i + 1}`, n, w, h)).join('')}
+   <h2 class="part">La répartition des comptes</h2><p class="part-sub">Actifs, admins, non confirmés, suspendus.</p><div class="g3" style="grid-template-columns:1fr">${REP.map(([n, w, h], i) => sec(`B${i + 1}`, n, w, h)).join('')}</div>
+   <h2 class="part">La croissance</h2><p class="part-sub">Survole un point ou une barre pour voir le jour.</p>${CRO.map(([n, w, h], i) => sec(`C${i + 1}`, n, w, h)).join('')}`
+</script>
+</body>
+</html>

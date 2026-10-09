@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morex voyage admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Poppins, system-ui, sans-serif; color: #fff; background-color: #020617;
+    background: linear-gradient(rgb(2 6 23 / .45), rgb(2 6 23 / .7)), url(/accueil_photo.jpg) 50% 28%/cover fixed; }
+  h1 { text-align: center; font-weight: 600; margin: 0; padding-top: 28px; }
+  .lead { text-align: center; color: rgb(255 255 255 / .75); margin: 8px auto 28px; font-size: 14px; max-width: 900px; padding: 0 16px; }
+  .wrap { max-width: 1450px; margin: 0 auto; padding: 0 28px 80px; display: flex; flex-direction: column; gap: 30px; }
+  .num { display: inline-block; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: #fff; color: #1e1b4b; margin: 0 0 10px 6px; }
+  .num span { font-weight: 400; margin-left: 6px; }
+  .glass { background: rgb(255 255 255 / .08); border: 1px solid rgb(255 255 255 / .14); border-radius: 24px; backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+  .card { padding: 26px 28px; position: relative; overflow: hidden; }
+  .card h3 { margin: 0 0 6px; font-size: 20px; font-weight: 600; letter-spacing: -.01em; display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+  .card h3::before { content: ''; width: 4px; height: 22px; border-radius: 4px; background: linear-gradient(#818cf8, #38bdf8); box-shadow: 0 0 12px rgb(99 102 241 / .7); }
+  .card h3 small { margin-left: auto; font-size: 13px; font-weight: 500; color: rgb(255 255 255 / .6); }
+  svg.v { width: 100%; height: auto; display: block; overflow: visible; }
+  .lbl { font-family: Poppins, sans-serif; }
+  .rocket { offset-rotate: auto 0deg; animation: fly 7s cubic-bezier(.45, .05, .55, .95) infinite; }
+  @keyframes fly { 0% { offset-distance: 0%; opacity: 0; } 6% { opacity: 1; } 92% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+  .bob { animation: bob 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; } @keyframes bob { 50% { transform: translateY(-6px); } }
+  .drift { animation: drift 5s ease-in infinite; transform-box: fill-box; } @keyframes drift { 0% { transform: translate(0, 0) rotate(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(26px, 70px) rotate(160deg); opacity: 0; } }
+  .ringspin { animation: rs 14s linear infinite; transform-box: fill-box; transform-origin: center; } @keyframes rs { to { transform: rotate(360deg); } }
+  .twk { animation: twk 2.6s ease-in-out infinite; } @keyframes twk { 50% { opacity: .3; } }
+  .draw { stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: drawl 2.4s ease-out forwards; } @keyframes drawl { to { stroke-dashoffset: 0; } }
+  .hover-stop { cursor: pointer; transition: transform .25s; transform-box: fill-box; transform-origin: center; } .hover-stop:hover { transform: scale(1.08); }
+</style>
+</head>
+<body>
+<h1>Le voyage des nouveaux, en plus beau</h1>
+<p class="lead">Trois versions du Voyage. Toutes montrent les mêmes 4 étapes : inscrits, e-mail confirmé, au moins 1 widget, un compte lié. Survole une étape pour la voir grossir. Données d'exemple : 12 comptes.</p>
+<div class="wrap" id="w"></div>
+<script>
+const S = [['Inscrits', 12, '#a78bfa', '#6366f1', 'ont créé un compte'], ['E-mail confirmé', 10, '#38bdf8', '#0284c7', 'ont cliqué sur le lien'], ['Au moins 1 widget', 10, '#34d399', '#059669', 'utilisent leur dashboard'], ['Un compte lié', 5, '#f472b6', '#db2777', 'GitHub, Google…']]
+const pct = (v) => Math.round(v / S[0][1] * 100)
+const sec = (n, name, why, html) => `<section><span class="num">${n} · ${name}<span>${why}</span></span>${html}</section>`
+const W = 1200, H = 340
+const stars = (n, seed = 1) => Array.from({ length: n }, (_, i) => { const r = Math.sin(i * 12.9898 + seed) * 43758.5453, x = (r - Math.floor(r)) * W, r2 = Math.sin(i * 78.233 + seed) * 12345.678, y = (r2 - Math.floor(r2)) * H; return `<circle class="twk" cx="${x}" cy="${y}" r="${(i % 3) * .5 + .6}" fill="#fff" opacity=".7" style="animation-delay:${-(i % 7) * .4}s"/>` }).join('')
+const defs = () => `<defs>${S.map(([, , c1, c2], i) => `<radialGradient id="pg${i}" cx="34%" cy="30%" r="75%"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="${c1}"/><stop offset=".75" stop-color="${c2}"/><stop offset="1" stop-color="#0f172a"/></radialGradient>`).join('')}
+  <linearGradient id="trail" x1="0" x2="1"><stop offset="0" stop-color="#a78bfa"/><stop offset=".35" stop-color="#38bdf8"/><stop offset=".65" stop-color="#34d399"/><stop offset="1" stop-color="#f472b6"/></linearGradient>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`
+const rocket = (d) => `<g class="rocket" style="offset-path:path('${d}')"><g transform="rotate(90)"><path d="M0,-16 C7,-10 7,4 5,10 L-5,10 C-7,4 -7,-10 0,-16Z" fill="#e2e8f0"/><circle cx="0" cy="-4" r="3.2" fill="#38bdf8"/><path d="M-5,4 L-10,12 L-5,10Z M5,4 L10,12 L5,10Z" fill="#f472b6"/><path d="M-3,10 Q0,24 3,10Z" fill="#fde047" filter="url(#glow)"/></g></g>`
+function planet(i, x, y, r, ring = true) {
+  const [l, v, c1, , d] = S[i]
+  return `<g class="hover-stop"><g class="bob" style="animation-delay:${-i}s">
+    ${ring ? `<ellipse cx="${x}" cy="${y}" rx="${r * 1.7}" ry="${r * .42}" fill="none" stroke="${c1}" stroke-opacity=".55" stroke-width="2.5" transform="rotate(-16 ${x} ${y})"/>` : ''}
+    <circle cx="${x}" cy="${y}" r="${r}" fill="url(#pg${i})" style="filter:drop-shadow(0 0 18px ${c1})"/>
+    ${ring ? `<path d="M${x - r * 1.7},${y} A${r * 1.7},${r * .42} 0 0 0 ${x + r * 1.7},${y}" fill="none" stroke="${c1}" stroke-width="2.5" transform="rotate(-16 ${x} ${y})"/>` : ''}
+    <text x="${x}" y="${y + 8}" text-anchor="middle" font-size="${r * .7}" font-weight="700" fill="#fff" class="lbl">${v}</text></g>
+    <text x="${x}" y="${y + r + 34}" text-anchor="middle" font-size="17" font-weight="600" fill="#fff" class="lbl">${l}</text>
+    <text x="${x}" y="${y + r + 56}" text-anchor="middle" font-size="13.5" fill="rgb(255 255 255 / .65)" class="lbl">${pct(v)} % · ${d}</text></g>`
+}
+const lost = (x, y, n) => n ? `<g><g class="drift"><path d="M${x - 7},${y - 3} l5,-6 l8,1 l3,7 l-6,6 l-8,-1Z" fill="#94a3b8" opacity=".9"/></g>
+  <rect x="${x - 50}" y="${y - 42}" width="100" height="26" rx="13" fill="rgb(127 29 29 / .6)" stroke="rgb(248 113 113 / .5)"/><text x="${x}" y="${y - 24}" text-anchor="middle" font-size="13" font-weight="600" fill="#fecaca" class="lbl">−${n} en route</text></g>` : ''
+
+// 1 La fusée : une fusée suit la trajectoire, les planètes ont un anneau, les perdus deviennent des astéroïdes qui tombent
+function v1() {
+  const P = [[110, 190], [440, 110], [760, 190], [1090, 110]], R = S.map(([, v]) => 26 + v / 12 * 24)
+  const d = `M${P[0][0]},${P[0][1]} C${P[0][0] + 160},${P[0][1]} ${P[1][0] - 160},${P[1][1]} ${P[1][0]},${P[1][1]} S${P[2][0] - 160},${P[2][1]} ${P[2][0]},${P[2][1]} S${P[3][0] - 160},${P[3][1]} ${P[3][0]},${P[3][1]}`
+  return `<svg class="v" viewBox="0 0 ${W} ${H}">${defs()}${stars(70)}
+    <path d="${d}" fill="none" stroke="url(#trail)" stroke-width="10" opacity=".18" filter="url(#glow)"/>
+    <path class="draw" d="${d}" fill="none" stroke="url(#trail)" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+    ${rocket(d)}${P.map(([x, y], i) => planet(i, x, y, R[i])).join('')}
+    ${P.slice(1).map(([x, y], i) => lost((P[i][0] + x) / 2, (P[i][1] + y) / 2 + 6, S[i][1] - S[i + 1][1])).join('')}</svg>`
+}
+// 2 La carte du ciel : une carte stellaire avec grille, les étapes sont des étoiles reliées comme une constellation
+function v2() {
+  const P = [[140, 200], [440, 120], [760, 210], [1060, 120]]
+  const grid = Array.from({ length: 11 }, (_, i) => `<line x1="${i * 120}" y1="0" x2="${i * 120}" y2="${H}" stroke="rgb(255 255 255 / .05)"/>`).join('') + Array.from({ length: 4 }, (_, i) => `<line x1="0" y1="${i * 100 + 20}" x2="${W}" y2="${i * 100 + 20}" stroke="rgb(255 255 255 / .05)"/>`).join('')
+  return `<svg class="v" viewBox="0 0 ${W} ${H}">${defs()}${grid}${stars(90, 7)}
+    <polyline class="draw" points="${P.map((p) => p.join(',')).join(' ')}" fill="none" stroke="rgb(255 255 255 / .55)" stroke-width="1.5"/>
+    ${P.map(([x, y], i) => { const [l, v, c1, , d] = S[i], r = 6 + v / 12 * 10; return `<g class="hover-stop">
+      <circle cx="${x}" cy="${y}" r="${r * 4}" fill="${c1}" opacity=".12"/><circle cx="${x}" cy="${y}" r="${r * 2.2}" fill="${c1}" opacity=".22" class="twk"/>
+      <path d="M${x},${y - r * 3} L${x + r * .5},${y - r * .5} L${x + r * 3},${y} L${x + r * .5},${y + r * .5} L${x},${y + r * 3} L${x - r * .5},${y + r * .5} L${x - r * 3},${y} L${x - r * .5},${y - r * .5}Z" fill="#fff" style="filter:drop-shadow(0 0 10px ${c1})"/>
+      <rect x="${x - 82}" y="${y + r * 3 + 14}" width="164" height="62" rx="16" fill="rgb(15 23 42 / .7)" stroke="${c1}" stroke-opacity=".5"/>
+      <text x="${x}" y="${y + r * 3 + 40}" text-anchor="middle" font-size="22" font-weight="700" fill="${c1}" class="lbl">${v} <tspan font-size="13" fill="rgb(255 255 255 / .6)" font-weight="500">· ${pct(v)} %</tspan></text>
+      <text x="${x}" y="${y + r * 3 + 62}" text-anchor="middle" font-size="14" font-weight="600" fill="#fff" class="lbl">${l}</text></g>` }).join('')}
+    ${P.slice(1).map(([x, y], i) => { const n = S[i][1] - S[i + 1][1]; return n ? `<text x="${(P[i][0] + x) / 2}" y="${(P[i][1] + y) / 2 - 14}" text-anchor="middle" font-size="13" font-weight="600" fill="#fca5a5" class="lbl">−${n} en route</text>` : '' }).join('')}</svg>`
+}
+// 3 Le système solaire : les étapes sont des planètes de plus en plus loin du soleil "Morex", chacune sur son orbite
+function v3() {
+  const cx = -60, cy = 170, orb = [270, 520, 770, 1020], ang = [-11, 9, -8, 6].map((a) => a * Math.PI / 180)
+  return `<svg class="v" viewBox="0 0 ${W} ${H}" style="overflow:hidden">${defs()}${stars(70, 3)}
+    <defs><radialGradient id="sun" cx="40%" cy="38%"><stop offset="0" stop-color="#fff7cc"/><stop offset=".5" stop-color="#fde047"/><stop offset="1" stop-color="#f59e0b"/></radialGradient></defs>
+    ${orb.map((r, i) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${S[i][2]}" stroke-opacity=".28" stroke-dasharray="3 7"/>`).join('')}
+    <circle cx="${cx}" cy="${cy}" r="120" fill="url(#sun)" style="filter:drop-shadow(0 0 50px #fde047)"/><text x="6" y="${cy + 6}" text-anchor="start" font-size="16" font-weight="800" fill="#78350f" class="lbl">MOREX</text>
+    ${orb.map((r, i) => { const x = cx + Math.cos(ang[i]) * r, y = cy + Math.sin(ang[i]) * r, pr = 22 + S[i][1] / 12 * 20, [l, v, c1, , d] = S[i]
+      return `<g class="hover-stop"><g class="bob" style="animation-delay:${-i}s"><circle cx="${x}" cy="${y}" r="${pr}" fill="url(#pg${i})" style="filter:drop-shadow(0 0 16px ${c1})"/><text x="${x}" y="${y + 7}" text-anchor="middle" font-size="${pr * .75}" font-weight="700" fill="#fff" class="lbl">${v}</text></g>
+        <text x="${x + pr + 14}" y="${y - 4}" font-size="16" font-weight="600" fill="#fff" class="lbl">${l}</text><text x="${x + pr + 14}" y="${y + 16}" font-size="13" fill="rgb(255 255 255 / .65)" class="lbl">${pct(v)} % · ${d}</text></g>` }).join('')}</svg>`
+}
+const V = [
+  ['La fusée', 'une petite fusée fait le trajet en boucle, les planètes ont un anneau, ceux qui décrochent tombent comme des astéroïdes', v1],
+  ['La carte du ciel', 'une carte stellaire quadrillée, chaque étape est une étoile brillante avec son étiquette, reliées en constellation', v2],
+  ['Le système solaire', 'Morex est le soleil, chaque étape une planète un peu plus loin sur son orbite', v3],
+]
+document.getElementById('w').innerHTML = V.map(([n, w, f], i) => sec(i + 1, n, w, `<div class="glass card"><h3>Le voyage des nouveaux <small>sur 12 inscrits</small></h3>${f()}</div>`)).join('')
+</script>
+</body>
+</html>
