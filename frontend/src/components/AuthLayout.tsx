@@ -79,6 +79,13 @@ export function AuthLayout({ title, subtitle, switchPrompt, switchLabel, switchT
                 </span>
               </span>
             </Link>
+
+            {/* Always reachable before logging in, not only from the sign-up checkbox */}
+            <nav aria-label={`${AUTH[lang].termsLabel} · ${AUTH[lang].privacyLabel}`} className="flex animate-fade-up flex-wrap gap-x-2 text-sm text-white/55 [animation-delay:300ms]">
+              <Link to="/terms" className="underline decoration-white/30 underline-offset-4 transition hover:text-white">{AUTH[lang].termsLabel}</Link>
+              <span aria-hidden>·</span>
+              <Link to="/privacy" className="underline decoration-white/30 underline-offset-4 transition hover:text-white">{AUTH[lang].privacyLabel}</Link>
+            </nav>
           </section>
 
           {/* Form side */}
