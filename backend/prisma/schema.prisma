@@ -25,6 +25,10 @@ model User {
   // Why, in the admin's own words — required when banning, cleared on unban. Shown back to the admin
   // in the users table, and to the user themselves in the ban notification email.
   banReason     String?
+  // Kept on the user so they survive logout (which deletes the session): when they last opened a new
+  // session, and when they were last active in any of them (see AuthService.touchSession)
+  lastLoginAt   DateTime?
+  lastSeenAt    DateTime?
 
   // Profile/preferences (Morex dashboard UI) — all optional/defaulted so
   // existing accounts don't need a backfill.
@@ -67,6 +71,10 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+  // Filled by SessionGuard on the session's first authenticated request, then at most every 5 minutes:
+  // the browser it was opened from (shown to admins as "Chrome · Linux") and its last activity
+  userAgent  String?
+  lastSeenAt DateTime @default(now())
 }
 
 model EmailVerificationToken {
