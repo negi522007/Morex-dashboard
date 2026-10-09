@@ -199,6 +199,53 @@ image collided with Render's own public-port auto-detection, and Render turned o
 own `$PORT` regardless — nginx now listens on whatever that is instead of a hardcoded port, with the
 backend forced onto a fixed internal one so the two can never end up racing for the same port again.
 
+**Oct 9 (admin, Services tab)** — Removed the hint line above the planets ("Click a planet · the bigger,
+the more widgets · red ring = errors"), on request: it cluttered the orbit view. Removed in both the
+React screen (`AdminServices.tsx`, its `orbitHint` text in FR/EN/ES in `shared.tsx`, the now-unused
+`.adm-system-hint` style in `admin.css`) and the mockup `apparences-admin-services.html`, so the two
+stay identical.
+
+**Oct 9 (admin console redesign, Morayo)** — The first admin page was a plain table; it was redesigned
+page by page, each design chosen on HTML mockups first (`frontend/public/apparences-admin-*.html`, the
+choices are listed in `FRONTEND.md` → *Admin console*) and then rebuilt in React with the same look:
+- **Four pages instead of one**, each with its own URL (`/admin`, `/admin/accounts`, `/admin/services`,
+  `/admin/moderation`), a collapsible sidebar with the Morex logo, FR / EN / ES, no page titles.
+- **Overview:** the dashboard's greeting card with the slogan, a health score out of 100, to-do cards, six
+  numbers, the account breakdown as a ringed planet, a 14-day growth curve, "le voyage des nouveaux"
+  (signed up → confirmed → first widget → linked account) with the Morex logo travelling along, and the
+  latest sign-ups as a timeline with real avatars.
+- **Accounts:** list + sheet — avatar, birth date with age and sign, last login and last activity, linked
+  accounts as provider logos, open sessions by browser, and a **miniature of the user's dashboard** (same
+  order, sizes and service colours, failing widgets marked). Search unrolls from a lens.
+- **Services:** a rotating solar system (most used closest to the sun, hover freezes it, click opens the
+  service sheet with its most used widgets and last error) and a read-only ranking.
+- **Moderation:** accounts to confirm with an hourglass ring of the hours left before deletion, suspended
+  accounts with their reason.
+
+Backend additions for it (all admin-only, tested — 28 admin tests, full suite 525): `GET /admin/service-stats`,
+`GET /admin/users/:id/sessions`, `GET /admin/users/:id/widgets` (never the widgets' `config` or data),
+and new fields on `GET /admin/users` (avatar, birth date, last login / last seen, linked account names).
+To know "when was this person last here, from what", sessions now record their browser and last activity
+(`touchSession`, written at most every 5 minutes, never blocking a request — migration
+`20261009120000_add_session_activity`), and GitHub / Google links keep the account's public name.
+Two small things found while building it: a smooth animation needs a GPU `transform` set straight on the
+DOM, not a React re-render each frame (the orbit was jerky); and a chart scaled like an image becomes huge
+on a wide screen, so the admin charts are drawn at the card's measured width instead.
+
+Earlier the same week (Morayo, already committed): the refresh countdown ring on every card, the
+"stale data" ribbon and empty-state card, a 45 s cap per widget refresh (one hung fetch used to freeze
+every widget), "Delete my account" (password, or email for password-less accounts) and "Download my data"
+as one JSON file — now documented in `API.md` and `ARCHITECTURE.md` → *Scheduler*.
+
+**Oct 9 (Terms / Privacy pages, Morayo)** — `/terms` and `/privacy` were plain white text on black, outside
+the Morex look, and their text had fallen behind the app (they still said admins only see name / email /
+status, and nothing about the new session tracking). Redesigned as **a letter on lined paper** (chosen among
+four mockups, `frontend/public/apparences-legal.html`), one shared `LegalPage` with tabs between the two
+documents, and the text rewritten in FR / EN / ES in `lib/legal.ts`: moderation with an emailed reason,
+what an admin can and cannot see, sign-in tracking (no IP, no location), and the right to download or
+delete your data. The line pointing readers to the technical `PRIVACY.md` on the repository was removed from the
+page on request (the page stands on its own; `docs/PRIVACY.md` remains the full version for the team).
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |
@@ -217,6 +264,10 @@ backend forced onto a fixed internal one so the two can never end up racing for 
 | "Sign in with GitHub" as a real login path, not just linking | Sept 23 | Already the intended design (see `schema.prisma`'s `OAuthAccount` comment from Sept 15) — just not built until now |
 | Microsoft sign-in opened to any account, not just epitech.eu | Oct 9 | Requested directly; the email claim can no longer be trusted enough to auto-link to an existing account across arbitrary tenants (nOAuth), so that specific path was closed instead of left trusting it |
 | Public deploy's SMTP: Brevo, not Gmail directly (local dev keeps Gmail) | Oct 9 | Render's free tier blocks outbound ports 25/465/587 — found live; Brevo's SMTP also answers on 2525, which isn't blocked |
+| Admin sees metadata, never content: widget list without `config`/data, session list without ids | Oct 9 | Enough to help and moderate; `config` can hold keys and private URLs, a session id is a login cookie |
+| Activity written at most every 5 min, fire-and-forget from `SessionGuard` | Oct 9 | "Last seen" doesn't need second precision; never slow down or fail a real request for it |
+| Admin API under `/admin/users` and `/admin/service-stats`, pages under `/admin/*` | Oct 9 | Only API prefixes are proxied, so reloading a page never lands on the backend |
+| Each refresh capped at 45 s, 8 in parallel, tick 5 s | Oct 9 | One unreachable service used to freeze every widget; countdowns on cards need a short tick |
 
 ## What's left
 

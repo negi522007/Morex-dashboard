@@ -17,19 +17,22 @@ and for every endpoint see [API.md](./API.md).
 | Profile (name, bio, password), avatar builder + photo upload | ✅ Done |
 | Themes (10 pictures), widget skins (5), decorations, FR / EN / ES | ✅ Done, saved on the account |
 | Private journal (open book) | ✅ Done |
+| Admin console: overview, accounts, services, moderation (FR / EN / ES) | ✅ Done — see [Admin console](#admin-console) |
 | AI insights (RSS recap, weather advice, GitHub stand-up) | ✅ Displayed when present; needs `AI_PROVIDER` on the server |
-| Privacy note acceptance at registration, `/docs` page, GitHub repo picker | ⏳ Not started (see the end) |
+| Terms of Service and Privacy Policy pages + required checkbox at registration (FR / EN / ES) | ✅ Done — see [Terms and privacy pages](#terms-and-privacy-pages) |
+| Export my data, delete my account | ✅ Done (profile) |
+| `/docs` page, GitHub repo picker | ⏳ Not started (see the end) |
 
 ## Tech stack
 
 - **React 19** + **TypeScript**, bundled with **Vite**
 - **React Router** for the three routes
 - **Tailwind CSS v4** for the login / register pages
-- **Plain CSS** for the dashboard ([`frontend/src/styles/morex.css`](./frontend/src/styles/morex.css)):
+- **Plain CSS** for the dashboard ([`frontend/src/styles/morex.css`](../frontend/src/styles/morex.css)):
   it is the mockup's stylesheet, ported as-is so the app looks exactly like the validated design
 
 No state library and no data-fetching library: `useState` / `useEffect` plus a thin `fetch` wrapper
-([`frontend/src/lib/api.ts`](./frontend/src/lib/api.ts)) are enough for an app this size.
+([`frontend/src/lib/api.ts`](../frontend/src/lib/api.ts)) are enough for an app this size.
 
 ## Project structure
 
@@ -70,7 +73,7 @@ The backend must be running on port `8080` (`docker compose up` from the repo ro
 
 ### The dev proxy: why every call uses a relative path
 
-[`frontend/vite.config.ts`](./frontend/vite.config.ts) forwards the backend's route prefixes to
+[`frontend/vite.config.ts`](../frontend/vite.config.ts) forwards the backend's route prefixes to
 `http://localhost:8080`: `/auth`, `/widgets`, `/about.json`, `/journal` and `/uploads` (uploaded avatar
 photos). The app therefore always calls relative paths (`/widgets`, not `http://localhost:8080/widgets`).
 For the browser everything is same-origin, so the `httpOnly` session cookie just works and the backend
@@ -92,7 +95,7 @@ which accounts are linked (`githubLinked`, `epitech`).
 
 `GET /about.json` lists every service, its widgets and their typed `params` (`string` / `integer`,
 `required`, `secret`). The add drawer only offers widgets present there, and builds its form fields from
-those `params`. [`catalog.ts`](./frontend/src/lib/catalog.ts) only adds what the backend doesn't know:
+those `params`. [`catalog.ts`](../frontend/src/lib/catalog.ts) only adds what the backend doesn't know:
 which card design to use (`kind`), display names and help texts per language. A widget that exists on the
 backend but not in `catalog.ts` is simply not shown in the drawer.
 
@@ -169,66 +172,197 @@ mode and the open drawer are also classes / data attributes on `<body>`, exactly
 | `/register` | `RegisterPage` | `POST /auth/register`, then "check your inbox" (email confirmation is required) |
 | `/login` | `LoginPage` | `POST /auth/login`, or "Continue with GitHub" (`<a href="/auth/github/login">`); shows `?error=` from the backend |
 | `/dashboard` | `DashboardPage` | Protected by `GET /auth/me` |
+| `/terms`, `/privacy` | `TermsPage`, `PrivacyPage` | Public; linked from the sign-up checkbox, see [Terms and privacy pages](#terms-and-privacy-pages) |
+| `/admin`, `/admin/accounts`, `/admin/services`, `/admin/moderation` | `AdminPage` | Admins only (`isAdmin`), see [Admin console](#admin-console) |
 
 **Email confirmation and OAuth callbacks have no frontend page**: they are handled by the backend
 (`/auth/confirm`, `/auth/github/callback`, `/auth/epitech/callback`), which are under the proxied `/auth`
 prefix anyway.
 
-## Admin console (spec — backend is done, no screen yet)
+## Terms and privacy pages
 
-An admin manages accounts. The API exists and is tested (see [API.md → Admin](./API.md#admin)); this section
-is what to build. It is optional in the school brief, but the checklist rewards covering everything the
-brief mentions.
+`/terms` and `/privacy` are public pages, reachable from everywhere:
+- **logged out:** "Conditions d'utilisation · Politique de confidentialité" at the bottom of the brand column
+  of the login and sign-up pages (`AuthLayout.tsx`), and the required checkbox of the sign-up form;
+- **logged in:** an "Infos légales" entry (document icon) in the dashboard sidebar, above
+  Help (`Sidebar` in `Chrome.tsx`, also in `mockups.html`), and the two links under "Mes données" in the
+  profile (`Modals.tsx`). Both are
+the same component, `pages/LegalPage.tsx` (`TermsPage` / `PrivacyPage` only pick the document), styled by
+`styles/legal.css`; the **text lives in `lib/legal.ts`**, in FR / EN / ES.
 
-**Who sees it.** Only when `GET /auth/me` returns `isAdmin: true`. Show an "Admin" entry in the sidebar
-for them (nobody else). The route `/admin` must also guard itself: if the user is not an admin, redirect to
-`/dashboard`. The API enforces it anyway (`403`), so this is UX, not security.
+- **Look — "a letter"** (chosen among four mockups in `frontend/public/apparences-legal.html`: logbook,
+  summary + detail, folding planets, letter): over the Morex sky, a sheet of lined cream paper like the
+  journal, a handwritten title (Caveat), the purple Morex seal, each section with a line icon drawn in the
+  letter's violet (SVG in `LegalPage.tsx`, chosen by name in `legal.ts` — emojis can't take a colour),
+  signed "— L'équipe Morex ✦".
+- **Top bar:** Morex logo (→ `/dashboard`, which sends a logged-out reader on to `/login`), FR / EN / ES (the same `setAuthLang` as the login pages, so the
+  language follows), "← Retour" back to the previous page (or `/login` when the page was opened in a new
+  tab). Two tabs switch between the two documents; they replace the history entry, so "Retour" leaves the
+  legal pages instead of bouncing between them.
+- **Each page shows** its last update date (`LEGAL_UPDATED`, change it whenever the text changes). Bold words are written `**like this**` in `legal.ts`; that is the only markup.
+- **Keep the texts true.** They summarize [PRIVACY.md](./PRIVACY.md) and must change with it — e.g. the
+  October 9 rewrite added what admins can see, the session / last-login tracking, moderation with an
+  emailed reason, and the export / delete-account rights.
 
-**How an account becomes admin** (for the demo): the email listed in `ADMIN_EMAILS` (`.env`) gets
-`isAdmin` when it *registers*. There is no button or endpoint that promotes anyone, on purpose.
+## Admin console
 
-**Routing and proxy.** Add the page at `/admin` (exact). Only the API prefix `/admin/users` is proxied —
-add `'/admin/users': 'http://localhost:8080'` to `vite.config.ts` (nginx already has it). Don't proxy the
-bare `/admin`, or Vite would send your page to the backend.
+An admin manages the accounts and keeps an eye on the services. Optional in the school brief, built anyway.
+The design was validated page by page on HTML mockups first (`frontend/public/apparences-admin-*.html`,
+see the end of this section), then rebuilt in React with the same look.
 
-**Screen: one table, "Users".** Data from `GET /admin/users`, newest first (sort by `createdAt`):
+**Who sees it.** Only an account with `isAdmin: true` (from `GET /auth/me`): it gets an "Admin" entry in the
+dashboard sidebar. `/admin` guards itself too — not logged in → `/login`, not an admin → `/dashboard`. The API
+answers `403` to anyone else anyway, so the guard is UX, not security.
 
-| Column | From | Notes |
+**How an account becomes admin** (for the demo): the email listed in `ADMIN_EMAILS` (`.env`, comma
+separated) gets `isAdmin` when it *registers* — an account created before the variable was set stays a
+normal user (recreate it, or set `isAdmin` in the database). There is no button or endpoint that promotes
+anyone, on purpose.
+
+### Where the code is
+
+| File | Role |
+|---|---|
+| `pages/AdminPage.tsx` | The shell: guard, sidebar, language switch, data loading, the action dialog (rename / ban / unban / delete) and the toast |
+| `components/admin/AdminOverview.tsx` | "Vue d'ensemble" page (greeting, health gauge, to-dos, numbers, charts, latest sign-ups) |
+| `components/admin/AdminAccounts.tsx` | "Comptes" page: list + account sheet, its sessions |
+| `components/admin/DashboardPreview.tsx` | The miniature of a user's dashboard shown in the account sheet |
+| `components/admin/AdminServices.tsx` | "Services" page: numbers, rotating solar system + service sheet, ranking |
+| `components/admin/AdminModeration.tsx` | "Modération" page: accounts to confirm (hourglass rings), suspended accounts |
+| `components/admin/GrowthChart.tsx`, `RingPlanet.tsx`, `Voyage.tsx` | The three hand-drawn SVG charts of the overview |
+| `components/admin/shared.tsx` | API types, the FR / EN / ES texts, small helpers (`stats`, `growth`, `health`, `hoursLeft`, `useWidth`, CSV export), avatars and provider logos |
+| `styles/admin.css` | Every admin style, scoped under `.adm` / `.adm-*` |
+
+### Routing, proxy, data
+
+- **Routes:** `/admin` (overview), `/admin/accounts`, `/admin/services`, `/admin/moderation` — one route
+  `/admin/:section?` in `App.tsx`. Each page has its own URL, so the browser's back button works.
+- **Proxy:** only the API prefixes `/admin/users` and `/admin/service-stats` are proxied (Vite and nginx).
+  Never proxy the bare `/admin`, or reloading a page would send it to the backend instead of React. That is
+  also why the services endpoint is `/admin/service-stats` and not `/admin/services`.
+- **Data:** `GET /admin/users` and `GET /admin/service-stats` on arrival, then **every 30 s**, so a new
+  sign-up, an avatar changed on the dashboard or a widget that starts failing shows up without reloading.
+  The account sheet also loads `GET /admin/users/:id/sessions` and `GET /admin/users/:id/widgets` when it
+  opens. Exact shapes: [API.md → Admin](./API.md#admin).
+
+### The frame
+
+- **Background:** `body.morex` with the admin's own theme picture, like the dashboard.
+- **Sidebar** (fixed, collapsible like the dashboard's): Morex logo + "console admin", the four pages with
+  drawn icons, the admin's avatar, "← Retour au dashboard". Folded / unfolded is remembered in
+  `localStorage` (`morex.admin.folded`). No page titles at the top of the pages (removed on request).
+- **FR / EN / ES** switch at the top right: saved on the account (`PATCH /auth/me { language }`), same as
+  the dashboard's language menu. Every admin text has its three languages in `shared.tsx`.
+- **Charts are drawn at the card's real pixel width** (`useWidth`, a `ResizeObserver`), not scaled like an
+  image: on a wide screen the text and planets keep a normal size instead of growing with the card.
+
+### Page 1 — Vue d'ensemble (`/admin`)
+
+| Block | What it shows | Computed from |
 |---|---|---|
-| Name | `firstName` `lastName` | |
-| Email | `email` | |
-| Status | `emailVerified`, `isBanned`, `banReason`, `isAdmin` | Badges: "Unconfirmed" (`emailVerified:false`), "Banned" (title/tooltip shows `banReason`), "Admin". Unconfirmed accounts are deleted by the server after 24 h — say so in a tooltip. |
-| Joined | `createdAt` | Relative date |
-| Widgets / Linked accounts / Sessions | `widgetCount`, `linkedAccountsCount`, `sessionCount` | Small numbers; `sessionCount` is "sessions stored", not "online now" |
-| Actions | — | See below |
+| Greeting card | Same as the dashboard's: the day number huge and outlined in the background, "WEEKDAY · MONTH", the admin's avatar, "Bonjour, Morayo", and the Morex slogan as the bio | `GET /auth/me`, the clock, `AUTH[lang].slogan` |
+| Health gauge | A score out of 100 with a sentence (green "Morex est en pleine forme", amber "à surveiller", red "Morex a besoin de toi" — the ring pulses) and what lowers it | `health()`: −5 per unconfirmed account (−15 if deleted in under 3 h), −8 per failing service (−25 if all its widgets fail), −2 per suspended account |
+| "À faire" cards | Accounts about to expire, services in error, suspended accounts — each with a "Voir →" to the right page | users + service stats |
+| 6 numbers | Accounts (+ this week, sparkline), unconfirmed, confirmation rate, widgets per account, suspended, admins — each clickable to the right page / filter | `stats()` |
+| Répartition | A planet with a tilted ring that turns slowly; each status (active, admins, unconfirmed, suspended) is a stretch of the ring. Hovering a stretch or a legend line shows its count; a click opens Comptes with that filter | `RingPlanet.tsx` |
+| Croissance sur 14 jours | Total accounts per day, smooth line, labelled axis, today's point glowing; hovering shows "date · N comptes · +k ce jour-là" at the top right | `growth()` (accounts still existing, by `createdAt`) |
+| Le voyage des nouveaux | Signed up → email confirmed → first widget → linked account, as ringed planets on a trail the Morex logo travels along; "−N en route" between two steps | `Voyage.tsx` (users: `emailVerified`, `widgetCount`, `linkedAccountsCount`) |
+| Derniers inscrits | Timeline grouped by day (today, yesterday, then the date): time of arrival, the user's real avatar, email, widget count, status | the 6 newest accounts |
 
-Add a search box (client-side filter on name/email) and a filter "All / Unconfirmed / Banned".
+### Page 2 — Comptes (`/admin/accounts`)
 
-**Row actions** (all `credentials: 'include'`, JSON where a body is sent):
+- **Toolbar:** filters All / Unconfirmed / Suspended / Admins with their counts, CSV export, and on the
+  right a lens that unrolls into a search field (name or email, accents ignored; Escape clears it).
+- **List** (left): newest first; avatar with a status dot, name, email, widget count. ↑ / ↓ move the selection.
+- **Account sheet** (right), for the selected account:
+  - big avatar with a halo of the status colour, name, email, badges, "actif il y a …";
+  - four boxes: widgets, linked accounts (the providers' **logos** — GitHub, Google, Microsoft, Epitech —
+    or `0`), sessions, days on Morex;
+  - joined on, **birth date** with age and sign ("12 avril 2000 · 26 ans · ♈ Bélier", or "non renseignée"),
+    **last login**, email confirmed or not, role, linked accounts with their names, suspension reason;
+  - **open sessions**, each named after its browser and system ("Chrome · Linux", 💻 / 📱), opened when,
+    last active when;
+  - **"Ses widgets"**: a miniature of the user's dashboard — same order and sizes as theirs, each card in its
+    service's colours with its title and widget type, a pulsing red "!" on widgets whose last refresh failed
+    (hover for the service, the type and the error or "mis à jour il y a …");
+  - actions: Rename, Confirm email (if unconfirmed), Export (CSV of this account), and apart on the right
+    Suspend / Reactivate and Delete — disabled on your own account and on another admin.
+
+**Rename changes the first and last name only**, by design of the API: not the email (a new address must be
+confirmed by its owner, otherwise an admin could redirect an account), not the password, not admin / ban
+status (they have their own buttons with a mandatory reason).
+
+**What "en erreur" means on a widget:** its last automatic refresh failed and the server stored why in
+`lastError` (the external API refused or timed out — e.g. CoinGecko `429` —, the source no longer exists —
+e.g. an RSS feed `404` —, an account was unlinked, or the server had no internet). Nothing is lost: the user
+keeps the last data with a "not up to date" note, and the error clears by itself at the first successful
+refresh.
+
+### Page 3 — Services (`/admin/services`)
+
+- **Four numbers:** services in use, widgets in total, healthy services, services with errors.
+- **Solar system:** each service on its own orbit around the Morex sun, two per orbit on opposite sides,
+  the most used closest; they turn for real. Planet size = number of widgets, a pulsing red ring = widgets
+  in error. Hovering a planet freezes the system so it can be clicked; a click opens its sheet. The motion
+  is a GPU `transform` set on the DOM every frame, **not** a React re-render (re-rendering 60 times a second
+  and moving `left`/`top` made it jerky). The elapsed time survives the 30 s data refresh, so nothing jumps.
+  Still for users who ask for reduced motion.
+- **Service sheet** (beside it): logo, "47 widgets chez 6 comptes · 42 % de tous les widgets", four boxes
+  (widgets, accounts using it, working, in error), **the most used widgets of this service** in bars, then
+  the last error in a red box or a green "everything refreshes fine".
+- **Ranking** (below): services from most to least used, with rank, logo, accounts, a bar in their colour,
+  widget count and a green / red dot. **Read-only on purpose** — it is not linked to the orbit.
+
+### Page 4 — Modération (`/admin/moderation`)
+
+- **Three numbers:** accounts expiring in under 3 h, accounts to confirm, suspended accounts.
+- **À confirmer avant expiration:** most urgent first; an **hourglass ring** per account empties as the 24 h
+  before the server deletes an unconfirmed account run out (green, amber under 12 h, red under 3 h), with
+  the avatar and "Confirmer l'e-mail".
+- **Comptes suspendus:** avatar, the reason they were given, Reactivate and Delete.
+
+### Actions and their dialog
 
 | Action | Call | Notes |
 |---|---|---|
-| Edit name | `PATCH /admin/users/:id` `{ firstName, lastName }` | Blank name → `400`, show the message |
-| Mark email as confirmed | `PATCH /admin/users/:id` `{ emailVerified: true }` | For someone whose confirmation mail never arrived |
-| Ban | `PATCH /admin/users/:id/ban` `{ reason }` → `204` | Ends all their sessions immediately. `reason` is **mandatory** (blank → `400`) — the UI must collect it before the request, not just rely on the server's error. The user is emailed the reason and told they can reply to contest it (no in-app appeal flow was built — see "why" below). |
-| Unban | `PATCH /admin/users/:id/unban` → `204` | Clears `banReason`. The user is emailed that access was restored. |
-| Delete | `DELETE /admin/users/:id` `{ reason }` → `204` | **Permanent** (their widgets, journal, links go too). `reason` is **mandatory** (blank → `400`), same as ban. Emailed to the user, with the "reply to contest" note, right before the row is actually deleted. Confirm dialog makes the admin type the email, as well as the reason. |
+| Rename | `PATCH /admin/users/:id` `{ firstName, lastName }` | Both required |
+| Confirm email | `PATCH /admin/users/:id` `{ emailVerified: true }` | For someone whose confirmation mail never arrived |
+| Suspend | `PATCH /admin/users/:id/ban` `{ reason }` | Reason mandatory: ready-made reasons + free text, and a **preview of the email** the user will receive. Their sessions end immediately |
+| Reactivate | `PATCH /admin/users/:id/unban` | The user is emailed |
+| Delete | `DELETE /admin/users/:id` `{ reason }` | Permanent. Reason mandatory + the admin must retype the user's email. The user is emailed first |
 
-Rules to reflect in the UI so the admin doesn't hit avoidable errors: you cannot ban or delete **yourself**
-or **another admin** (the API answers `400` with a message — hide or disable those buttons for rows where
-`isAdmin` is true or `id` equals the current user's id, and still display the API message if it happens).
+You cannot suspend or delete yourself or another admin — the buttons are disabled with a tooltip, and the
+API's own `400` message is shown if it happens anyway. Every result is a toast ("Compte suspendu", or the
+server's error); the lists reload right after.
 
 **Why email-and-reply instead of a full in-app appeal system**: a banned/unbanned user is never left
 guessing (reason stated, notified by email, a real inbox to reply to) — but a complete moderation
 workflow (an appeal ticket with a status, a dedicated admin review screen) is a disproportionate amount of
-new surface (new models, new pages, a new notification loop) for a project this size. Revisit only if a
-real backlog of contested bans shows up.
-After any action, refresh the list (or update the row locally). Error states: a `403` (should not happen if
-the guard is right) → redirect to `/dashboard`; other errors → a visible message, never a silent failure.
-Also show the empty and loading states (the same standard as the dashboard, see the findings below).
+new surface for a project this size. Revisit only if a real backlog of contested bans shows up.
 
-**Not in scope:** promoting/demoting admins, changing a user's password or email (no endpoints, by design),
-and viewing anyone's widgets or journal (the admin API never exposes private content; keep it that way).
+### What the admin can and cannot see
+
+The admin sees **metadata**, never private content: which widgets someone has and whether they work (never
+their settings — they can hold keys, private feed URLs or custom API headers — nor their data), which
+accounts are linked and their public name (never a token), which browsers they are logged in from (never
+the session id, which is the login cookie itself). Never the journal. Promoting / demoting admins and
+changing someone's email or password are not possible (no endpoints, by design).
+
+### Mockups (`frontend/public/apparences-admin-*.html`)
+
+Kept as the record of what was proposed and chosen; open them at `http://localhost:5173/<file>`. The page
+mockups load the real `admin.css`, so they look exactly like the console.
+
+| File | What was compared | Chosen |
+|---|---|---|
+| `apparences-admin.html`, `-admin2`, `-admin3` | First layouts: table, cards, control centre | "Centre de contrôle" + "services en orbite" |
+| `apparences-admin4.html`, `-admin5` | The same split into four pages; top tabs vs sidebar; three skins | Sidebar, simple skin |
+| `apparences-admin-bonjour.html`, `-messages` | Greeting banner; the status message under it | Dashboard-style greeting + slogan; health gauge (4) |
+| `apparences-admin-chiffres.html`, `-donut`, `-parcours`, `-voyage` | Numbers, breakdown, newcomers' journey | Numbers kept; ringed planet (2); the rocket trail (1), rocket then replaced by the Morex logo |
+| `apparences-admin-inscrits.html` | Latest sign-ups | Timeline (2), with real avatars |
+| `apparences-admin-comptes.html`, `-fiche`, `-widgets`, `-comptes-widgets` | Accounts page, account sheet, a user's widgets | List + sheet (1), dashboard preview (3) |
+| `apparences-admin-services.html`, `-systeme` | Services page, its solar system | Orbit + sheet + ranking; rotating orbits (1) |
+| `apparences-admin-moderation.html` | Moderation page | Two columns + hourglasses (1) |
 
 ## Screens still to build (the backend for each is done — API.md has the exact shapes)
 
@@ -479,14 +613,11 @@ then clear them from the URL.
 
 ## Not built yet
 
-- **Privacy note acceptance at registration**: a required checkbox linking to a `/privacy` page rendering
-  [PRIVACY.md](./PRIVACY.md). No backend field records the consent yet.
+- **Recording the consent**: the sign-up checkbox is required by the form, but no backend field stores
+  when it was accepted.
 - **In-app documentation page**: not at `/docs` — in production nginx forwards `/docs` to the backend's Swagger UI, so pick another path (e.g. `/help/docs`).
 - **GitHub repo picker**: params may carry an `optionsUrl` (GitHub's `repo` → `/services/github/repos`,
   answering `{ value, label }[]`); the drawer still uses a free-text field.
-- **Export my data / delete my account**: shown as "soon" in the profile, no backend endpoint yet.
-- **Errors from a service** are only in the server logs: the API doesn't expose them per widget, so a
-  failing card keeps its last data (or keeps "waiting").
 
 
 ## Defense-checklist findings to fix (found by testing the running app, Sept 26)

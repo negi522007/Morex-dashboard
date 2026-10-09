@@ -46,8 +46,14 @@ want the technical detail behind any of this (hashing, encryption), see
   sign is). You can change or remove it in your profile. Accounts created with GitHub, Google, My Epitech or
   Microsoft start without one.
 - **A Microsoft account link, if you use it** — we read your name and school address once (the organisation
-  vouches for it), keep the link and an encrypted access key, and never see your Microsoft password. Only accounts
-  of the allowed organisation (`epitech.eu`) are accepted.
+  vouches for it), keep the link and an encrypted access key, and never see your Microsoft password. Any Microsoft
+  account is accepted (school, work or personal).
+- **When and from what you sign in** — when you last logged in, when you were last active (updated at most
+  every 5 minutes, not every click), and for each session still open, the browser and system it was opened
+  from, as your browser announces it (e.g. "Chrome · Linux"). Used only to show you and admins "last active"
+  and which devices are logged in. No IP address, no location, no tracking across sites.
+- **The public name of the accounts you link** — your GitHub username, or the email of your Google /
+  Microsoft account (Epitech: your login and campus, see above). Never a token, shown back to you and to admins.
 - **Widget history and alerts** — for numeric widgets we keep a value sample at most every 5 minutes for
   90 days (to draw trends), and the alerts you create plus a log of when they fired. Alert emails go to
   your account email through the server's SMTP.
@@ -99,15 +105,21 @@ the link kills the old URL immediately.
   have will simply fail on their next refresh until you reconnect. If GitHub is your *only* way to log in
   (you signed up via "Sign in with GitHub" and never set a password), unlinking is blocked — there's
   currently no way to add a password after the fact, so removing GitHub would lock you out entirely.
-- There is currently no self-service "delete my account" button — if you want your account and its data
-  removed, ask an admin. (Worth knowing plainly: this is a gap we haven't closed yet, not a hidden
-  policy.)
+- **Download your data**: "Download my data" in your profile gives you one JSON file with your profile,
+  widgets and their settings, journal, alerts and linked accounts (secret settings stay masked, tokens are
+  never included).
+- **Delete your account yourself**: "Delete my account" in your profile, confirmed with your password (or
+  your email typed again if you only sign in with GitHub / Google / Microsoft / My Epitech). Everything goes
+  with it, for good. Signing in again later with the same email creates a new, empty account.
 - An admin can suspend (ban) or delete an account. Banning immediately ends every active session for
   that account, everywhere it was logged in — see `ARCHITECTURE.md` if you're curious why that's
   instant rather than "eventually."
 
 ## Who can see what
 
-Regular users only ever see their own data. Admins can see every account's email, name, confirmation
-status, and how many widgets/linked accounts/sessions it has — never anyone's password or the raw
-content of their encrypted tokens.
+Regular users only ever see their own data. Admins can see every account's email, name, avatar, date of
+birth (with its sign), confirmation status, when it signed up, last logged in and was last active, the
+browsers its open sessions come from, which accounts are linked (GitHub / Google / Microsoft / Epitech and
+their public name), and which widgets it has — their service, type, title, position and whether their last
+refresh worked. Never anyone's password, the content of their encrypted tokens, their widgets' settings
+(which can hold keys or private links) or data, nor their journal.
