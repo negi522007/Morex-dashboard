@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { parseUserAgent } from '../common/user-agent.util';
+import { toIsoDate, zodiacOf } from '../common/birth-date.util';
 
 // Told to the banned/unbanned user by email — they are never just silently cut off with no way to
 // understand why or respond. Replying to this address reaches SMTP_FROM, which is read by a real person
@@ -25,6 +27,13 @@ const DELETE_TEXT: Record<string, { subject: string; body: (reason: string) => s
   es: { subject: 'Tu cuenta de Morex ha sido eliminada', body: (r) => `Un administrador eliminó permanentemente tu cuenta y todo su contenido. Motivo indicado: «${r}».\n\nEsto no se puede deshacer de nuestro lado. Si crees que es un error o quieres explicarte, responde a este correo — una persona real lo leerá.` },
 };
 
+function accountLabel(profile: unknown): string | null {
+  if (!profile || typeof profile !== 'object') return null;
+  const p = profile as Record<string, unknown>;
+  const pick = [p.login, p.email, p.name].find((v) => typeof v === 'string' && v.trim());
+  return (pick as string | undefined) ?? null;
+}
+
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
@@ -39,6 +48,7 @@ export class AdminService {
       orderBy: { createdAt: 'asc' },
       include: {
         _count: { select: { widgetInstances: true, oauthAccounts: true, sessions: true } },
+        oauthAccounts: { select: { provider: true, profile: true } },
       },
     });
 
@@ -52,12 +62,83 @@ export class AdminService {
       isBanned: u.isBanned,
       banReason: u.banReason,
       createdAt: u.createdAt,
+      // So the admin console shows the same face as the user's own dashboard: the uploaded photo
+      // (served publicly under /uploads) wins, else the DiceBear options they picked
+      avatarConfig: u.avatarConfig,
+      avatarPhotoUrl: u.avatarPhotoPath,
+      // Kept on the user, so still known after they log out (see AuthService.touchSession)
+      // "YYYY-MM-DD" and the sign the horoscope widget uses, both null when the user never gave it
+      birthDate: u.birthDate ? toIsoDate(u.birthDate) : null,
+      zodiac: u.birthDate ? zodiacOf(u.birthDate) : null,
+      lastLoginAt: u.lastLoginAt,
+      lastSeenAt: u.lastSeenAt,
       widgetCount: u._count.widgetInstances,
       linkedAccountsCount: u._count.oauthAccounts,
+      // Which accounts are linked (github, google, microsoft, epitech) and, when the provider gave one,
+      // their non-secret name: GitHub login, Google / Microsoft email, Epitech login. Never a token.
+      linkedAccounts: u.oauthAccounts.map((a) => ({ provider: a.provider, label: accountLabel(a.profile) })),
       // Includes expired-but-not-yet-deleted rows — an approximation of
       // "how many sessions", not a live "currently logged in" count.
       sessionCount: u._count.sessions,
     }));
+  }
+
+  // One row per service actually in use: how many widgets, how many distinct accounts, and how many
+  // widgets are currently failing (lastError set by the last refresh) with the most recent of those
+  // messages, so the admin console can show which upstream API is struggling right now, and how many
+  // of each of its widgets are in use.
+  async serviceStats() {
+    const widgets = await this.prisma.widgetInstance.findMany({
+      select: { serviceName: true, widgetName: true, userId: true, lastError: true, lastRefreshedAt: true },
+    });
+    const byService = new Map<string, { users: Set<string>; widgets: number; errors: number; lastError: string | null; lastErrorAt: number; types: Map<string, number> }>();
+    for (const w of widgets) {
+      const row = byService.get(w.serviceName) ?? { users: new Set<string>(), widgets: 0, errors: 0, lastError: null, lastErrorAt: -1, types: new Map<string, number>() };
+      row.widgets++;
+      row.users.add(w.userId);
+      row.types.set(w.widgetName, (row.types.get(w.widgetName) ?? 0) + 1);
+      if (w.lastError) {
+        row.errors++;
+        const at = w.lastRefreshedAt?.getTime() ?? 0;
+        if (at >= row.lastErrorAt) {
+          row.lastError = w.lastError;
+          row.lastErrorAt = at;
+        }
+      }
+      byService.set(w.serviceName, row);
+    }
+    return [...byService.entries()]
+      .map(([service, r]) => ({
+        service, widgets: r.widgets, users: r.users.size, errors: r.errors, lastError: r.lastError,
+        // Which of the service's widgets people actually use, most used first
+        types: [...r.types.entries()].map(([widget, count]) => ({ widget, count })).sort((a, b) => b.count - a.count),
+      }))
+      .sort((a, b) => b.widgets - a.widgets);
+  }
+
+  // The user's sessions that are still valid, most recently active first, each named after the browser
+  // and system it was opened from. The session id is never returned: it is the login cookie itself.
+  async listSessions(userId: string) {
+    await this.findUserOrThrow(userId);
+    const sessions = await this.prisma.session.findMany({
+      where: { userId, expiresAt: { gt: new Date() } },
+      orderBy: { lastSeenAt: 'desc' },
+      select: { userAgent: true, createdAt: true, lastSeenAt: true, expiresAt: true },
+    });
+    return sessions.map((s) => ({ ...parseUserAgent(s.userAgent), createdAt: s.createdAt, lastSeenAt: s.lastSeenAt, expiresAt: s.expiresAt }));
+  }
+
+  // The user's widgets as the admin console lists them: what (service + widget + their own title), where
+  // on their dashboard (position: order / cols / rows, to draw a miniature of it), how
+  // often it refreshes, and whether its last refresh worked. Deliberately NOT config or cachedData:
+  // config can hold the user's keys, private feed URLs or custom API headers.
+  async listWidgets(userId: string) {
+    await this.findUserOrThrow(userId);
+    return this.prisma.widgetInstance.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, serviceName: true, widgetName: true, title: true, position: true, refreshRateSeconds: true, lastRefreshedAt: true, lastError: true, shared: true, createdAt: true },
+    });
   }
 
   // Blocks login immediately AND kills every existing session in the same

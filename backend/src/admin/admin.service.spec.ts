@@ -4,7 +4,8 @@ import { AdminService } from './admin.service';
 function makePrismaMock() {
   return {
     user: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn(), delete: jest.fn() },
-    session: { deleteMany: jest.fn() },
+    widgetInstance: { findMany: jest.fn() },
+    session: { deleteMany: jest.fn(), findMany: jest.fn() },
     $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
   };
 }
@@ -24,8 +25,31 @@ describe('AdminService', () => {
     service = new AdminService(prisma as any, mail as any);
   });
 
+  describe('serviceStats', () => {
+    it('groups widgets by service, counts distinct accounts and failing widgets, most used first', async () => {
+      prisma.widgetInstance.findMany.mockResolvedValue([
+        { serviceName: 'weather', widgetName: 'current_weather', userId: 'u1', lastError: null, lastRefreshedAt: new Date('2026-01-01T10:00:00Z') },
+        { serviceName: 'market_data', widgetName: 'price_history', userId: 'u1', lastError: 'HTTP 429', lastRefreshedAt: new Date('2026-01-01T10:00:00Z') },
+        { serviceName: 'market_data', widgetName: 'exchange_rate', userId: 'u2', lastError: 'timeout', lastRefreshedAt: new Date('2026-01-01T11:00:00Z') },
+        { serviceName: 'market_data', widgetName: 'exchange_rate', userId: 'u2', lastError: null, lastRefreshedAt: null },
+      ]);
+
+      const stats = await service.serviceStats();
+
+      expect(stats).toEqual([
+        { service: 'market_data', widgets: 3, users: 2, errors: 2, lastError: 'timeout', types: [{ widget: 'exchange_rate', count: 2 }, { widget: 'price_history', count: 1 }] },
+        { service: 'weather', widgets: 1, users: 1, errors: 0, lastError: null, types: [{ widget: 'current_weather', count: 1 }] },
+      ]);
+    });
+
+    it('returns an empty list when nobody has a widget yet', async () => {
+      prisma.widgetInstance.findMany.mockResolvedValue([]);
+      await expect(service.serviceStats()).resolves.toEqual([]);
+    });
+  });
+
   describe('listUsers', () => {
-    it('flattens Prisma\'s _count into plain fields, never exposing passwordHash', async () => {
+    it('flattens Prisma\'s _count into plain fields and returns the avatar, never exposing passwordHash', async () => {
       prisma.user.findMany.mockResolvedValue([
         {
           id: 'u1',
@@ -38,6 +62,15 @@ describe('AdminService', () => {
           isBanned: false,
           banReason: null,
           createdAt: new Date('2026-01-01'),
+          avatarConfig: { top: 'curly' },
+          avatarPhotoPath: '/uploads/avatars/u1.png',
+          birthDate: new Date('2000-04-12'),
+          lastLoginAt: new Date('2026-02-01'),
+          lastSeenAt: new Date('2026-02-02'),
+          oauthAccounts: [
+            { provider: 'github', profile: { login: 'ada-dev', name: 'Ada' } },
+            { provider: 'google', profile: null },
+          ],
           _count: { widgetInstances: 2, oauthAccounts: 1, sessions: 3 },
         },
       ]);
@@ -55,11 +88,59 @@ describe('AdminService', () => {
           isBanned: false,
           banReason: null,
           createdAt: new Date('2026-01-01'),
+          avatarConfig: { top: 'curly' },
+          avatarPhotoUrl: '/uploads/avatars/u1.png',
+          birthDate: '2000-04-12',
+          zodiac: 'aries',
+          lastLoginAt: new Date('2026-02-01'),
+          lastSeenAt: new Date('2026-02-02'),
           widgetCount: 2,
           linkedAccountsCount: 1,
+          linkedAccounts: [{ provider: 'github', label: 'ada-dev' }, { provider: 'google', label: null }],
           sessionCount: 3,
         },
       ]);
+    });
+  });
+
+  describe('listWidgets', () => {
+    it('lists the user\'s widgets without ever selecting their config or cached data', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u1' });
+      prisma.widgetInstance.findMany.mockResolvedValue([{ id: 'w1', serviceName: 'weather', widgetName: 'current' }]);
+
+      const result = await service.listWidgets('u1');
+
+      const args = prisma.widgetInstance.findMany.mock.calls[0][0];
+      expect(args.where).toEqual({ userId: 'u1' });
+      expect(args.select).not.toHaveProperty('config');
+      expect(args.select).not.toHaveProperty('cachedData');
+      expect(result).toEqual([{ id: 'w1', serviceName: 'weather', widgetName: 'current' }]);
+    });
+
+    it('404s on an unknown user', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      await expect(service.listWidgets('nope')).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('listSessions', () => {
+    it('names each valid session after its browser and system, without ever returning its id', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'u1' });
+      const at = new Date('2026-03-01');
+      prisma.session.findMany.mockResolvedValue([
+        { userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/129.0 Safari/537.36', createdAt: at, lastSeenAt: at, expiresAt: at },
+      ]);
+
+      const result = await service.listSessions('u1');
+
+      expect(prisma.session.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: 'u1', expiresAt: { gt: expect.any(Date) } } }));
+      expect(prisma.session.findMany.mock.calls[0][0].select).not.toHaveProperty('id');
+      expect(result).toEqual([{ browser: 'Chrome', os: 'Linux', createdAt: at, lastSeenAt: at, expiresAt: at }]);
+    });
+
+    it('404s on an unknown user', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      await expect(service.listSessions('nope')).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 

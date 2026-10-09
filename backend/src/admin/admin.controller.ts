@@ -20,6 +20,22 @@ export class AdminController {
     return this.adminService.listUsers();
   }
 
+  @Get(':id/widgets')
+  @ApiOperation({ summary: "A user's widgets: service, widget, title, refresh rate, last refresh and last error (admin only). Never their config or data." })
+  @ApiResponse({ status: 200, description: 'Array of { id, serviceName, widgetName, title, position, refreshRateSeconds, lastRefreshedAt, lastError, shared, createdAt }' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  widgets(@Param('id') id: string) {
+    return this.adminService.listWidgets(id);
+  }
+
+  @Get(':id/sessions')
+  @ApiOperation({ summary: "A user's valid sessions, most recently active first, named by browser and system (admin only). Never returns the session ids." })
+  @ApiResponse({ status: 200, description: 'Array of { browser, os, createdAt, lastSeenAt, expiresAt }' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  sessions(@Param('id') id: string) {
+    return this.adminService.listSessions(id);
+  }
+
   @Patch(':id')
   @ApiOperation({
     summary: "Edit a user's name and/or manually flip emailVerified — not password, not admin/ban status (use the dedicated endpoints for those)",
@@ -64,5 +80,21 @@ export class AdminController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async remove(@CurrentUser() admin: { id: string }, @Param('id') id: string, @Body() body: { reason?: string }) {
     await this.adminService.remove(id, admin.id, body?.reason ?? '');
+  }
+}
+
+@ApiTags('admin')
+@ApiCookieAuth('dashboard_session')
+@Controller('admin/service-stats')
+@UseGuards(SessionGuard, AdminGuard)
+export class AdminServicesController {
+  constructor(private readonly adminService: AdminService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Usage and current health of each service: widgets, distinct accounts, widgets failing right now (admin only)' })
+  @ApiResponse({ status: 200, description: 'Array of { service, widgets, users, errors, lastError }, most used first' })
+  @ApiResponse({ status: 403, description: 'Not an admin' })
+  list() {
+    return this.adminService.serviceStats();
   }
 }
