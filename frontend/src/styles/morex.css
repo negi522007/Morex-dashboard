@@ -1103,3 +1103,8 @@ body.editing .w-empty-acts { visibility: hidden; }
 .del-acts { display: flex; gap: 8px; justify-content: flex-end; }
 .btn-danger.solid { background: #dc2626; border-color: #dc2626; color: #fff; }
 .btn-danger.solid:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Profile → My data: links to the Terms and Privacy pages */
+.pf-legal { margin: 12px 0 0; font-size: 13px; color: rgb(255 255 255 / .55); } .pf-legal a { color: rgb(255 255 255 / .75); text-decoration: underline; text-decoration-color: rgb(255 255 255 / .3); text-underline-offset: 3px; } .pf-legal a:hover { color: #fff; }
+/* Sidebar links: the icon never shrinks, a long label is cut with … instead of overflowing */
+.A nav a svg { flex: none; } .A nav a span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

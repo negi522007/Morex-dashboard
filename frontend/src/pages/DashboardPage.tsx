@@ -164,7 +164,7 @@ export function DashboardPage() {
   return (
     <>
       <div className={`A${collapsed ? ' collapsed' : ''}`}>
-        <Sidebar lang={lang} isAdmin={user?.isAdmin} onToggle={() => setCollapsed((c) => !c)} onProfile={() => setModal('profile')} onAdmin={() => navigate('/admin')} onHelp={() => setModal('help')} onLogout={() => setModal('logout')} />
+        <Sidebar lang={lang} isAdmin={user?.isAdmin} onToggle={() => setCollapsed((c) => !c)} onProfile={() => setModal('profile')} onAdmin={() => navigate('/admin')} onHelp={() => setModal('help')} onLegal={() => navigate('/terms')} onLogout={() => setModal('logout')} />
         <main>
           <Toolbar user={user} lang={lang} theme={theme} skin={skin} onLang={(l) => savePrefs({ language: l })} onTheme={(t) => savePrefs({ theme: t })} onSkin={(s) => savePrefs({ widgetSkin: s })} onOpen={setModal} />
           <Hero user={user} lang={lang} onAvatar={() => setModal('avatar')} onBio={() => setModal('bio')} onJournal={() => setModal('journal')} />

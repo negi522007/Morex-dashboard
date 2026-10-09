@@ -883,6 +883,7 @@
   
   /* Previews: same size for every tile; the card is drawn at its dashboard size then scaled as a whole */
   .dw-pv .shrink { left: 50%; top: calc(50% - 11px); width: var(--w); height: var(--h); transform: translate(-50%, -50%) scale(var(--s)); transform-origin: center; }
+.A nav a svg { flex: none; } .A nav a span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 </style>
 </head>
 <body data-theme="galaxy" data-wskin="glass">
@@ -900,6 +901,7 @@
       <a href="#" data-open-profile><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span data-t="navProfile"></span></a>
     </nav>
     <nav class="bottom">
+      <a href="/terms" target="_blank"><svg class="i" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h4"/></svg><span data-t="navLegal"></span></a>
       <a href="#" data-open-help><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01"/></svg><span data-t="help"></span></a>
       <a href="#" class="danger" data-open-logout><svg class="i" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l-5-5 5-5M5 12h11"/></svg><span data-t="logout"></span></a>
     </nav>
@@ -1295,7 +1297,7 @@ const T = {
   fr: { th_galaxy: 'Galaxie', th_aurora: 'Aurore boréale', th_moon: 'Pleine lune', th_dolphins: 'Dauphins au couchant', th_forest: 'Forêt', th_mystic: 'Rivage mystique', th_ocean: 'Abysses', th_beach: 'Plage tropicale', th_desertNight: 'Nuit au Sahara', th_desertMoon: 'Désert violet', decoLabel: 'Décoration', deco: { none: 'Aucune', flowers: 'Fleurs', balloons: 'Ballons', stars: 'Étoiles', butterflies: 'Papillons', hearts: 'Cœurs', lights: 'Guirlande', clouds: 'Nuages', crown: 'Couronne', bow: 'Nœud', cat: 'Chat' }, wxTitle: 'Météo', wxAddSub: 'Température, pluie, vent, prochaines heures', wxNow: 'Maintenant', wxSunny: 'Ensoleillé', worldTitle: 'Heure du monde', worldSub: 'Qui dort, qui se lève, qui travaille', same: 'même heure', tomorrow: 'demain', yesterday: 'hier', here: 'Ici', lastPage: 'Dernière page : hier', writeToday: 'Écrire aujourd\u2019hui', journal: 'Mon journal', journalPrivate: 'Rien que pour toi', newPage: 'Nouvelle page', howFeel: 'Comment tu te sens ?',
     writeHere: 'Écris ce que tu ressens, personne d\u2019autre ne le lira…', saved: 'Enregistré ✓',
     untitled: 'Page vide',
-    help: 'Aide', logout: 'Déconnexion', myProfile: 'Mon profil', changeAvatar: 'Changer d\u2019avatar',
+    navLegal: 'Infos légales', help: 'Aide', logout: 'Déconnexion', myProfile: 'Mon profil', changeAvatar: 'Changer d\u2019avatar',
     helpTitle: 'Besoin d\u2019aide ?', helpSub: 'Les réponses aux questions les plus fréquentes', helpMore: 'Toujours bloqué·e ? Écris-nous :',
     faq: [['Comment ajouter un widget ?', 'Clique sur la carte « ＋ Ajouter un widget » en bas de ta grille, ou cherche un service dans la barre de recherche.'],
       ['Comment déplacer ou agrandir un widget ?', 'Reste appuyé sur un widget : ils se mettent à trembler. Fais-le glisser pour le déplacer, ou tire la poignée ↘ pour changer sa taille. Clique à côté pour terminer.'],
@@ -1324,7 +1326,7 @@ const T = {
   en: { th_galaxy: 'Galaxy', th_aurora: 'Northern lights', th_moon: 'Full moon', th_dolphins: 'Sunset dolphins', th_forest: 'Forest', th_mystic: 'Mystic shore', th_ocean: 'Deep sea', th_beach: 'Tropical beach', th_desertNight: 'Sahara night', th_desertMoon: 'Purple desert', decoLabel: 'Decoration', deco: { none: 'None', flowers: 'Flowers', balloons: 'Balloons', stars: 'Stars', butterflies: 'Butterflies', hearts: 'Hearts', lights: 'Fairy lights', clouds: 'Clouds', crown: 'Crown', bow: 'Bow', cat: 'Cat' }, wxTitle: 'Weather', wxAddSub: 'Temperature, rain, wind, next hours', wxNow: 'Now', wxSunny: 'Sunny', worldTitle: 'World clock', worldSub: 'Who\u2019s asleep, waking up, working', same: 'same time', tomorrow: 'tomorrow', yesterday: 'yesterday', here: 'Here', lastPage: 'Last page: yesterday', writeToday: 'Write today', journal: 'My journal', journalPrivate: 'Just for you', newPage: 'New page', howFeel: 'How do you feel?',
     writeHere: 'Write what you feel, no one else will read it…', saved: 'Saved ✓',
     untitled: 'Empty page',
-    help: 'Help', logout: 'Log out', myProfile: 'My profile', changeAvatar: 'Change avatar',
+    navLegal: 'Legal', help: 'Help', logout: 'Log out', myProfile: 'My profile', changeAvatar: 'Change avatar',
     helpTitle: 'Need help?', helpSub: 'Answers to the most common questions', helpMore: 'Still stuck? Write to us:',
     faq: [['How do I add a widget?', 'Click the “＋ Add a widget” card at the end of your grid, or search a service in the search bar.'],
       ['How do I move or resize a widget?', 'Press and hold a widget: they start to jiggle. Drag it to move it, or pull the ↘ handle to resize it. Click outside to finish.'],
@@ -1353,7 +1355,7 @@ const T = {
   es: { th_galaxy: 'Galaxia', th_aurora: 'Aurora boreal', th_moon: 'Luna llena', th_dolphins: 'Delfines al atardecer', th_forest: 'Bosque', th_mystic: 'Orilla mística', th_ocean: 'Abismo', th_beach: 'Playa tropical', th_desertNight: 'Noche en el Sahara', th_desertMoon: 'Desierto violeta', decoLabel: 'Decoración', deco: { none: 'Ninguna', flowers: 'Flores', balloons: 'Globos', stars: 'Estrellas', butterflies: 'Mariposas', hearts: 'Corazones', lights: 'Guirnalda', clouds: 'Nubes', crown: 'Corona', bow: 'Lazo', cat: 'Gato' }, wxTitle: 'Tiempo', wxAddSub: 'Temperatura, lluvia, viento, próximas horas', wxNow: 'Ahora', wxSunny: 'Soleado', worldTitle: 'Hora mundial', worldSub: 'Quién duerme, quién despierta, quién trabaja', same: 'misma hora', tomorrow: 'mañana', yesterday: 'ayer', here: 'Aquí', lastPage: 'Última página: ayer', writeToday: 'Escribir hoy', journal: 'Mi diario', journalPrivate: 'Solo para ti', newPage: 'Nueva página', howFeel: '¿Cómo te sientes?',
     writeHere: 'Escribe lo que sientes, nadie más lo leerá…', saved: 'Guardado ✓',
     untitled: 'Página vacía',
-    help: 'Ayuda', logout: 'Cerrar sesión', myProfile: 'Mi perfil', changeAvatar: 'Cambiar avatar',
+    navLegal: 'Aviso legal', help: 'Ayuda', logout: 'Cerrar sesión', myProfile: 'Mi perfil', changeAvatar: 'Cambiar avatar',
     helpTitle: '¿Necesitas ayuda?', helpSub: 'Respuestas a las preguntas más frecuentes', helpMore: '¿Sigues atascado? Escríbenos:',
     faq: [['¿Cómo añado un widget?', 'Haz clic en la tarjeta «＋ Añadir un widget» al final de tu cuadrícula, o busca un servicio en la barra de búsqueda.'],
       ['¿Cómo muevo o cambio el tamaño de un widget?', 'Mantén pulsado un widget: empezarán a temblar. Arrástralo para moverlo o tira del asa ↘ para cambiar su tamaño. Haz clic fuera para terminar.'],

@@ -404,6 +404,9 @@ export function ProfileModal({ user, lang, theme, onClose, onSaved, onLang, onTh
             <a className="soft" href="/auth/me/export" download style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>⬇ <span>{t.export}</span></a>
             <button className="btn-danger" onClick={() => { setDel(!del); setDelErr('') }}>🗑 <span>{t.deleteAcc}</span></button>
           </div>
+          <p className="pf-legal">
+            <a href="/terms" target="_blank" rel="noopener noreferrer">{t.legalTerms}</a> · <a href="/privacy" target="_blank" rel="noopener noreferrer">{t.legalPrivacy}</a>
+          </p>
           {del && <DeleteAccount user={user} lang={lang} onCancel={() => setDel(false)} error={delErr} setError={setDelErr} />}
         </section>
         {error && <p style={{ color: '#fca5a5', fontSize: 13, margin: 0 }}>{error}</p>}
