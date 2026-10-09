@@ -17,7 +17,7 @@ function App() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/help" element={<HelpCenterPage />} />
-      <Route path="/admin" element={<AdminPage />} />
+      <Route path="/admin/:section?" element={<AdminPage />} />
     </Routes>
   )
 }

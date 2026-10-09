@@ -1,256 +1,181 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { api, ApiError } from '../lib/api'
-import { useAuthLang } from '../lib/authLang'
-import { ago } from '../lib/format'
-import type { Lang } from '../lib/i18n'
+import { setAuthLang, useAuthLang } from '../lib/authLang'
+import { LANGS, type Lang } from '../lib/i18n'
 import type { User } from '../lib/types'
+import { avatarSrc } from '../components/morex/Chrome'
+import { AdminOverview } from '../components/admin/AdminOverview'
+import { AdminAccounts } from '../components/admin/AdminAccounts'
+import { AdminServices } from '../components/admin/AdminServices'
+import { AdminModeration } from '../components/admin/AdminModeration'
+import { TEXTS, fullName, type AdminUser, type DialogKind, type Filter, type Section, type ServiceStat } from '../components/admin/shared'
+import '../styles/admin.css'
 
-// Admin console (FRONTEND.md § "Admin console"): the one screen the backend's AdminModule never had.
-// Not required by the brief, built anyway — see README.md.
+// Admin console (FRONTEND.md § "Admin console"), one page per section under /admin/:section, with a
+// fixed sidebar. Data: GET /admin/users and GET /admin/service-stats; actions: PATCH /admin/users/:id
+// (rename, confirm email), PATCH …/ban and …/unban, DELETE /admin/users/:id (a reason is required
+// for ban and delete, the backend emails it to the user).
 
-interface AdminUser {
-  id: string
-  email: string
-  firstName: string | null
-  lastName: string | null
-  emailVerified: boolean
-  isAdmin: boolean
-  isBanned: boolean
-  banReason: string | null
-  createdAt: string
-  widgetCount: number
-  linkedAccountsCount: number
-  sessionCount: number
+const SECTIONS: Section[] = ['overview', 'accounts', 'services', 'moderation']
+const ICONS: Record<Section, React.ReactNode> = {
+  overview: <><circle cx="12" cy="12" r="3.2" fill="currentColor" /><ellipse cx="12" cy="12" rx="9.5" ry="3.6" fill="none" stroke="currentColor" strokeWidth="1.5" transform="rotate(-20 12 12)" /></>,
+  accounts: <><circle cx="7" cy="8" r="2" fill="currentColor" /><circle cx="17" cy="7" r="1.6" fill="currentColor" /><circle cx="13" cy="16" r="2.2" fill="currentColor" /><circle cx="5" cy="17" r="1.3" fill="currentColor" /><path d="M7 8 17 7 13 16 5 17 7 8" fill="none" stroke="currentColor" strokeWidth="1" opacity=".55" /></>,
+  services: <><circle cx="12" cy="12" r="2.6" fill="currentColor" /><circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" opacity=".5" /><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" opacity=".35" /><circle cx="18" cy="12" r="1.5" fill="currentColor" /><circle cx="5.5" cy="7" r="1.3" fill="currentColor" /></>,
+  moderation: <><path d="M12 2.5 19.5 5.5v6c0 4.6-3.2 8.3-7.5 10-4.3-1.7-7.5-5.4-7.5-10v-6Z" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="m12 7.5 1.2 2.6 2.8.3-2.1 1.9.6 2.8-2.5-1.4-2.5 1.4.6-2.8-2.1-1.9 2.8-.3Z" fill="currentColor" /></>,
 }
 
-const T = {
-  fr: {
-    title: 'Administration', back: '← Retour au dashboard', search: 'Rechercher un nom ou un email…',
-    all: 'Tous', unconfirmed: 'Non confirmés', banned: 'Bannis', none: 'Aucun utilisateur',
-    colName: 'Nom', colEmail: 'Email', colStatus: 'Statut', colJoined: 'Inscrit', colCounts: 'Widgets / Comptes liés / Sessions',
-    colActions: 'Actions', badgeUnconfirmed: 'Non confirmé', badgeBanned: 'Banni', badgeAdmin: 'Admin',
-    unconfirmedTip: 'Les comptes non confirmés sont supprimés automatiquement après 24 h',
-    edit: 'Modifier', save: 'Enregistrer', cancel: 'Annuler', confirmEmail: 'Confirmer l’email',
-    ban: 'Bannir', unban: 'Réactiver', delete: 'Supprimer',
-    confirmBan: (n: string) => `Bannir ${n} ? Ses sessions seront fermées immédiatement et il/elle reçoit un email avec le motif.`,
-    confirmUnban: (n: string) => `Réactiver ${n} ? Un email de confirmation lui sera envoyé.`,
-    banReasonPrompt: 'Motif (envoyé par email à l’utilisateur) :', banReasonPlaceholder: 'Ex. : spam, abus, contenu interdit…',
-    deletePrompt: (e: string) => `Suppression définitive. Tape l’email pour confirmer : ${e}`,
-    deleteWarn: 'Widgets, journal, comptes liés — tout part avec, pour de bon. Un email avec le motif lui sera envoyé avant.',
-    confirm: 'Confirmer', loading: 'Chargement…', error: 'Une erreur est survenue', firstName: 'Prénom', lastName: 'Nom',
-  },
-  en: {
-    title: 'Admin', back: '← Back to dashboard', search: 'Search a name or email…',
-    all: 'All', unconfirmed: 'Unconfirmed', banned: 'Banned', none: 'No users',
-    colName: 'Name', colEmail: 'Email', colStatus: 'Status', colJoined: 'Joined', colCounts: 'Widgets / Linked accounts / Sessions',
-    colActions: 'Actions', badgeUnconfirmed: 'Unconfirmed', badgeBanned: 'Banned', badgeAdmin: 'Admin',
-    unconfirmedTip: 'Unconfirmed accounts are deleted automatically after 24 h',
-    edit: 'Edit', save: 'Save', cancel: 'Cancel', confirmEmail: 'Confirm email',
-    ban: 'Ban', unban: 'Unban', delete: 'Delete',
-    confirmBan: (n: string) => `Ban ${n}? Their sessions will end immediately and they'll get an email with the reason.`,
-    confirmUnban: (n: string) => `Unban ${n}? A confirmation email will be sent to them.`,
-    banReasonPrompt: 'Reason (emailed to the user):', banReasonPlaceholder: 'e.g. spam, abuse, prohibited content…',
-    deletePrompt: (e: string) => `Permanent deletion. Type the email to confirm: ${e}`,
-    deleteWarn: "Widgets, journal, linked accounts — all of it goes too, for good. They'll get an email with the reason first.",
-    confirm: 'Confirm', loading: 'Loading…', error: 'Something went wrong', firstName: 'First name', lastName: 'Last name',
-  },
-  es: {
-    title: 'Administración', back: '← Volver al panel', search: 'Buscar un nombre o email…',
-    all: 'Todos', unconfirmed: 'No confirmados', banned: 'Suspendidos', none: 'Sin usuarios',
-    colName: 'Nombre', colEmail: 'Email', colStatus: 'Estado', colJoined: 'Registrado', colCounts: 'Widgets / Cuentas vinculadas / Sesiones',
-    colActions: 'Acciones', badgeUnconfirmed: 'No confirmado', badgeBanned: 'Suspendido', badgeAdmin: 'Admin',
-    unconfirmedTip: 'Las cuentas no confirmadas se eliminan automáticamente tras 24 h',
-    edit: 'Editar', save: 'Guardar', cancel: 'Cancelar', confirmEmail: 'Confirmar email',
-    ban: 'Suspender', unban: 'Reactivar', delete: 'Eliminar',
-    confirmBan: (n: string) => `¿Suspender a ${n}? Sus sesiones terminarán de inmediato y recibirá un email con el motivo.`,
-    confirmUnban: (n: string) => `¿Reactivar a ${n}? Se le enviará un email de confirmación.`,
-    banReasonPrompt: 'Motivo (enviado por email al usuario):', banReasonPlaceholder: 'Ej.: spam, abuso, contenido prohibido…',
-    deletePrompt: (e: string) => `Eliminación definitiva. Escribe el email para confirmar: ${e}`,
-    deleteWarn: 'Widgets, diario, cuentas vinculadas: todo desaparece, para siempre. Antes se le enviará un email con el motivo.',
-    confirm: 'Confirmar', loading: 'Cargando…', error: 'Algo salió mal', firstName: 'Nombre', lastName: 'Apellido',
-  },
-} satisfies Record<Lang, Record<string, string | ((s: string) => string)>>
-
-function fold(s: string) {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-}
+interface Dialog { kind: DialogKind; targets: AdminUser[] }
 
 export function AdminPage() {
   const navigate = useNavigate()
-  const lang = useAuthLang()
-  const t = T[lang] as (typeof T)['en']
+  const { section: raw } = useParams()
+  const section: Section = SECTIONS.includes(raw as Section) ? (raw as Section) : 'overview'
+  const authLang = useAuthLang()
   const [me, setMe] = useState<User | null>(null)
+  const lang: Lang = me && LANGS.includes(me.language as Lang) ? (me.language as Lang) : authLang
+  const t = TEXTS[lang]
   const [users, setUsers] = useState<AdminUser[] | null>(null)
-  const [error, setError] = useState('')
-  const [q, setQ] = useState('')
-  const [filter, setFilter] = useState<'all' | 'unconfirmed' | 'banned'>('all')
-  const [editing, setEditing] = useState<string | null>(null)
-  const [editValues, setEditValues] = useState({ firstName: '', lastName: '' })
-  const [confirming, setConfirming] = useState<{ id: string; kind: 'ban' | 'unban' | 'delete' } | null>(null)
-  const [deleteTyped, setDeleteTyped] = useState('')
-  const [deleteReasonInput, setDeleteReasonInput] = useState('')
-  const [banReasonInput, setBanReasonInput] = useState('')
-  const [busy, setBusy] = useState<string | null>(null)
+  const [services, setServices] = useState<ServiceStat[]>([])
+  const [filter, setFilter] = useState<Filter>('all')
+  const [dialog, setDialog] = useState<Dialog | null>(null)
+  const [reason, setReason] = useState('')
+  const [typed, setTyped] = useState('')
+  const [names, setNames] = useState({ firstName: '', lastName: '' })
+  const [busy, setBusy] = useState(false)
+  const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
+  // Folded sidebar (icons only), remembered for the next visit like a per-viewer preference
+  const [folded, setFolded] = useState(() => { try { return localStorage.getItem('morex.admin.folded') === '1' } catch { return false } })
+  const toggleFold = () => setFolded((f) => { try { localStorage.setItem('morex.admin.folded', f ? '0' : '1') } catch { /* not remembered */ } return !f })
 
-  const load = () => api.get<AdminUser[]>('/admin/users').then(setUsers).catch((e) => setError(e instanceof ApiError ? e.message : t.error))
+  const say = useCallback((text: string, bad = false) => {
+    setToast({ text, bad })
+    window.setTimeout(() => setToast((cur) => (cur?.text === text ? null : cur)), 3500)
+  }, [])
+  const load = useCallback(() => Promise.all([
+    api.get<AdminUser[]>('/admin/users').then(setUsers),
+    api.get<ServiceStat[]>('/admin/service-stats').then(setServices),
+  ]).catch((e) => say(e instanceof ApiError ? e.message : TEXTS[lang].error, true)), [lang, say])
 
   useEffect(() => {
     api.get<User>('/auth/me').then((u) => {
-      setMe(u)
       if (!u.isAdmin) { navigate('/dashboard', { replace: true }); return }
-      load()
+      setMe(u)
     }).catch(() => navigate('/login', { replace: true }))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [navigate])
+  // Loaded on arrival, then refreshed every 30 s so changes made elsewhere (a new sign-up, an avatar
+  // edited on the dashboard, a widget failing) show up without reloading the page
+  useEffect(() => {
+    if (!me) return
+    load()
+    const id = setInterval(load, 30_000)
+    return () => clearInterval(id)
+  }, [me?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const needle = fold(q.trim())
-  const filtered = useMemo(() => {
-    if (!users) return []
-    return users
-      .filter((u) => (filter === 'unconfirmed' ? !u.emailVerified : filter === 'banned' ? u.isBanned : true))
-      .filter((u) => !needle || fold(`${u.firstName ?? ''} ${u.lastName ?? ''} ${u.email}`).includes(needle))
-  }, [users, filter, needle])
+  // Same page look as the dashboard: the account's own theme picture behind everything
+  useEffect(() => {
+    document.body.classList.add('morex')
+    return () => { document.body.classList.remove('morex'); delete document.body.dataset.theme }
+  }, [])
+  useEffect(() => { if (me) document.body.dataset.theme = me.theme }, [me])
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && setDialog(null); addEventListener('keydown', k); return () => removeEventListener('keydown', k) }, [])
 
-  async function act<T>(id: string, fn: () => Promise<T>) {
-    setBusy(id); setError('')
-    try { await fn(); await load() } catch (e) { setError(e instanceof ApiError ? e.message : t.error) } finally { setBusy(null); setConfirming(null); setDeleteTyped(''); setDeleteReasonInput(''); setBanReasonInput('') }
+  // Same as the dashboard's language menu: saved on the account, and remembered for the login page
+  const changeLang = (l: Lang) => {
+    setMe((u) => (u ? { ...u, language: l } : u))
+    setAuthLang(l)
+    api.patch('/auth/me', { language: l }).catch(() => {})
+  }
+  const go = (s: Section, f?: Filter) => { if (f) setFilter(f); navigate(s === 'overview' ? '/admin' : `/admin/${s}`); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const open = (kind: DialogKind, u: AdminUser) => { setDialog({ kind, targets: [u] }); setReason(''); setTyped(''); setNames({ firstName: u.firstName ?? '', lastName: u.lastName ?? '' }) }
+
+  async function run(fn: () => Promise<unknown>, done: string) {
+    setBusy(true)
+    try { await fn(); say(done); setDialog(null) } catch (e) { say(e instanceof ApiError ? e.message : t.error, true) } finally { setBusy(false); load() }
+  }
+  const confirmEmails = (us: AdminUser[]) => run(() => Promise.all(us.map((u) => api.patch(`/admin/users/${u.id}`, { emailVerified: true }))), t.done.confirm)
+  function submit() {
+    if (!dialog) return
+    const { kind, targets } = dialog, r = reason.trim()
+    if (kind === 'ban') run(() => Promise.all(targets.map((u) => api.patch(`/admin/users/${u.id}/ban`, { reason: r }))), t.done.ban)
+    if (kind === 'unban') run(() => api.patch(`/admin/users/${targets[0].id}/unban`, {}), t.done.unban)
+    if (kind === 'delete') run(() => api.del(`/admin/users/${targets[0].id}`, { reason: r }), t.done.delete)
+    if (kind === 'rename') run(() => api.patch(`/admin/users/${targets[0].id}`, { firstName: names.firstName, lastName: names.lastName }), t.done.rename)
   }
 
-  const name = (u: AdminUser) => [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email
+  if (!me) return <div className="adm-loading">{t.loading}</div>
 
-  if (!me) return <div className="min-h-screen bg-slate-950 px-4 py-10 font-sans text-white">{t.loading}</div>
+  const target = dialog?.targets[0]
+  const canSubmit = !busy && dialog && (
+    dialog.kind === 'unban' ||
+    (dialog.kind === 'ban' && !!reason.trim()) ||
+    (dialog.kind === 'delete' && !!reason.trim() && typed.trim().toLowerCase() === target?.email.toLowerCase()) ||
+    (dialog.kind === 'rename' && !!names.firstName.trim() && !!names.lastName.trim()))
 
   return (
-    <div className="min-h-screen bg-slate-950 px-4 py-10 font-sans text-white">
-      <main className="mx-auto max-w-6xl">
-        <a href="/dashboard" onClick={(e) => { e.preventDefault(); navigate('/dashboard') }} className="text-sm text-white/60 underline decoration-white/30 hover:text-white">{t.back}</a>
-        <h1 className="mt-4 mb-6 text-3xl font-bold">{t.title}</h1>
+    <div className={`adm${folded ? ' folded' : ''}`}>
+      <aside className="adm-glass adm-side">
+        <div className="adm-brand">
+          <img src="/logo.svg" alt="" />
+          <span className="adm-label-txt">Morex<small>{t.brand}</small></span>
+          <button className="adm-fold" onClick={toggleFold} aria-label="Menu" title="Menu"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+        </div>
+        {SECTIONS.map((s) => (
+          <button key={s} className={section === s ? 'on' : ''} onClick={() => go(s)} title={t.nav[s]}>
+            <span><svg viewBox="0 0 24 24">{ICONS[s]}</svg><span className="adm-label-txt">{t.nav[s]}</span></span>
+          </button>
+        ))}
+        <div className="adm-me"><img src={avatarSrc(me)} alt="" /><div className="adm-label-txt"><b>{me.firstName || me.email}</b><small>{t.role}</small></div></div>
+        <a className="adm-back" href="/dashboard" title={t.back} onClick={(e) => { e.preventDefault(); navigate('/dashboard') }}><span aria-hidden>←</span><span className="adm-label-txt">{t.back.replace(/^←\s*/, '')}</span></a>
+      </aside>
 
-        <div className="mb-5 flex flex-wrap items-center gap-3">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.search}
-            className="min-w-[240px] flex-1 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm text-white placeholder-white/50 focus:border-white/50 focus:outline-none" />
-          <div className="flex gap-1 rounded-full border border-white/15 bg-white/5 p-1">
-            {(['all', 'unconfirmed', 'banned'] as const).map((f) => (
-              <button key={f} type="button" onClick={() => setFilter(f)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${filter === f ? 'bg-white text-slate-950' : 'text-white/70 hover:text-white'}`}>
-                {f === 'all' ? t.all : f === 'unconfirmed' ? t.unconfirmed : t.banned}
-              </button>
-            ))}
+      <main className="adm-main">
+        <div className="adm-crumb">
+          <div className="adm-langs" role="group" aria-label="Language">
+            {LANGS.map((l) => <button key={l} className={lang === l ? 'on' : ''} onClick={() => changeLang(l)}>{l.toUpperCase()}</button>)}
           </div>
         </div>
-
-        {error && <p className="mb-4 rounded-xl bg-red-500/15 px-4 py-2.5 text-sm text-red-200">{error}</p>}
-
-        {!users ? (
-          <p className="text-white/60">{t.loading}</p>
-        ) : filtered.length === 0 ? (
-          <p className="text-white/50">{t.none}</p>
-        ) : (
-          <div className="overflow-x-auto rounded-2xl border border-white/10">
-            <table className="w-full min-w-[820px] text-left text-sm">
-              <thead className="bg-white/5 text-xs uppercase tracking-wide text-white/50">
-                <tr>
-                  <th className="px-4 py-3 font-medium">{t.colName}</th>
-                  <th className="px-4 py-3 font-medium">{t.colEmail}</th>
-                  <th className="px-4 py-3 font-medium">{t.colStatus}</th>
-                  <th className="px-4 py-3 font-medium">{t.colJoined}</th>
-                  <th className="px-4 py-3 font-medium">{t.colCounts}</th>
-                  <th className="px-4 py-3 font-medium">{t.colActions}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((u) => {
-                  const isSelf = u.id === me.id
-                  const locked = isSelf || u.isAdmin // can't ban/delete yourself or another admin
-                  return (
-                    <tr key={u.id} className="border-t border-white/10 align-top">
-                      <td className="px-4 py-3">
-                        {editing === u.id ? (
-                          <div className="flex flex-col gap-1.5">
-                            <input value={editValues.firstName} onChange={(e) => setEditValues((v) => ({ ...v, firstName: e.target.value }))}
-                              placeholder={t.firstName} className="rounded-lg border border-white/20 bg-white/10 px-2 py-1 text-sm" />
-                            <input value={editValues.lastName} onChange={(e) => setEditValues((v) => ({ ...v, lastName: e.target.value }))}
-                              placeholder={t.lastName} className="rounded-lg border border-white/20 bg-white/10 px-2 py-1 text-sm" />
-                            <div className="flex gap-2">
-                              <button onClick={() => act(u.id, () => api.patch(`/admin/users/${u.id}`, editValues))} disabled={busy === u.id}
-                                className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-950">{t.save}</button>
-                              <button onClick={() => setEditing(null)} className="rounded-full border border-white/25 px-3 py-1 text-xs">{t.cancel}</button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button onClick={() => { setEditing(u.id); setEditValues({ firstName: u.firstName ?? '', lastName: u.lastName ?? '' }) }}
-                            className="text-left hover:underline">{name(u)}</button>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-white/80">{u.email}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1.5">
-                          {!u.emailVerified && <span title={t.unconfirmedTip} className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-200">{t.badgeUnconfirmed}</span>}
-                          {u.isBanned && <span title={u.banReason ?? undefined} className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs text-red-200">{t.badgeBanned}{u.banReason ? `: ${u.banReason}` : ''}</span>}
-                          {u.isAdmin && <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-200">{t.badgeAdmin}</span>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-white/70">{ago(u.createdAt, lang)}</td>
-                      <td className="px-4 py-3 text-white/70">{u.widgetCount} / {u.linkedAccountsCount} / {u.sessionCount}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1.5">
-                          {!u.emailVerified && (
-                            <button disabled={busy === u.id} onClick={() => act(u.id, () => api.patch(`/admin/users/${u.id}`, { emailVerified: true }))}
-                              className="rounded-full border border-white/20 px-2.5 py-1 text-xs hover:bg-white/10">{t.confirmEmail}</button>
-                          )}
-                          {!locked && confirming?.id === u.id && confirming.kind === 'ban' && !u.isBanned ? (
-                            <span className="flex flex-col gap-1 rounded-xl bg-white/10 p-2 text-xs">
-                              <span>{t.confirmBan(name(u))}</span>
-                              <span>{t.banReasonPrompt}</span>
-                              <input value={banReasonInput} onChange={(e) => setBanReasonInput(e.target.value)} placeholder={t.banReasonPlaceholder}
-                                className="rounded-lg border border-white/20 bg-white/10 px-2 py-1" />
-                              <span className="flex gap-2">
-                                <button disabled={busy === u.id || !banReasonInput.trim()}
-                                  onClick={() => act(u.id, () => api.patch(`/admin/users/${u.id}/ban`, { reason: banReasonInput.trim() }))}
-                                  className="rounded-full bg-white px-3 py-1 font-semibold text-slate-950 disabled:opacity-40">{t.confirm}</button>
-                                <button onClick={() => { setConfirming(null); setBanReasonInput('') }} className="rounded-full border border-white/25 px-3 py-1">{t.cancel}</button>
-                              </span>
-                            </span>
-                          ) : !locked && confirming?.id === u.id && confirming.kind === 'unban' && u.isBanned ? (
-                            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-2 py-1 text-xs">
-                              {t.confirmUnban(name(u))}
-                              <button disabled={busy === u.id} onClick={() => act(u.id, () => api.patch(`/admin/users/${u.id}/unban`, {}))} className="font-semibold underline">{t.confirm}</button>
-                              <button onClick={() => setConfirming(null)}>{t.cancel}</button>
-                            </span>
-                          ) : !locked ? (
-                            <button onClick={() => { setConfirming({ id: u.id, kind: u.isBanned ? 'unban' : 'ban' }); setBanReasonInput('') }}
-                              className="rounded-full border border-white/20 px-2.5 py-1 text-xs hover:bg-white/10">{u.isBanned ? t.unban : t.ban}</button>
-                          ) : null}
-                          {!locked && confirming?.id === u.id && confirming.kind === 'delete' ? (
-                            <span className="flex flex-col gap-1 rounded-xl bg-red-500/10 p-2 text-xs">
-                              <span>{t.deletePrompt(u.email)}</span>
-                              <span className="text-red-200/80">{t.deleteWarn}</span>
-                              <span>{t.banReasonPrompt}</span>
-                              <input value={deleteReasonInput} onChange={(e) => setDeleteReasonInput(e.target.value)} placeholder={t.banReasonPlaceholder}
-                                className="rounded-lg border border-white/20 bg-white/10 px-2 py-1" />
-                              <input value={deleteTyped} onChange={(e) => setDeleteTyped(e.target.value)} placeholder={u.email}
-                                className="rounded-lg border border-white/20 bg-white/10 px-2 py-1" />
-                              <span className="flex gap-2">
-                                <button disabled={busy === u.id || deleteTyped.trim().toLowerCase() !== u.email.toLowerCase() || !deleteReasonInput.trim()}
-                                  onClick={() => act(u.id, () => api.del(`/admin/users/${u.id}`, { reason: deleteReasonInput.trim() }))}
-                                  className="rounded-full bg-red-500 px-3 py-1 font-semibold text-white disabled:opacity-40">{t.confirm}</button>
-                                <button onClick={() => { setConfirming(null); setDeleteTyped(''); setDeleteReasonInput('') }} className="rounded-full border border-white/25 px-3 py-1">{t.cancel}</button>
-                              </span>
-                            </span>
-                          ) : !locked ? (
-                            <button onClick={() => { setConfirming({ id: u.id, kind: 'delete' }); setDeleteTyped(''); setDeleteReasonInput('') }}
-                              className="rounded-full border border-red-400/40 px-2.5 py-1 text-xs text-red-300 hover:bg-red-500/10">{t.delete}</button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+        {!users ? <div className="adm-glass adm-card adm-empty">{t.loading}</div> : (
+          <div className="adm-page" key={section}>
+            {section === 'overview' && <AdminOverview me={me} users={users} services={services} t={t} lang={lang} go={go} />}
+            {section === 'accounts' && <AdminAccounts meId={me.id} users={users} t={t} lang={lang} filter={filter} setFilter={setFilter} busy={busy} open={open} confirmEmails={confirmEmails} />}
+            {section === 'services' && <AdminServices services={services} t={t} lang={lang} />}
+            {section === 'moderation' && <AdminModeration meId={me.id} users={users} t={t} busy={busy} open={open} confirmEmails={confirmEmails} />}
           </div>
         )}
       </main>
+
+      {dialog && target && (
+        <div className="adm-dlg" onClick={(e) => e.target === e.currentTarget && setDialog(null)}>
+          <div className="adm-glass adm-dlg-box" role="dialog" aria-modal="true">
+            <h3>{dialog.kind === 'ban' ? (dialog.targets.length > 1 ? t.dBanMany(dialog.targets.length) : t.dBan(fullName(target)))
+              : dialog.kind === 'unban' ? t.dUnban(fullName(target)) : dialog.kind === 'delete' ? t.dDelete(fullName(target)) : t.dRename(fullName(target))}</h3>
+            {dialog.kind !== 'rename' && <p className="adm-muted">{dialog.kind === 'ban' ? t.dBanWhat : dialog.kind === 'unban' ? t.dUnbanWhat : t.dDeleteWhat}</p>}
+            {(dialog.kind === 'ban' || dialog.kind === 'delete') && (
+              <>
+                <label className="adm-label">{t.reason}</label>
+                <div className="adm-presets">{t.presets.map((p) => <button key={p} className={`adm-chip ${reason === p ? 'on' : ''}`} onClick={() => setReason(p)}>{p}</button>)}</div>
+                <textarea className="adm-input" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} autoFocus />
+                {reason.trim() && <div className="adm-mail"><small>✉ {t.preview}</small>{dialog.kind === 'ban' ? t.mailBan(reason.trim()) : t.mailDelete(reason.trim())}</div>}
+              </>
+            )}
+            {dialog.kind === 'delete' && <><label className="adm-label">{t.typeEmail(target.email)}</label><input className="adm-input" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={target.email} /></>}
+            {dialog.kind === 'rename' && (
+              <div className="adm-names">
+                <label><span className="adm-label">{t.firstName}</span><input className="adm-input" value={names.firstName} onChange={(e) => setNames((n) => ({ ...n, firstName: e.target.value }))} autoFocus /></label>
+                <label><span className="adm-label">{t.lastName}</span><input className="adm-input" value={names.lastName} onChange={(e) => setNames((n) => ({ ...n, lastName: e.target.value }))} /></label>
+              </div>
+            )}
+            <div className="adm-dlg-acts">
+              <button className="adm-btn" onClick={() => setDialog(null)}>{t.cancel}</button>
+              <button className={`adm-btn ${dialog.kind === 'ban' || dialog.kind === 'delete' ? 'red' : 'primary'}`} disabled={!canSubmit} onClick={submit}>
+                {dialog.kind === 'rename' ? t.save : t.go}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {toast && <div className={`adm-toast ${toast.bad ? 'bad' : ''}`}>{toast.text}</div>}
     </div>
   )
 }
