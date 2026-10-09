@@ -10,12 +10,12 @@ function makeContext(cookies: Record<string, string>) {
 }
 
 describe('SessionGuard', () => {
-  let authService: { getUserBySession: jest.Mock };
+  let authService: { getUserBySession: jest.Mock; touchSession: jest.Mock };
   let config: { get: jest.Mock };
   let guard: SessionGuard;
 
   beforeEach(() => {
-    authService = { getUserBySession: jest.fn() };
+    authService = { getUserBySession: jest.fn(), touchSession: jest.fn().mockResolvedValue(undefined) };
     config = { get: jest.fn().mockReturnValue('dashboard_session') };
     guard = new SessionGuard(authService as any, config as any);
   });
@@ -39,6 +39,22 @@ describe('SessionGuard', () => {
 
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
     expect(ctx._req.user).toEqual(user);
+  });
+
+  it('records the session\'s browser and activity without waiting for it', async () => {
+    authService.getUserBySession.mockResolvedValue({ id: 'user-1', email: 'a@example.com' });
+    const ctx = makeContext({ dashboard_session: 'valid-id' });
+    ctx._req.headers = { 'user-agent': 'Mozilla/5.0 Firefox/130.0' };
+
+    await guard.canActivate(ctx);
+    expect(authService.touchSession).toHaveBeenCalledWith('valid-id', 'Mozilla/5.0 Firefox/130.0');
+  });
+
+  it('still lets the request through when recording the activity fails', async () => {
+    authService.getUserBySession.mockResolvedValue({ id: 'user-1', email: 'a@example.com' });
+    authService.touchSession.mockRejectedValue(new Error('db down'));
+
+    await expect(guard.canActivate(makeContext({ dashboard_session: 'valid-id' }))).resolves.toBe(true);
   });
 
   it('uses the configured cookie name, not a hardcoded one', async () => {

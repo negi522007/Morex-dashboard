@@ -32,6 +32,11 @@ interface GithubProfile {
   name: string | null;
 }
 
+// The non-secret name of a linked account, kept in OAuthAccount.profile so admins (and the user) can see
+// which GitHub / Google account it is
+const githubLabel = (p: GithubProfile) => ({ login: p.login, name: p.name });
+const googleLabel = (p: GoogleProfile) => ({ email: p.email, name: p.name ?? null });
+
 interface GithubEmail {
   email: string;
   primary: boolean;
@@ -61,6 +66,8 @@ const REJECT_BLOCK_MS = 24 * 60 * 60 * 1000;
 // How long to wait before an unconfirmed address may sign up again.
 const RESIGNUP_COOLDOWN_MS = 2 * 60 * 1000;
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// How often a session's / user's lastSeenAt is refreshed at most (see touchSession)
+const TOUCH_EVERY_MS = 5 * 60 * 1000;
 
 // The mockup's own option sets (mockups.html's [data-theme]/T dictionaries) —
 // validated server-side so a bad value can't get stored and silently break
@@ -347,11 +354,11 @@ export class AuthService {
     if (existing) {
       await this.prisma.oAuthAccount.update({
         where: { id: existing.id },
-        data: { accessTokenEncrypted },
+        data: { accessTokenEncrypted, profile: githubLabel(profile) },
       });
     } else {
       await this.prisma.oAuthAccount.create({
-        data: { provider: 'github', providerAccountId, userId, accessTokenEncrypted },
+        data: { provider: 'github', providerAccountId, userId, accessTokenEncrypted, profile: githubLabel(profile) },
       });
     }
   }
@@ -450,7 +457,7 @@ export class AuthService {
       user = existingAccount.user;
       await this.prisma.oAuthAccount.update({
         where: { id: existingAccount.id },
-        data: { accessTokenEncrypted },
+        data: { accessTokenEncrypted, profile: githubLabel(profile) },
       });
     } else {
       const verifiedEmail = await this.fetchVerifiedGithubEmail(accessToken);
@@ -479,7 +486,7 @@ export class AuthService {
       }
 
       await this.prisma.oAuthAccount.create({
-        data: { provider: 'github', providerAccountId, userId: user.id, accessTokenEncrypted },
+        data: { provider: 'github', providerAccountId, userId: user.id, accessTokenEncrypted, profile: githubLabel(profile) },
       });
     }
 
@@ -505,7 +512,28 @@ export class AuthService {
     return toPublicUser(session.user);
   }
 
-  // Used only by GET /auth/me: the frontend has no other way to know
+  // Called by SessionGuard on every authenticated request, but only writes when it matters: the
+  // session's first request (records its browser, and counts as the user's latest login) and then at
+  // most once every 5 minutes (last activity), so normal browsing doesn't write to the database on
+  // every click. Feeds the admin console's "last seen" and its list of sessions.
+  async touchSession(sessionId: string, userAgent: string | undefined): Promise<void> {
+    const now = new Date();
+    const ua = (userAgent ?? '').slice(0, 400);
+    const first = await this.prisma.session.updateMany({ where: { id: sessionId, userAgent: null }, data: { userAgent: ua, lastSeenAt: now } });
+    if (first.count) {
+      await this.prisma.user.updateMany({ where: { sessions: { some: { id: sessionId } } }, data: { lastLoginAt: now, lastSeenAt: now } });
+      return;
+    }
+    const later = await this.prisma.session.updateMany({
+      where: { id: sessionId, lastSeenAt: { lt: new Date(now.getTime() - TOUCH_EVERY_MS) } },
+      data: { lastSeenAt: now },
+    });
+    if (later.count) {
+      await this.prisma.user.updateMany({ where: { sessions: { some: { id: sessionId } } }, data: { lastSeenAt: now } });
+    }
+  }
+
+
   // whether the current user has a GitHub account linked (needed to show
   // "Link" vs "Unlink" instead of always "Link"). Not folded into
   // toPublicUser/PublicUser itself, since register/login/getUserBySession
@@ -583,11 +611,11 @@ export class AuthService {
     if (existing) {
       await this.prisma.oAuthAccount.update({
         where: { id: existing.id },
-        data: { accessTokenEncrypted },
+        data: { accessTokenEncrypted, profile: googleLabel(profile) },
       });
     } else {
       await this.prisma.oAuthAccount.create({
-        data: { provider: 'google', providerAccountId, userId, accessTokenEncrypted },
+        data: { provider: 'google', providerAccountId, userId, accessTokenEncrypted, profile: googleLabel(profile) },
       });
     }
   }
@@ -656,7 +684,7 @@ export class AuthService {
       user = existingAccount.user;
       await this.prisma.oAuthAccount.update({
         where: { id: existingAccount.id },
-        data: { accessTokenEncrypted },
+        data: { accessTokenEncrypted, profile: googleLabel(profile) },
       });
     } else {
       if (!profile.email_verified) {
@@ -687,7 +715,7 @@ export class AuthService {
       }
 
       await this.prisma.oAuthAccount.create({
-        data: { provider: 'google', providerAccountId, userId: user.id, accessTokenEncrypted },
+        data: { provider: 'google', providerAccountId, userId: user.id, accessTokenEncrypted, profile: googleLabel(profile) },
       });
     }
 

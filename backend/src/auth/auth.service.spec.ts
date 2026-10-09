@@ -12,10 +12,10 @@ import { encryptToken } from '../common/token-encryption.util';
 
 function makePrismaMock() {
   return {
-    user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+    user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn(), updateMany: jest.fn() },
     emailVerificationToken: { create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
     blockedEmail: { findUnique: jest.fn().mockResolvedValue(null), upsert: jest.fn() },
-    session: { create: jest.fn(), deleteMany: jest.fn(), findUnique: jest.fn() },
+    session: { create: jest.fn(), deleteMany: jest.fn(), findUnique: jest.fn(), updateMany: jest.fn() },
     oAuthAccount: { findUnique: jest.fn(), findFirst: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     widgetInstance: { updateMany: jest.fn() },
     $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
@@ -329,6 +329,43 @@ describe('AuthService', () => {
         user: { id: 'user-1', email: 'a@example.com' },
       });
       await expect(service.getUserBySession('valid')).resolves.toEqual({ id: 'user-1', email: 'a@example.com', birthDate: null, zodiac: null });
+    });
+  });
+
+  describe('touchSession', () => {
+    it('on the session\'s first request, records the browser and counts it as the latest login', async () => {
+      prisma.session.updateMany.mockResolvedValueOnce({ count: 1 });
+
+      await service.touchSession('s1', 'Mozilla/5.0 Firefox/130.0');
+
+      expect(prisma.session.updateMany).toHaveBeenCalledTimes(1);
+      expect(prisma.session.updateMany).toHaveBeenCalledWith({
+        where: { id: 's1', userAgent: null },
+        data: { userAgent: 'Mozilla/5.0 Firefox/130.0', lastSeenAt: expect.any(Date) },
+      });
+      expect(prisma.user.updateMany).toHaveBeenCalledWith({
+        where: { sessions: { some: { id: 's1' } } },
+        data: { lastLoginAt: expect.any(Date), lastSeenAt: expect.any(Date) },
+      });
+    });
+
+    it('afterwards only refreshes the activity when the last one is more than 5 minutes old', async () => {
+      prisma.session.updateMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 });
+
+      await service.touchSession('s1', 'ua');
+
+      const second = prisma.session.updateMany.mock.calls[1][0];
+      expect(second.where.id).toBe('s1');
+      expect(Date.now() - second.where.lastSeenAt.lt.getTime()).toBeGreaterThanOrEqual(5 * 60 * 1000 - 1000);
+      expect(prisma.user.updateMany).toHaveBeenCalledWith({ where: { sessions: { some: { id: 's1' } } }, data: { lastSeenAt: expect.any(Date) } });
+    });
+
+    it('writes nothing to the user when the session was touched recently', async () => {
+      prisma.session.updateMany.mockResolvedValue({ count: 0 });
+
+      await service.touchSession('s1', 'ua');
+
+      expect(prisma.user.updateMany).not.toHaveBeenCalled();
     });
   });
 

@@ -24,6 +24,9 @@ export class SessionGuard implements CanActivate {
       throw new UnauthorizedException('Session expired or invalid');
     }
 
+    // Last activity / browser for the admin console. Never blocks or fails the request
+    void this.authService.touchSession(sessionId, req.headers?.['user-agent']).catch(() => undefined);
+
     (req as Request & { user: typeof user }).user = user;
     return true;
   }
