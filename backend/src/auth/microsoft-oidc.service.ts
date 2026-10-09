@@ -7,7 +7,12 @@ import type { OidcFlow } from './oidc-controller.factory';
 const META_TTL_MS = 60 * 60 * 1000;
 const PROVIDER = 'microsoft';
 const LABEL = 'Microsoft';
-const DEFAULT_DOMAIN = 'epitech.eu';
+// Any real Microsoft Entra ID tenant's v2.0 issuer looks like this, with a genuine tenant GUID in the
+// middle (the fixed GUID 9188040d-6c67-4c5b-b112-36a304b66dad is Microsoft's own well-known tenant for
+// personal Microsoft accounts, and also matches here) — checked instead of one fixed string precisely
+// because this integration no longer pins to a single organisation. See loadMeta()'s comment for why the
+// "common" discovery document's own `issuer` field can't be compared directly.
+const ISSUER_PATTERN = /^https:\/\/login\.microsoftonline\.com\/[0-9a-f-]{36}\/v2\.0$/i;
 
 interface Discovery {
   issuer: string;
@@ -31,16 +36,22 @@ export interface MicrosoftProfile {
   tenant: string;
 }
 
-// "Sign in with your school Microsoft account", restricted to ONE organisation (default epitech.eu).
+// "Sign in with Microsoft" — any real Microsoft Entra ID or personal Microsoft account, not restricted
+// to one organisation. Previously pinned to epitech.eu only; broadened at the user's request.
 //
-// Why the restriction is not optional: in a multi-tenant Microsoft app the `email` claim of an account
-// from ANY organisation is whatever that organisation's admin set — it proves nothing. So the account
-// must belong to the tenant that owns the allowed domain (the signed `tid` claim), and only then is the
-// address trusted. The tenant is looked up from Microsoft's public metadata for that domain, so there
-// is no tenant id to configure.
+// What changed, and the one thing that couldn't just go away: with a single fixed organisation, the
+// signed `tid` claim provably belonged to the one tenant that owns the allowed domain, so its `email`
+// claim could be trusted outright. Opened up to ANY tenant, that trust is gone — any Entra ID tenant
+// admin can set an arbitrary user's email/UPN attribute to someone else's real address (the "nOAuth"
+// class of vulnerability), so the email claim alone is no longer proof of who's signing in. The mitigation
+// lives in OidcAccountsService.login's `allowLinkByEmail: false` passed from login() below: a brand-new
+// Microsoft sign-in can still create a fresh account from whatever email it reports, but it will never be
+// silently attached to an already-existing one just because the email happens to match — that would be
+// exactly how someone else's account gets taken over. Linking Microsoft to an existing account still
+// works fine from the profile page, while already logged in as that account for real.
 @Injectable()
 export class MicrosoftOidcService implements OidcFlow {
-  private meta: { at: number; discovery: Discovery; tenantId: string; keys: any[] } | null = null;
+  private meta: { at: number; discovery: Discovery; keys: any[] } | null = null;
 
   constructor(
     private readonly config: ConfigService,
@@ -56,9 +67,6 @@ export class MicrosoftOidcService implements OidcFlow {
   private get callbackUrl() {
     return this.config.get<string>('MICROSOFT_CALLBACK_URL');
   }
-  private get domain() {
-    return (this.config.get<string>('MICROSOFT_ALLOWED_DOMAIN') || DEFAULT_DOMAIN).toLowerCase();
-  }
 
   isConfigured(): boolean {
     return Boolean(this.clientId && this.clientSecret && this.callbackUrl && this.config.get<string>('TOKEN_ENCRYPTION_KEY'));
@@ -70,16 +78,18 @@ export class MicrosoftOidcService implements OidcFlow {
 
   private async loadMeta() {
     if (this.meta && Date.now() - this.meta.at < META_TTL_MS) return this.meta;
-    const url =
-      this.config.get<string>('MICROSOFT_DISCOVERY_URL') || `https://login.microsoftonline.com/${encodeURIComponent(this.domain)}/v2.0/.well-known/openid-configuration`;
+    // "common" accepts any organisation AND personal Microsoft accounts (whichever the app registration's
+    // own "supported account types" allows — this endpoint doesn't restrict it further). Its own `issuer`
+    // field is a literal, unresolved "{tenantid}" placeholder, not a real value — comparing a real token's
+    // issuer against it would always fail, which is exactly why verifyIdToken() below uses ISSUER_PATTERN
+    // instead of discovery.issuer.
+    const url = this.config.get<string>('MICROSOFT_DISCOVERY_URL') || 'https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration';
     const dRes = await fetch(url, { signal: AbortSignal.timeout(10_000) });
     if (!dRes.ok) throw new ServiceUnavailableException('Microsoft is unreachable');
     const discovery = (await dRes.json()) as Discovery;
-    const tenantId = /\/([0-9a-f-]{36})\/v2\.0\/?$/i.exec(discovery.issuer)?.[1];
-    if (!tenantId) throw new ServiceUnavailableException(`Could not find the Microsoft organisation for ${this.domain}`);
     const kRes = await fetch(discovery.jwks_uri, { signal: AbortSignal.timeout(10_000) });
     if (!kRes.ok) throw new ServiceUnavailableException('Microsoft is unreachable');
-    this.meta = { at: Date.now(), discovery, tenantId, keys: ((await kRes.json()) as { keys: any[] }).keys ?? [] };
+    this.meta = { at: Date.now(), discovery, keys: ((await kRes.json()) as { keys: any[] }).keys ?? [] };
     return this.meta;
   }
 
@@ -97,7 +107,6 @@ export class MicrosoftOidcService implements OidcFlow {
       nonce,
       code_challenge: challenge,
       code_challenge_method: 'S256',
-      domain_hint: this.domain,
       prompt: 'select_account',
     });
     return { url: `${discovery.authorization_endpoint}?${params}`, state, nonce, verifier };
@@ -128,19 +137,20 @@ export class MicrosoftOidcService implements OidcFlow {
     return { claims, accessToken: data.access_token, refreshToken: data.refresh_token ?? null };
   }
 
-  // Signature + issuer + audience + nonce, then the organisation and the address.
+  // Signature + issuer (any real Microsoft tenant, see ISSUER_PATTERN) + audience + nonce, then the address.
   async verifyIdToken(idToken: string, nonce: string): Promise<MicrosoftClaims & { address: string }> {
-    const { discovery, keys, tenantId } = await this.loadMeta();
-    const claims = verifyIdToken(idToken, keys, { issuer: discovery.issuer, audience: this.clientId as string, nonce }, () => (this.meta = null)) as MicrosoftClaims;
-    if (claims.tid !== tenantId) throw new BadRequestException(`Only ${this.domain} accounts can sign in with Microsoft here`);
+    const { keys } = await this.loadMeta();
+    const claims = verifyIdToken(idToken, keys, { issuer: ISSUER_PATTERN, audience: this.clientId as string, nonce }, () => (this.meta = null)) as MicrosoftClaims;
     const address = String(claims.email ?? claims.preferred_username ?? '').toLowerCase();
-    if (!address.endsWith(`@${this.domain}`)) throw new BadRequestException(`Only ${this.domain} accounts can sign in with Microsoft here`);
+    if (!address) throw new BadRequestException('This Microsoft account has no usable email address');
     return { ...claims, address };
   }
 
   private grant(claims: MicrosoftClaims & { address: string }, accessToken: string, refreshToken: string | null) {
-    const profile: MicrosoftProfile = { name: claims.name ?? null, email: claims.address, tenant: this.domain };
-    // `oid` is the person's stable id inside the organisation.
+    // Purely informational (shown back to the user as "connected as X @ Y") — never used for any trust
+    // decision, unlike when this was pinned to one organisation.
+    const profile: MicrosoftProfile = { name: claims.name ?? null, email: claims.address, tenant: claims.address.split('@')[1] ?? 'microsoft' };
+    // `oid` is the person's stable id inside their tenant; `tid` makes it globally unique across tenants.
     return { subject: `${claims.tid}.${claims.oid ?? claims.sub}`, accessToken, refreshToken, profile };
   }
 
@@ -152,12 +162,18 @@ export class MicrosoftOidcService implements OidcFlow {
   async login(code: string, verifier: string, nonce: string): Promise<{ id: string; expiresAt: Date }> {
     const { claims, accessToken, refreshToken } = await this.redeem(code, verifier, nonce);
     const [first, ...rest] = (claims.name ?? '').trim().split(/\s+/).filter(Boolean);
-    return this.accounts.login(PROVIDER, LABEL, this.grant(claims, accessToken, refreshToken), {
-      email: claims.address,
-      emailVerified: true, // the organisation vouches for it (checked in verifyIdToken)
-      firstName: first ?? null,
-      lastName: rest.join(' ') || null,
-    });
+    return this.accounts.login(
+      PROVIDER,
+      LABEL,
+      this.grant(claims, accessToken, refreshToken),
+      {
+        email: claims.address,
+        emailVerified: true, // Microsoft vouches for the address itself; just not for who else might share it (see the class comment)
+        firstName: first ?? null,
+        lastName: rest.join(' ') || null,
+      },
+      { allowLinkByEmail: false },
+    );
   }
 
   unlink(userId: string): Promise<void> {

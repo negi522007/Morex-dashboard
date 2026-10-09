@@ -1,5 +1,10 @@
 server {
-  listen 80;
+  # NGINX_PORT is substituted the same way BACKEND_ORIGIN is — defaults to 80 (both docker-compose.yml
+  # and frontend/Dockerfile set it explicitly), but the combined deploy image (deploy/start.sh) sets it
+  # dynamically to whatever the hosting platform's own $PORT happens to be, since some platforms (Render
+  # included) always inject one and route public traffic there regardless of what this image declares —
+  # nginx has to actually be the thing listening on it, not just the backend next door guessing right.
+  listen ${NGINX_PORT};
   root /usr/share/nginx/html;
   client_max_body_size 6m;   # avatar uploads
 

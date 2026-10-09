@@ -4,9 +4,9 @@ import { W, translateError, type Lang } from '../../lib/i18n'
 // (or ?github_error=…; same for epitech and microsoft). This card tells the user how it went:
 // Morex ⇄ the account, what it unlocks, confetti when it worked, the reason and a retry when it didn't.
 
-export type LinkResult = { provider: 'github' | 'epitech' | 'microsoft'; ok: boolean; error?: string }
+export type LinkResult = { provider: 'github' | 'google' | 'epitech' | 'microsoft'; ok: boolean; error?: string }
 
-const PROVIDERS = ['github', 'epitech', 'microsoft'] as const
+const PROVIDERS = ['github', 'google', 'epitech', 'microsoft'] as const
 
 // Reads the result from the current address (and returns null when there is none)
 export function readLinkResult(search: string): LinkResult | null {
@@ -21,6 +21,7 @@ export function readLinkResult(search: string): LinkResult | null {
 
 const LOOK = {
   github: { name: 'GitHub', icon: '🐙' },
+  google: { name: 'Google', icon: <span className="grid h-5 w-5 place-items-center rounded-full bg-[#4285F4] text-[11px] font-bold text-white">G</span> },
   epitech: { name: 'My Epitech', icon: '🎓' },
   microsoft: { name: 'Microsoft', icon: <span className="acc-ms"><i /><i /><i /><i /></span> },
 }

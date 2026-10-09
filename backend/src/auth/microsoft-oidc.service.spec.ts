@@ -1,11 +1,12 @@
 import { createSign, generateKeyPairSync } from 'node:crypto';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { MicrosoftOidcService } from './microsoft-oidc.service';
 import { OidcAccountsService } from './oidc-accounts.service';
 
 const TID = '901cb4ca-b862-4029-9306-e5cd0f6d9f86';
 const OTHER_TID = '11111111-2222-3333-4444-555555555555';
 const ISS = `https://login.microsoftonline.com/${TID}/v2.0`;
+const OTHER_ISS = `https://login.microsoftonline.com/${OTHER_TID}/v2.0`;
 const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'k1' };
 
@@ -29,7 +30,7 @@ function make(idToken = 'x', env: Record<string, string> = {}) {
   const config: any = { get: (k: string) => cfg[k] };
   global.fetch = jest.fn(async (url: any) => {
     const u = String(url);
-    if (u.includes('.well-known')) return new Response(JSON.stringify({ issuer: ISS, authorization_endpoint: `https://login.microsoftonline.com/${TID}/oauth2/v2.0/authorize`, token_endpoint: `https://login.microsoftonline.com/${TID}/oauth2/v2.0/token`, jwks_uri: 'https://login.microsoftonline.com/keys' }));
+    if (u.includes('.well-known')) return new Response(JSON.stringify({ issuer: 'https://login.microsoftonline.com/{tenantid}/v2.0', authorization_endpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize', token_endpoint: 'https://login.microsoftonline.com/common/oauth2/v2.0/token', jwks_uri: 'https://login.microsoftonline.com/keys' }));
     if (u.endsWith('/keys')) return new Response(JSON.stringify({ keys: [jwk] }));
     if (u.endsWith('/token')) return new Response(JSON.stringify({ id_token: idToken, access_token: 'at', refresh_token: 'rt' }));
     throw new Error('unexpected ' + u);
@@ -38,14 +39,14 @@ function make(idToken = 'x', env: Record<string, string> = {}) {
 }
 
 describe('MicrosoftOidcService', () => {
-  it('sends the user to the Epitech organisation with PKCE, state, nonce and a domain hint', async () => {
+  it('sends the user to the multi-tenant "common" endpoint with PKCE, state and nonce (no domain hint — any account is welcome)', async () => {
     const { svc } = make();
     const s = await svc.start();
     const u = new URL(s.url);
-    expect(u.pathname).toBe(`/${TID}/oauth2/v2.0/authorize`);
+    expect(u.pathname).toBe('/common/oauth2/v2.0/authorize');
     expect(u.searchParams.get('code_challenge_method')).toBe('S256');
     expect(u.searchParams.get('scope')).toBe('openid profile email');
-    expect(u.searchParams.get('domain_hint')).toBe('epitech.eu');
+    expect(u.searchParams.get('domain_hint')).toBeNull();
     expect(u.searchParams.get('client_secret')).toBeNull();
   });
 
@@ -54,27 +55,17 @@ describe('MicrosoftOidcService', () => {
     expect(svc.isConfigured()).toBe(false);
   });
 
-  it('accepts a correctly signed token from the Epitech organisation', async () => {
+  it('accepts a correctly signed token from any real tenant', async () => {
     const { svc } = make();
     expect(await svc.verifyIdToken(sign(claims()), 'n1')).toMatchObject({ address: 'ada.lovelace@epitech.eu', oid: 'oid-1' });
-  });
-
-  it('refuses an account from ANOTHER organisation even if it claims an @epitech.eu address (the nOAuth attack)', async () => {
-    const { svc } = make();
-    // Same signing keys and audience, but the account lives in a different tenant.
-    const forged = sign(claims({ tid: OTHER_TID, email: 'ada.lovelace@epitech.eu' }));
-    await expect(svc.verifyIdToken(forged, 'n1')).rejects.toThrow(/Only epitech\.eu accounts/);
-  });
-
-  it('refuses an Epitech-tenant account whose address is outside the allowed domain', async () => {
-    const { svc } = make();
-    await expect(svc.verifyIdToken(sign(claims({ preferred_username: 'x@evil.test' })), 'n1')).rejects.toBeInstanceOf(BadRequestException);
+    expect(await svc.verifyIdToken(sign(claims({ iss: OTHER_ISS, tid: OTHER_TID, preferred_username: 'bob@school.example' })), 'n1'))
+      .toMatchObject({ address: 'bob@school.example' });
   });
 
   it.each([
     ['a forged signature', () => sign(claims(), generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey)],
     ['the wrong audience', () => sign(claims({ aud: 'other' }))],
-    ['the wrong issuer', () => sign(claims({ iss: 'https://evil.test/v2.0' }))],
+    ['an issuer that is not a real Microsoft tenant URL', () => sign(claims({ iss: 'https://evil.test/v2.0' }))],
     ['an expired token', () => sign(claims({ exp: 1 }))],
     ['a replayed nonce', () => sign(claims({ nonce: 'other' }))],
   ])('rejects %s', async (_n, mk) => {
@@ -82,7 +73,7 @@ describe('MicrosoftOidcService', () => {
     await expect(svc.verifyIdToken(mk(), 'n1')).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('login creates a verified account from the organisation identity, keyed by tenant + oid, tokens encrypted', async () => {
+  it('login creates a verified account from the identity, keyed by tenant + oid, tokens encrypted', async () => {
     const { svc, prisma } = make(sign(claims()));
     const session = await svc.login('code', 'ver', 'n1');
     expect(session.id).toBe('sess');
@@ -93,16 +84,16 @@ describe('MicrosoftOidcService', () => {
     expect(acct.profile).toEqual({ name: 'Ada Lovelace', email: 'ada.lovelace@epitech.eu', tenant: 'epitech.eu' });
   });
 
-  it('login attaches to the existing local account with the same address instead of duplicating it', async () => {
-    const { svc, prisma } = make(sign(claims()));
+  // Opening Microsoft sign-in to any tenant means its email claim is no longer trustworthy enough to
+  // auto-attach to an EXISTING account (any Entra ID tenant admin can set it to whatever they want — the
+  // "nOAuth" class of vulnerability). A brand-new account is still fine; silently logging the caller into
+  // somebody else's pre-existing account because the email happens to match is exactly what must not
+  // happen, and is now a clear error instead.
+  it('refuses to attach to an existing account just because the email matches (the nOAuth attack)', async () => {
+    const { svc, prisma } = make(sign(claims({ tid: OTHER_TID, email: 'ada.lovelace@epitech.eu' })));
     prisma.user.findUnique.mockResolvedValue({ id: 'existing', isBanned: false });
-    await svc.login('c', 'v', 'n1');
-    expect(prisma.user.create).not.toHaveBeenCalled();
-    expect(prisma.oAuthAccount.create.mock.calls[0][0].data.userId).toBe('existing');
-  });
 
-  it('can be pointed at another organisation with MICROSOFT_ALLOWED_DOMAIN', async () => {
-    const { svc } = make(sign(claims({ preferred_username: 'bob@school.example' })), { MICROSOFT_ALLOWED_DOMAIN: 'school.example' });
-    expect(await svc.verifyIdToken(sign(claims({ preferred_username: 'bob@school.example' })), 'n1')).toMatchObject({ address: 'bob@school.example' });
+    await expect(svc.login('c', 'v', 'n1')).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.oAuthAccount.create).not.toHaveBeenCalled();
   });
 });

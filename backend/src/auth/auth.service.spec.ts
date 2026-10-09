@@ -41,6 +41,9 @@ describe('AuthService', () => {
       GITHUB_CLIENT_ID: 'client-id',
       GITHUB_CLIENT_SECRET: 'client-secret',
       GITHUB_OAUTH_CALLBACK_URL: 'http://localhost:8080/auth/github/callback',
+      GOOGLE_CLIENT_ID: 'google-client-id',
+      GOOGLE_CLIENT_SECRET: 'google-client-secret',
+      GOOGLE_OAUTH_CALLBACK_URL: 'http://localhost:8080/auth/google/callback',
       TOKEN_ENCRYPTION_KEY: 'a'.repeat(64),
     });
     service = new AuthService(prisma as any, mail as any, config as any);
@@ -598,6 +601,260 @@ describe('AuthService', () => {
       });
 
       await expect(service.loginWithGithub('auth-code')).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.session.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('hasLinkedGoogle', () => {
+    it('returns true when an OAuthAccount exists for this user', async () => {
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1' });
+      await expect(service.hasLinkedGoogle('user-1')).resolves.toBe(true);
+      expect(prisma.oAuthAccount.findFirst).toHaveBeenCalledWith({
+        where: { userId: 'user-1', provider: 'google' },
+      });
+    });
+
+    it('returns false when none exists', async () => {
+      prisma.oAuthAccount.findFirst.mockResolvedValue(null);
+      await expect(service.hasLinkedGoogle('user-1')).resolves.toBe(false);
+    });
+  });
+
+  describe('linkGoogleAccount', () => {
+    function mockGoogleExchange(sub = 'google-sub-1') {
+      fetchMock.mockImplementation((url: string) => {
+        if (url.includes('oauth2.googleapis.com/token')) {
+          return Promise.resolve({ json: () => Promise.resolve({ access_token: 'ya29.token' }) });
+        }
+        if (url.includes('openidconnect.googleapis.com/v1/userinfo')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ sub, email: 'ada@example.com', email_verified: true, given_name: 'Ada', family_name: 'Lovelace' }) });
+        }
+        throw new Error(`Unexpected fetch to ${url}`);
+      });
+    }
+
+    it('creates a new OAuthAccount when none exists for this Google id', async () => {
+      mockGoogleExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue(null);
+
+      await service.linkGoogleAccount('user-1', 'auth-code');
+
+      expect(prisma.oAuthAccount.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ provider: 'google', providerAccountId: 'google-sub-1', userId: 'user-1' }),
+        }),
+      );
+    });
+
+    it('refreshes the token when the same user re-links the same Google account', async () => {
+      mockGoogleExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue({ id: 'oauth-1', userId: 'user-1' });
+
+      await service.linkGoogleAccount('user-1', 'auth-code');
+
+      expect(prisma.oAuthAccount.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'oauth-1' } }),
+      );
+      expect(prisma.oAuthAccount.create).not.toHaveBeenCalled();
+    });
+
+    it('refuses to relink a Google account already owned by a different user', async () => {
+      mockGoogleExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue({ id: 'oauth-1', userId: 'someone-else' });
+
+      await expect(service.linkGoogleAccount('user-1', 'auth-code')).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.oAuthAccount.update).not.toHaveBeenCalled();
+      expect(prisma.oAuthAccount.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects when Google does not return an access token', async () => {
+      fetchMock.mockResolvedValue({ json: () => Promise.resolve({ error: 'invalid_grant' }) });
+      await expect(service.linkGoogleAccount('user-1', 'bad-code')).rejects.toThrow(/did not return an access token/);
+    });
+
+    it('rejects when the server has no TOKEN_ENCRYPTION_KEY configured', async () => {
+      config.get.mockImplementation((key: string) => (key === 'TOKEN_ENCRYPTION_KEY' ? undefined : 'set'));
+      await expect(service.linkGoogleAccount('user-1', 'auth-code')).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('unlinkGoogleAccount', () => {
+    it('rejects if the user has no linked Google account', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'salt:hash' });
+      prisma.oAuthAccount.findFirst.mockResolvedValue(null);
+
+      await expect(service.unlinkGoogleAccount('user-1')).rejects.toBeInstanceOf(NotFoundException);
+      expect(prisma.oAuthAccount.delete).not.toHaveBeenCalled();
+    });
+
+    it('refuses to unlink when the account has no password (would lock the user out)', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: null });
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1' });
+
+      await expect(service.unlinkGoogleAccount('user-1')).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.oAuthAccount.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes the OAuthAccount when the user has a password to fall back on', async () => {
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'salt:hash' });
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1', accessTokenEncrypted: encryptToken('g-token', 'a'.repeat(64)) });
+      fetchMock.mockResolvedValue({ ok: true, status: 200 });
+
+      await service.unlinkGoogleAccount('user-1');
+
+      expect(prisma.oAuthAccount.delete).toHaveBeenCalledWith({ where: { id: 'oauth-1' } });
+    });
+
+    it('revokes the grant on Google itself', async () => {
+      const accessTokenEncrypted = encryptToken('g-token-123', 'a'.repeat(64));
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'salt:hash' });
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1', accessTokenEncrypted });
+      fetchMock.mockResolvedValue({ ok: true, status: 200 });
+
+      await service.unlinkGoogleAccount('user-1');
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('https://oauth2.googleapis.com/revoke?token='),
+        expect.objectContaining({ method: 'POST' }),
+      );
+      expect(prisma.oAuthAccount.delete).toHaveBeenCalledWith({ where: { id: 'oauth-1' } });
+    });
+
+    it('still unlinks locally even if Google refuses or is unreachable when revoking the grant', async () => {
+      const accessTokenEncrypted = encryptToken('g-token-123', 'a'.repeat(64));
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', passwordHash: 'salt:hash' });
+      prisma.oAuthAccount.findFirst.mockResolvedValue({ id: 'oauth-1', accessTokenEncrypted });
+      fetchMock.mockRejectedValue(new Error('network down'));
+
+      await expect(service.unlinkGoogleAccount('user-1')).resolves.toBeUndefined();
+      expect(prisma.oAuthAccount.delete).toHaveBeenCalledWith({ where: { id: 'oauth-1' } });
+    });
+  });
+
+  describe('loginWithGoogle', () => {
+    // Spread-merge, not destructuring defaults: a test that explicitly sets given_name/family_name to
+    // undefined (simulating Google's profile actually omitting them) must NOT fall back to the default
+    // Ada/Lovelace values — destructuring defaults would silently do that for an explicit `undefined`.
+    function mockGoogleExchange(overrides: Partial<{ sub: string; email: string; email_verified: boolean; given_name?: string; family_name?: string; name?: string }> = {}) {
+      const profile = { sub: 'google-sub-1', email: 'ada@example.com', email_verified: true, given_name: 'Ada', family_name: 'Lovelace', ...overrides };
+      fetchMock.mockImplementation((url: string) => {
+        if (url.includes('oauth2.googleapis.com/token')) {
+          return Promise.resolve({ json: () => Promise.resolve({ access_token: 'ya29.token' }) });
+        }
+        if (url.includes('openidconnect.googleapis.com/v1/userinfo')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(profile) });
+        }
+        throw new Error(`Unexpected fetch to ${url}`);
+      });
+    }
+
+    it('logs in directly when the Google account is already linked', async () => {
+      mockGoogleExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue({
+        id: 'oauth-1',
+        user: { id: 'user-1', email: 'ada@example.com', firstName: 'Ada', lastName: 'Lovelace', isAdmin: false, isBanned: false },
+      });
+      prisma.session.create.mockResolvedValue({ id: 'session-1', expiresAt: new Date() });
+
+      const result = await service.loginWithGoogle('auth-code');
+
+      expect(prisma.oAuthAccount.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'oauth-1' } }));
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
+      expect(prisma.user.create).not.toHaveBeenCalled();
+      expect(result.user.id).toBe('user-1');
+    });
+
+    it('links to an existing local account that matches the verified Google email, without creating a duplicate', async () => {
+      mockGoogleExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-2',
+        email: 'ada@example.com',
+        firstName: 'Ada',
+        lastName: 'L.',
+        isAdmin: false,
+        isBanned: false,
+      });
+      prisma.session.create.mockResolvedValue({ id: 'session-2', expiresAt: new Date() });
+
+      const result = await service.loginWithGoogle('auth-code');
+
+      expect(prisma.user.create).not.toHaveBeenCalled();
+      expect(prisma.oAuthAccount.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ userId: 'user-2', providerAccountId: 'google-sub-1' }) }),
+      );
+      expect(result.user.id).toBe('user-2');
+    });
+
+    it('registers a brand new, already-verified account when nothing matches', async () => {
+      mockGoogleExchange({ email: 'grace@example.com', given_name: 'Grace', family_name: 'Hopper' });
+      prisma.oAuthAccount.findUnique.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({
+        id: 'user-3',
+        email: 'grace@example.com',
+        firstName: 'Grace',
+        lastName: 'Hopper',
+        isAdmin: false,
+        isBanned: false,
+      });
+      prisma.session.create.mockResolvedValue({ id: 'session-3', expiresAt: new Date() });
+
+      const result = await service.loginWithGoogle('auth-code');
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: 'grace@example.com',
+            firstName: 'Grace',
+            lastName: 'Hopper',
+            emailVerified: true,
+          }),
+        }),
+      );
+      expect(result.user.id).toBe('user-3');
+    });
+
+    it('falls back to splitting the display name when given/family name are missing', async () => {
+      mockGoogleExchange({ email: 'octo@example.com', given_name: undefined, family_name: undefined, name: 'Octo Cat' });
+      prisma.oAuthAccount.findUnique.mockResolvedValue(null);
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockResolvedValue({
+        id: 'user-4',
+        email: 'octo@example.com',
+        firstName: 'Octo',
+        lastName: 'Cat',
+        isAdmin: false,
+        isBanned: false,
+      });
+      prisma.session.create.mockResolvedValue({ id: 'session-4', expiresAt: new Date() });
+
+      await service.loginWithGoogle('auth-code');
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ firstName: 'Octo', lastName: 'Cat' }) }),
+      );
+    });
+
+    it('rejects when Google reports the email as unverified', async () => {
+      mockGoogleExchange({ email_verified: false });
+      prisma.oAuthAccount.findUnique.mockResolvedValue(null);
+
+      await expect(service.loginWithGoogle('auth-code')).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a banned user even when their Google account is already linked', async () => {
+      mockGoogleExchange();
+      prisma.oAuthAccount.findUnique.mockResolvedValue({
+        id: 'oauth-1',
+        user: { id: 'user-1', email: 'ada@example.com', firstName: 'Ada', lastName: 'Lovelace', isAdmin: false, isBanned: true },
+      });
+
+      await expect(service.loginWithGoogle('auth-code')).rejects.toBeInstanceOf(ForbiddenException);
       expect(prisma.session.create).not.toHaveBeenCalled();
     });
   });

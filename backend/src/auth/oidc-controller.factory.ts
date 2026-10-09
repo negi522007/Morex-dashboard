@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Delete, Get, HttpCode, Inject, Query, Req, Res, Type, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Delete, Get, HttpCode, Inject, Logger, Query, Req, Res, Type, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
@@ -29,6 +29,8 @@ export function makeOidcController(opts: { route: string; label: string; cookie:
   @ApiTags('auth')
   @Controller(opts.route)
   class OidcController {
+    private readonly logger = new Logger(`${opts.label}OidcController`);
+
     constructor(
       @Inject(opts.flow) private readonly oidc: OidcFlow,
       private readonly authService: AuthService,
@@ -72,7 +74,7 @@ export function makeOidcController(opts: { route: string; label: string; cookie:
     @Get('callback')
     @ApiOperation({ summary: `${opts.label}'s redirect target — the frontend never calls this directly` })
     @ApiResponse({ status: 302, description: `Back to the frontend: /dashboard (login), /dashboard?${queryKey}=linked (link), or /login?error=… / /dashboard?${queryKey}_error=… on failure` })
-    async callback(@Query('code') code: string, @Query('state') state: string, @Query('error') error: string, @Req() req: Request, @Res() res: Response) {
+    async callback(@Query('code') code: string, @Query('state') state: string, @Query('error') error: string, @Query('error_description') errorDescription: string, @Req() req: Request, @Res() res: Response) {
       const frontend = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
       let saved: { mode: 'link' | 'login'; state: string; nonce: string; verifier: string } | null = null;
       try {
@@ -85,6 +87,7 @@ export function makeOidcController(opts: { route: string; label: string; cookie:
 
       const fail = (msg: string) =>
         res.redirect(saved!.mode === 'login' ? `${frontend}/login?error=${encodeURIComponent(msg)}` : `${frontend}/dashboard?${queryKey}_error=${encodeURIComponent(msg)}`);
+      if (error) this.logger.warn(`${opts.label} returned an error on the callback: ${error} — ${errorDescription ?? 'no description'}`);
       if (error || !code) return fail(error ? `${opts.label} sign-in was cancelled` : 'Missing code');
 
       try {

@@ -248,10 +248,11 @@ function ConnectedAccounts({ user, lang, onSaved }: { user: User; lang: Lang; on
   const [ready, setReady] = useState<Record<string, boolean>>({})
   const [error, setError] = useState('')
   useEffect(() => {
-    for (const p of ['github', 'epitech', 'microsoft']) api.get<{ configured: boolean }>(`/auth/${p}/status`).then((r) => setReady((s) => ({ ...s, [p]: r.configured }))).catch(() => {})
+    for (const p of ['github', 'google', 'epitech', 'microsoft']) api.get<{ configured: boolean }>(`/auth/${p}/status`).then((r) => setReady((s) => ({ ...s, [p]: r.configured }))).catch(() => {})
   }, [])
   const rows: [string, string, React.ReactNode, string | null][] = [
     ['github', 'GitHub', '🐙', user.githubLinked ? w.linked : null],
+    ['google', 'Google', <span className="grid h-5 w-5 place-items-center rounded-full bg-[#4285F4] text-[11px] font-bold text-white">G</span>, user.googleLinked ? w.linked : null],
     ['epitech', 'My Epitech', <span className="acc-epi">EPI</span>, user.epitech ? user.epitech.login ?? user.epitech.email ?? w.linked : null],
     ['microsoft', 'Microsoft', <span className="acc-ms"><i /><i /><i /><i /></span>, user.microsoft ? user.microsoft.email : null],
   ]

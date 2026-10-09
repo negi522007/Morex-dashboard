@@ -21,6 +21,10 @@ want the technical detail behind any of this (hashing, encryption), see
 - **If you sign up via "Sign in with GitHub"** instead of email/password, your account has no password at
   all until you set one — there's currently no way to add one after the fact (see "what we don't do
   yet" below).
+- **A Google access token, if you link your Google account (or sign up/sign in with Google)** — used only
+  to read your name and verified email once, to create or match your account — there is no Google-linked
+  widget that calls it again afterwards, unlike GitHub's. Encrypted at rest the same way. Same no-password
+  caveat as "Sign in with GitHub" above if that's how you signed up.
 - **What your widgets fetch** — e.g. if you add an RSS widget, the last few articles from the feed you
   configured are cached so the dashboard can show them without hitting that feed on every page load.
 - **Your journal entries, if you write any** — encrypted at rest (AES-256-GCM, same as GitHub tokens
@@ -39,8 +43,8 @@ want the technical detail behind any of this (hashing, encryption), see
   are encrypted at rest and never shown again (the API only returns `********`).
 - **Your date of birth, if you give it** — used only to work out your zodiac sign (to pre-select the horoscope widget), and to
   check you are at least 13 when you sign up. It is never shown to anyone else and never sent to the AI (only the
-  sign is). You can change or remove it in your profile. Accounts created with GitHub, My Epitech or Microsoft
-  start without one.
+  sign is). You can change or remove it in your profile. Accounts created with GitHub, Google, My Epitech or
+  Microsoft start without one.
 - **A Microsoft account link, if you use it** — we read your name and school address once (the organisation
   vouches for it), keep the link and an encrypted access key, and never see your Microsoft password. Only accounts
   of the allowed organisation (`epitech.eu`) are accepted.
