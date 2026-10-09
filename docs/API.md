@@ -189,6 +189,36 @@ avatar from `avatarConfig`.
 |---|---|
 | `200` | Updated user, `avatarPhotoUrl` now `null`. |
 
+### `GET /auth/me/export`
+
+🔒 Session required. "Download my data": the profile, widgets with their settings, journal, alerts and
+linked accounts as one JSON file. Secret settings (calendar URL, API keys…) stay masked as `********`,
+exactly like `GET /widgets`; tokens are never included. `journal` is `null` if it can't be decrypted on
+this server. Navigate the browser here (it is a download), don't `fetch` it.
+
+| Status | When |
+|---|---|
+| `200` | `morex-my-data-YYYY-MM-DD.json` (`Content-Disposition: attachment`, `Cache-Control: no-store`). |
+
+### `DELETE /auth/me`
+
+🔒 Session required. Deletes the account **for good**, with everything tied to it (sessions, widgets,
+journal, alerts, briefs, linked accounts) through the schema's `onDelete: Cascade`; the uploaded photo and
+the GitHub grant are cleaned up on the way. Proof that it's really the owner:
+```json
+{ "password": "…" }
+```
+or, for an account without a password (GitHub / Google / Microsoft / Epitech sign-in only — see
+`hasPassword` in `GET /auth/me`), the email typed again: `{ "email": "ada@example.com" }`.
+
+| Status | When |
+|---|---|
+| `204` | Deleted; the session cookie is cleared. |
+| `403` | Wrong password, or the email doesn't match — nothing was deleted. |
+
+Signing in again later with GitHub / Google using the same email creates a **new, empty** account; nothing
+of the deleted one comes back.
+
 ### `GET /auth/github`
 
 🔒 Session required. **Not a login route** — this links a GitHub account to the *already* authenticated
@@ -817,7 +847,41 @@ session 401s.
 
 | Status | When |
 |---|---|
-| `200` | Array of every user: `{ id, email, firstName, lastName, emailVerified, isAdmin, isBanned, createdAt, widgetCount, linkedAccountsCount, sessionCount }`. Never includes `passwordHash`. |
+| `200` | Array of every user: `{ id, email, firstName, lastName, emailVerified, isAdmin, isBanned, banReason, createdAt, avatarConfig, avatarPhotoUrl, birthDate, zodiac, lastLoginAt, lastSeenAt, widgetCount, linkedAccountsCount, linkedAccounts, sessionCount }`. `lastLoginAt` / `lastSeenAt` are when they last opened a session and were last active (refreshed at most every 5 minutes, kept after logout; `null` if never seen since this was added). `birthDate` is `"YYYY-MM-DD"` with its `zodiac` sign (both `null` if never given). `linkedAccounts` is `[{ provider, label }]`: `github` / `google` / `microsoft` / `epitech`, with the account's non-secret name when known (GitHub login, Google / Microsoft email, Epitech login), never a token. `avatarPhotoUrl` (an uploaded photo under `/uploads`) wins over `avatarConfig` (the DiceBear options), same as on the user's own dashboard. Never includes `passwordHash`. |
+| `403` | Not an admin. |
+
+### `GET /admin/users/:id/widgets`
+
+That user's widgets, oldest first, to show what their dashboard looks like. Never their `config` (it can
+hold their keys, private feed URLs or custom API headers) nor their data.
+
+| Status | When |
+|---|---|
+| `200` | `[{ id, serviceName, widgetName, title, position, refreshRateSeconds, lastRefreshedAt, lastError, shared, createdAt }]`. `position` is `{ order?, cols?, rows? }` as saved by the dashboard. |
+| `403` | Not an admin. |
+| `404` | User not found. |
+
+### `GET /admin/users/:id/sessions`
+
+That user's sessions that are still valid, most recently active first. Each is named after the browser
+and system it was opened from (parsed from its `User-Agent`). The session id is never returned: it is
+the login cookie itself.
+
+| Status | When |
+|---|---|
+| `200` | `[{ browser, os, createdAt, lastSeenAt, expiresAt }]`, e.g. `{ "browser": "Chrome", "os": "Linux", ... }`. `Unknown` when the browser didn't say. |
+| `403` | Not an admin. |
+| `404` | User not found. |
+
+### `GET /admin/service-stats`
+
+How each service is used and whether it is healthy right now — feeds the admin console's "Services"
+page. One row per service that has at least one widget, most used first. `errors` counts the widgets
+whose last refresh failed (`lastError` set); `lastError` is the most recent of those messages.
+
+| Status | When |
+|---|---|
+| `200` | `[{ service, widgets, users, errors, lastError, types }]` (`types`: `[{ widget, count }]`, most used first), e.g. `{ "service": "market_data", "widgets": 14, "users": 6, "errors": 2, "lastError": "CoinGecko returned HTTP 429" }`. |
 | `403` | Not an admin. |
 
 ### `PATCH /admin/users/:id`

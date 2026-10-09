@@ -138,11 +138,19 @@ erDiagram
         boolean emailVerified
         boolean isAdmin
         boolean isBanned
+        string banReason "nullable"
+        datetime birthDate "nullable"
+        json avatarConfig "nullable"
+        string avatarPhotoPath "nullable"
+        datetime lastLoginAt "nullable"
+        datetime lastSeenAt "nullable"
     }
     Session {
         string id PK "the session cookie value"
         string userId FK
         datetime expiresAt
+        string userAgent "nullable, browser it was opened from"
+        datetime lastSeenAt "last activity"
     }
     EmailVerificationToken {
         string id PK
@@ -155,6 +163,7 @@ erDiagram
         string provider
         string providerAccountId
         string accessTokenEncrypted
+        json profile "nullable, non-secret name (GitHub login, email)"
         string userId FK
     }
     ServiceSubscription {
@@ -172,6 +181,7 @@ erDiagram
         json position
         datetime lastRefreshedAt "nullable"
         json cachedData "nullable"
+        string lastError "nullable, why the last refresh failed"
         boolean aiEnabled "opt-in AI insight"
         json insight "nullable, beside cachedData"
         string insightHash "nullable, skip AI if data unchanged"
@@ -211,11 +221,19 @@ erDiagram
   `getUserBySession` all funnel through a shared `toPublicUser()` projection in `auth.service.ts` so the
   three stay in sync. `isAdmin`/`isBanned` — see [Admin](#admin-user-management) below.
 - **Session** — a server-side session record; its `id` is the unguessable value stored in the login
-  cookie. Deleting a row logs that session out immediately (see Authentication below).
+  cookie. Deleting a row logs that session out immediately (see Authentication below). `userAgent` and
+  `lastSeenAt` say which browser it was opened from and when it was last used — filled by
+  `AuthService.touchSession` (see [Activity tracking](#activity-tracking-last-login-last-seen-sessions)).
+  `User.lastLoginAt` / `User.lastSeenAt` keep the same facts on the account, so they survive logout
+  (which deletes the session row). Migration `20261009120000_add_session_activity` adds the four columns
+  and back-fills them from the sessions still open.
 - **EmailVerificationToken** — time-limited token for signup email confirmation.
 - **OAuthAccount** — a third-party account linked to a `User`. Linking is resolved by matching the
   provider's verified email against an existing `User`, never by auto-creating a duplicate. Tokens are
-  stored encrypted (`accessTokenEncrypted`/`refreshTokenEncrypted`), never in plaintext.
+  stored encrypted (`accessTokenEncrypted`/`refreshTokenEncrypted`), never in plaintext. `profile` holds
+  only non-secret facts shown to people: the GitHub `login`, the Google / Microsoft `email`, the Epitech
+  login and campus. GitHub and Google fill it at each link or sign-in (accounts linked earlier get it on
+  their next sign-in).
 - **ServiceSubscription** — a non-OAuth service subscription (plain credentials), also encrypted at rest.
 - **WidgetSnapshot / Alert / AlertEvent** — value history (≥5 min apart, pruned after 90 days) and threshold
   alerts, both driven by `WidgetDefinition.primaryMetric`; detection is plain arithmetic, no AI.
@@ -225,7 +243,8 @@ erDiagram
   *public* articles, and the day's brief.
 - **WidgetInstance** — one widget instance placed on a user's dashboard: `config` (validated against the
   `WidgetDefinition`'s `params`), `refreshRateSeconds`, `position` (for react-grid-layout), `cachedData` +
-  `lastRefreshedAt` (last result cached by the scheduler).
+  `lastRefreshedAt` (last result cached by the scheduler), `lastError` (why the last refresh failed, cleared
+  at the next success — shown on the card and to admins).
 
 ## Admin (user management)
 
@@ -242,7 +261,21 @@ on it having run first).
   to what this project needs — this is the "avoid over-engineering" advice cutting the other way from the
   "build everything mentioned" one: build the feature, don't gold-plate its edges.
 - **`GET /admin/users`** — every user, with `_count`-derived `widgetCount`/`linkedAccountsCount`/
-  `sessionCount`, never `passwordHash`.
+  `sessionCount`, never `passwordHash`. Also: the avatar (`avatarPhotoUrl` wins over `avatarConfig`, same
+  rule as the user's own dashboard), `birthDate` + `zodiac`, `lastLoginAt` / `lastSeenAt`, and
+  `linkedAccounts` — each provider with its non-secret name from `OAuthAccount.profile`, never a token.
+- **`GET /admin/users/:id/sessions`** — that user's valid sessions, most recently active first, each named
+  after its browser and system by `common/user-agent.util.ts` (`parseUserAgent`: Edge / Opera / Firefox /
+  Chrome / Safari / API client × Windows / Android / iOS / macOS / ChromeOS / Linux — order matters, Edge
+  and Opera also say "Chrome"). The session `id` is never selected: it is the login cookie itself.
+- **`GET /admin/users/:id/widgets`** — that user's widgets: service, widget, title, `position` (to draw a
+  miniature of their dashboard), refresh rate, last refresh, `lastError`. **Never `config` nor
+  `cachedData`**: `config` can hold the user's keys, private feed URLs or custom API headers. A test asserts
+  neither is selected.
+- **`GET /admin/service-stats`** (its own `AdminServicesController`, same two guards) — one row per service
+  in use: widgets, distinct accounts, widgets currently failing, the most recent `lastError`, and `types`
+  (how many of each of its widgets are in use). Path chosen so it can't collide with the frontend's
+  `/admin/services` page (the proxies forward the API prefixes only).
 - **`PATCH /admin/users/:id`** — edit a user's name and/or manually flip `emailVerified` (unblocks
   someone whose confirmation email never arrived, without needing a "resend" flow to exist). Deliberately
   **not** password (an admin silently setting someone's password is a bigger footgun than the convenience
@@ -284,6 +317,22 @@ sequenceDiagram
     end
     Note over DB: The target's browser, mid-session elsewhere,<br/>is logged out on its very next request — no delay.
 ```
+
+### Activity tracking (last login, last seen, sessions)
+
+Asked for by the admin console ("when was this person last here, from what?"). `SessionGuard` calls
+`AuthService.touchSession(sessionId, userAgent)` on every authenticated request, **without awaiting it and
+swallowing any error** — recording activity must never slow down or fail a real request. It writes only when
+it matters, so normal browsing doesn't write on every click:
+
+- the session's **first** request (`userAgent` still null): stores the browser string (capped at 400 chars)
+  and counts as the user's latest login → `User.lastLoginAt` and `lastSeenAt`;
+- afterwards, **at most once every 5 minutes** (`TOUCH_EVERY_MS`): refreshes `Session.lastSeenAt` and
+  `User.lastSeenAt`, with a conditional `updateMany` so concurrent requests don't double-write.
+
+Kept on the user as well as on the session because logout deletes the session row. Covered by
+`auth.service.spec.ts` (`touchSession`), `session.guard.spec.ts` (called, and a failure still lets the
+request through) and `user-agent.util.spec.ts`.
 
 ## Widgets (add / reconfigure / move / delete)
 
@@ -337,14 +386,26 @@ and updates `cachedData`. The frontend reads this cache (lightweight per-instanc
 This choice stays isolated behind the `ServiceProvider` contract: if a scalability need appears later,
 the scheduler can be swapped without touching the services themselves.
 
+**Current tuning** (`backend/src/timer/timer.service.ts`):
+- **Tick every 5 s** (`TICK_MS`), so a widget refreshes a few seconds after the countdown on its card ends.
+- **8 widgets refreshed in parallel** (`CONCURRENCY`): one slow or unreachable service no longer holds
+  everyone else up.
+- **45 s hard cap per widget** (`REFRESH_LIMIT_MS`). Each fetch has its own timeout, but a step outside
+  them (a DNS lookup that never answers, a stuck AI call) used to keep the round running forever, and since
+  a tick is skipped while the previous one runs, **every widget froze**. Past 45 s the widget is given up
+  for this round with `lastError: "gave up after 45 s"` and retried at its next due time.
+- **Failures are kept in `lastError`** (the provider's message, or "<service> is not connected anymore —
+  connect it again"), cleared at the next success. The card shows it — and keeps the last data with a
+  "not up to date" note — and the admin console counts it per service.
+
 ```mermaid
 sequenceDiagram
-    participant T as TimerService (@Interval 15s)
+    participant T as TimerService (@Interval 5s)
     participant DB as Postgres
     participant P as ServiceProvider (e.g. RssProvider)
     participant Ext as External API
 
-    loop every 15s
+    loop every 5s
         alt previous tick still running
             T->>T: log a warning, skip this tick
         else
@@ -363,11 +424,11 @@ sequenceDiagram
                     alt success
                         Ext-->>P: data
                         P-->>T: normalized result
-                        T->>DB: update cachedData + lastRefreshedAt
+                        T->>DB: update cachedData + lastRefreshedAt, lastError = null
                     else failure (timeout, non-2xx, parse error)
                         P-->>T: throws ServiceFetchError
                         T->>T: log the error
-                        T->>DB: update lastRefreshedAt only (cachedData kept as-is)
+                        T->>DB: update lastRefreshedAt + lastError (cachedData kept as-is)
                     end
                 end
             end
