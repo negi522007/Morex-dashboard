@@ -166,6 +166,39 @@ only issues a Web API key to an account that has spent at least $5 real money on
 policy, unrelated to owning free games), which isn't testable here, so it was pulled rather than shipped
 unverified (see API.md → *Deliberately not built*). YouTube confirmed working end to end with a real key.
 
+**Oct 8–9** — Real examiner feedback from a defense dry-run, addressed directly: `PATCH /widgets/:id` had
+no server-side shape check on `position` (garbage accepted with a `200`) and let a wrong-typed
+`shared`/`aiEnabled`/`title` reach Prisma directly, surfacing as a raw `500` instead of our own clean `400`
+— found live with devtools, matching exactly how it was caught at the defense, fixed and re-verified the
+same way. The admin console got its frontend (the backend existed, untested from a browser until now, and
+got a real end-to-end pass: register, ban, delete, through the actual UI). Every doc but `README.md` moved
+into `docs/`, with a small script added to confirm every relative link in the repo still resolves — not
+just the ones touched by hand. `ARCHITECTURE.md` now states outright where the database lives (the
+`db_data` Docker volume, the `psql` command to open a real session on it), not just the schema file's path.
+
+Then, two follow-up requests once the admin page was actually tried: (1) ban and delete now require a
+written reason and email the affected user — with a reply-to-contest inbox, deliberately short of a full
+appeal-ticket workflow (judged disproportionate for this project's size, see `FRONTEND.md`'s "Admin
+console"). (2) **"Sign in with Google"** added, mirroring the GitHub OAuth integration almost exactly —
+`OAuthAccount.provider` was already a free-form string, so no schema change was needed. (3) Microsoft
+sign-in opened from epitech.eu-only to any Microsoft account (any organisation, and personal accounts) —
+removing the tenant restriction also removed the one thing that made trusting the `email` claim safe (any
+Entra ID tenant admin can set it to whatever they want — the "nOAuth" class of vulnerability), so a
+brand-new Microsoft sign-in can still create a fresh account, but can no longer silently attach to an
+*existing* one just because the email matches; that's a clear error now, not a takeover path.
+
+Also deployed publicly for the first time (optional — the brief only requires `docker-compose up` on a
+fresh clone, already covered): Neon for Postgres, Brevo for real email (Render's free tier blocks outbound
+SMTP on 587/465/25 — found live, fixed by switching providers to one with an alternate port, not by
+touching the app's SMTP code at all), and a combined single-container image (`deploy/`, not used by
+`docker-compose.yml`) once splitting frontend and backend across two hostnames turned out to break every
+OAuth login (the provider's callback always lands on one fixed domain, so a CSRF-state or session cookie
+set while the browser *looked* like it was on the other domain never comes back). Two real platform
+surprises along the way, both fixed and documented in `deploy/`'s own comments: a `PORT` env var in the
+image collided with Render's own public-port auto-detection, and Render turned out to always inject its
+own `$PORT` regardless — nginx now listens on whatever that is instead of a hardcoded port, with the
+backend forced onto a fixed internal one so the two can never end up racing for the same port again.
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |
@@ -182,6 +215,8 @@ unverified (see API.md → *Deliberately not built*). YouTube confirmed working 
 | Insight stored beside `cachedData`, not inside | Sept 25 | Keeps every existing widget shape stable for the frontend |
 | No Epitech JWT pasting / scraping | Sept 25 | It is the student's full access, would live in our DB and expires; ask Epitech for an official scope instead |
 | "Sign in with GitHub" as a real login path, not just linking | Sept 23 | Already the intended design (see `schema.prisma`'s `OAuthAccount` comment from Sept 15) — just not built until now |
+| Microsoft sign-in opened to any account, not just epitech.eu | Oct 9 | Requested directly; the email claim can no longer be trusted enough to auto-link to an existing account across arbitrary tenants (nOAuth), so that specific path was closed instead of left trusting it |
+| Public deploy's SMTP: Brevo, not Gmail directly (local dev keeps Gmail) | Oct 9 | Render's free tier blocks outbound ports 25/465/587 — found live; Brevo's SMTP also answers on 2525, which isn't blocked |
 
 ## What's left
 
