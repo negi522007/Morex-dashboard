@@ -246,6 +246,11 @@ what an admin can and cannot see, sign-in tracking (no IP, no location), and the
 delete your data. The line pointing readers to the technical `PRIVACY.md` on the repository was removed from the
 page on request (the page stands on its own; `docs/PRIVACY.md` remains the full version for the team).
 
+**Oct 9 (mockups out of the repository)** — The HTML design mockups (`frontend/public/mockups.html`,
+`clocks.html`, `dates.html`, `tiroir*.html` and every `apparences-*.html`, 58 files) were removed from the
+repository on request: they are design work kept on Morayo's machine, not part of the app. Earlier log entries
+still name them, as the record of how each design was chosen; `FRONTEND.md` → *Design mockups* explains.
+
 ## Key decisions (quick reference)
 
 | Decision | When | Why |

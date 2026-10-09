@@ -10,7 +10,7 @@ and for every endpoint see [API.md](./API.md).
 | Area | Status |
 |---|---|
 | Auth (register, login, logout, session check, "Continue with GitHub") | ✅ Done |
-| Dashboard reproducing the validated mockup (`frontend/public/mockups.html`) | ✅ Done |
+| Dashboard reproducing the validated HTML mockup (kept locally, see [Design mockups](#design-mockups)) | ✅ Done |
 | One custom card design per widget (20 widgets, 9 services) | ✅ Done |
 | iPhone-style editing: long press, jiggle, drag to reorder, resize, delete with undo | ✅ Done |
 | Add-widget drawer built from `/about.json`, with live preview | ✅ Done |
@@ -179,18 +179,26 @@ mode and the open drawer are also classes / data attributes on `<body>`, exactly
 (`/auth/confirm`, `/auth/github/callback`, `/auth/epitech/callback`), which are under the proxied `/auth`
 prefix anyway.
 
+## Design mockups
+
+Every screen was first designed as a standalone HTML mockup (no React, sample data), shown to the team,
+then rebuilt in React to look the same: the dashboard (`mockups.html`, `clocks.html`, `dates.html`,
+`tiroir*.html`) and one page of proposals per feature (`apparences-*.html`). **They are kept on Morayo's
+machine only and are not in the repository** (removed on October 9; excluded locally through
+`.git/info/exclude`). The choices they led to are written down in this document, section by section.
+
 ## Terms and privacy pages
 
 `/terms` and `/privacy` are public pages, reachable from everywhere:
 - **logged out:** "Conditions d'utilisation · Politique de confidentialité" at the bottom of the brand column
   of the login and sign-up pages (`AuthLayout.tsx`), and the required checkbox of the sign-up form;
 - **logged in:** an "Infos légales" entry (document icon) in the dashboard sidebar, above
-  Help (`Sidebar` in `Chrome.tsx`, also in `mockups.html`), and the two links under "Mes données" in the
+  Help (`Sidebar` in `Chrome.tsx`), and the two links under "Mes données" in the
   profile (`Modals.tsx`). Both are
 the same component, `pages/LegalPage.tsx` (`TermsPage` / `PrivacyPage` only pick the document), styled by
 `styles/legal.css`; the **text lives in `lib/legal.ts`**, in FR / EN / ES.
 
-- **Look — "a letter"** (chosen among four mockups in `frontend/public/apparences-legal.html`: logbook,
+- **Look — "a letter"** (chosen among four mockups: logbook,
   summary + detail, folding planets, letter): over the Morex sky, a sheet of lined cream paper like the
   journal, a handwritten title (Caveat), the purple Morex seal, each section with a line icon drawn in the
   letter's violet (SVG in `LegalPage.tsx`, chosen by name in `legal.ts` — emojis can't take a colour),
@@ -207,8 +215,8 @@ the same component, `pages/LegalPage.tsx` (`TermsPage` / `PrivacyPage` only pick
 ## Admin console
 
 An admin manages the accounts and keeps an eye on the services. Optional in the school brief, built anyway.
-The design was validated page by page on HTML mockups first (`frontend/public/apparences-admin-*.html`,
-see the end of this section), then rebuilt in React with the same look.
+The design was validated page by page on HTML mockups first (see the end of this section), then rebuilt
+in React with the same look.
 
 **Who sees it.** Only an account with `isAdmin: true` (from `GET /auth/me`): it gets an "Admin" entry in the
 dashboard sidebar. `/admin` guards itself too — not logged in → `/login`, not an admin → `/dashboard`. The API
@@ -348,7 +356,7 @@ accounts are linked and their public name (never a token), which browsers they a
 the session id, which is the login cookie itself). Never the journal. Promoting / demoting admins and
 changing someone's email or password are not possible (no endpoints, by design).
 
-### Mockups (`frontend/public/apparences-admin-*.html`)
+### Mockups (kept locally, not in the repository)
 
 Kept as the record of what was proposed and chosen; open them at `http://localhost:5173/<file>`. The page
 mockups load the real `admin.css`, so they look exactly like the console.
