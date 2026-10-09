@@ -533,6 +533,14 @@ body[data-wskin] .w.add { background: rgb(255 255 255 / .05); border: 1.5px dash
 .A main { padding: 16px 28px 90px; display: flex; flex-direction: column; gap: 28px; min-width: 0; }
 .A .top { display: flex; gap: 12px; align-items: center; }
 .A .top { justify-content: flex-end; }
+/* Mobile-only controls: the hamburger that opens the sidebar as a slide-in overlay below 900px, the
+   sidebar's own "✕" to close it from inside, and the scrim behind it — all absent above that breakpoint,
+   where the sidebar is a normal sticky column opened by nothing because it's already there. */
+.mnav-btn, .side-close { display: none; }
+.side-scrim { position: fixed; inset: 0; z-index: 85; background: rgb(0 0 0 / .5); opacity: 0; pointer-events: none; transition: opacity .3s; }
+.side-scrim.show { opacity: 1; pointer-events: auto; }
+.top-row { display: flex; align-items: center; gap: 12px; }
+.top-row .top { flex: 1; }
 .A .search-row { display: flex; justify-content: flex-end; margin-top: 18px; position: relative; z-index: 5; }
 /* Collapsed: only the magnifier. Click it and the bar unrolls to the left */
 .A .search-row .search { flex: none; width: 50px; max-width: none; transition: width .45s cubic-bezier(.2, .8, .2, 1); }
@@ -802,7 +810,21 @@ body.dw-open .dw { transform: translate(-50%, 0); }
 .opts .none { font-size: 12px; color: rgb(255 255 255 / .6); }
 
 @media (max-width: 900px) {
-  .A { grid-template-columns: 1fr; } .A aside { display: none; }
+  .A { grid-template-columns: 1fr; }
+  /* Off-canvas, not gone: previously `display: none` with nothing anywhere to bring it back, which made
+     the profile, help, admin and even log-out unreachable on any phone (no replacement was ever added).
+     Kept in the DOM and just slid out of view via transform, so DashboardPage's hamburger (.mnav-btn,
+     shown below) can slide it back in — same off-canvas pattern as the existing `.dw` widget drawer, just
+     anchored left instead of to the bottom. */
+  .A aside { position: fixed; inset: 0 auto 0 0; z-index: 90; margin: 0; width: 82vw; max-width: 320px; height: 100vh;
+    border-radius: 0; transform: translateX(-100%); transition: transform .35s cubic-bezier(.2, .8, .2, 1); }
+  .A aside.mobile-open { transform: translateX(0); }
+  .A.collapsed aside { width: 82vw; max-width: 320px; padding-left: 16px; padding-right: 16px; } /* collapsed is a desktop-only state; never let it shrink the mobile overlay */
+  .A.collapsed aside nav a span, .A.collapsed aside .brand-name { opacity: 1; width: auto; overflow: visible; }
+  .side-toggle { display: none; } /* the desktop icon-rail collapse toggle: meaningless once the sidebar is an overlay */
+  .side-close { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; border: 1px solid rgb(255 255 255 / .14); background: rgb(255 255 255 / .08); cursor: pointer; }
+  .mnav-btn { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 12px; border: 1px solid rgb(255 255 255 / .14);
+    background: rgb(255 255 255 / .08); cursor: pointer; color: inherit; }
   .A .hero, .av-grid { grid-template-columns: 1fr; }
   .A .hello-card { flex-direction: column; text-align: center; padding: 32px 24px; }
   .A .hello-card .ghost { font-size: 200px; right: 50%; transform: translate(50%, -52%); }

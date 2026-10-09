@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
-import { LANGS, W, type Lang } from '../lib/i18n'
+import { LANGS, W, tr, type Lang } from '../lib/i18n'
 import { setAuthLang } from '../lib/authLang'
 import { entryFor, type CatalogEntry } from '../lib/catalog'
 import type { AboutResponse, User, WidgetInstance } from '../lib/types'
@@ -26,6 +26,9 @@ export function DashboardPage() {
   const [about, setAbout] = useState<AboutResponse | null>(null)
   const [widgets, setWidgets] = useState<WidgetInstance[]>([])
   const [collapsed, setCollapsed] = useState(true)
+  // Below 900px the sidebar is off-canvas (morex.css) — this is purely "is the slide-in overlay open",
+  // unrelated to `collapsed` (the desktop icon-rail toggle, which doesn't apply on mobile at all).
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [modal, setModal] = useState<ModalName | null>(null)
   // A question the help chat asks by itself when it opens ("why is my widget empty?" from an empty card)
@@ -164,9 +167,14 @@ export function DashboardPage() {
   return (
     <>
       <div className={`A${collapsed ? ' collapsed' : ''}`}>
-        <Sidebar lang={lang} isAdmin={user?.isAdmin} onToggle={() => setCollapsed((c) => !c)} onProfile={() => setModal('profile')} onAdmin={() => navigate('/admin')} onHelp={() => setModal('help')} onLegal={() => navigate('/terms')} onLogout={() => setModal('logout')} />
+        <Sidebar lang={lang} isAdmin={user?.isAdmin} mobileOpen={mobileNavOpen} onToggle={() => setCollapsed((c) => !c)} onCloseMobile={() => setMobileNavOpen(false)} onProfile={() => setModal('profile')} onAdmin={() => navigate('/admin')} onHelp={() => setModal('help')} onLegal={() => navigate('/terms')} onLogout={() => setModal('logout')} />
         <main>
-          <Toolbar user={user} lang={lang} theme={theme} skin={skin} onLang={(l) => savePrefs({ language: l })} onTheme={(t) => savePrefs({ theme: t })} onSkin={(s) => savePrefs({ widgetSkin: s })} onOpen={setModal} />
+          <div className="top-row">
+            <button type="button" className="mnav-btn" aria-label={tr(lang).navMenu} onClick={() => setMobileNavOpen(true)}>
+              <svg className="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+            <Toolbar user={user} lang={lang} theme={theme} skin={skin} onLang={(l) => savePrefs({ language: l })} onTheme={(t) => savePrefs({ theme: t })} onSkin={(s) => savePrefs({ widgetSkin: s })} onOpen={setModal} />
+          </div>
           <Hero user={user} lang={lang} onAvatar={() => setModal('avatar')} onBio={() => setModal('bio')} onJournal={() => setModal('journal')} />
           <SearchBar lang={lang} widgets={visible} onGoWidget={goToWidget} onAdd={(e) => setDrawer({ open: true, preset: e })} />
           <WidgetGrid widgets={visible} lang={lang} linked={{ github: user.githubLinked, epitech: !!user.epitech }} onWhy={() => { setHelpAsk(W[lang].whyEmpty); setModal('help') }} editing={editing} setEditing={setEditing} landing={landing}
