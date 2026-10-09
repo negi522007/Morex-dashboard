@@ -21,6 +21,7 @@ export default defineConfig({
       '/public': 'http://localhost:8080',
       '/ai': 'http://localhost:8080',
       '/admin/users': 'http://localhost:8080',
+      '/admin/service-stats': 'http://localhost:8080',
     },
   },
 })

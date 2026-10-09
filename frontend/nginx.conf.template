@@ -9,7 +9,7 @@ server {
   client_max_body_size 6m;   # avatar uploads
 
   # Every backend route prefix — keep in sync with vite.config.ts's dev proxy.
-  location ~ ^/(auth|widgets|journal|uploads|services|ai|brief|assistant|alerts|share|public|admin/users|helpdesk|docs|docs-json|about\.json) {
+  location ~ ^/(auth|widgets|journal|uploads|services|ai|brief|assistant|alerts|share|public|admin/users|admin/service-stats|helpdesk|docs|docs-json|about\.json) {
     # BACKEND_ORIGIN is substituted by the nginx base image's own envsubst-on-templates
     # entrypoint (this file lives at /etc/nginx/templates/default.conf.template) — docker-compose.yml
     # sets it to http://server:8080 (the Compose service name); a split-host deploy (e.g. Render, where
