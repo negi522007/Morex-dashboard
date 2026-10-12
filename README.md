@@ -1,5 +1,8 @@
 # Dashboard
 
+**🔗 Live demo: [morex-combined-latest.onrender.com](https://morex-combined-latest.onrender.com/)**
+(free-tier hosting — the first request after a period of inactivity may take ~30-60s to wake up)
+
 ## What is this? (no technical background needed)
 
 Think of your browser's new-tab page — but instead of a search bar and a few shortcuts, you decide
